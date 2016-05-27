@@ -1,0 +1,3 @@
+import:
+- package: github.com/Sirupsen/logrus
+  version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
