@@ -1,0 +1,5 @@
+*.swp
+
+/build
+/bin
+/gopath

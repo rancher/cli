@@ -1,3 +1,15 @@
 import:
+- package: github.com/gorilla/websocket
+  version: 8b209f63177a963547dc3cee89350a327ead0412
+- package: github.com/patrickmn/go-cache
+  version: 1881a9bccb818787f68c52bfba648c6cf34c34fa
+- package: github.com/rancher/go-rancher
+  version: 853abf4af7cf82fcaa05d041de7c56b40d7a1b17
+- package: github.com/rancher/rancher-docker-api-proxy
+  version: 152712a566dbdb8b809ee42b20d9d18f15d7ece0
+- package: github.com/docker/docker
+  version: v1.11.1
+- package: github.com/codegangsta/cli
+  version: 9a18ffad6c548ca4d458d4c30a8aa4d181cf92fa
 - package: github.com/Sirupsen/logrus
-  version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
+  version: 6d9ae300aaf85d6acd2e5424081c7fcddb21dab8
