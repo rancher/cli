@@ -1,3 +1,3 @@
-FROM ubuntu:15.10
-COPY cli /usr/bin/
-CMD ["cli"]
+FROM alpine
+COPY rancher /usr/bin/
+ENTRYPOINT ["rancher"]

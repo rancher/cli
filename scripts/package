@@ -8,7 +8,7 @@ cd $(dirname $0)/../package
 TAG=${TAG:-${VERSION}}
 REPO=${REPO:-rancher}
 
-cp ../bin/cli .
+cp ../bin/rancher .
 docker build -t ${REPO}/cli:${TAG} .
 
 echo Built ${REPO}/cli:${TAG}

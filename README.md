@@ -1,7 +1,9 @@
-cli
-========
+Rancher CLI
+===========
 
-A microservice that does micro things.
+It takes arguments and outputs text.  Trust me, this is going to be great!
+
+Coming Summer of '16
 
 ## Building
 
@@ -10,7 +12,7 @@ A microservice that does micro things.
 
 ## Running
 
-`./bin/cli`
+`./bin/rancher`
 
 ## License
 Copyright (c) 2014-2016 [Rancher Labs, Inc.](http://rancher.com)
