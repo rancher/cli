@@ -14,6 +14,10 @@ func PsCommand() cli.Command {
 		Action: servicePs,
 		Flags: []cli.Flag{
 			cli.BoolFlag{
+				Name:  "containers,c",
+				Usage: "Display containers",
+			},
+			cli.BoolFlag{
 				Name:  "quiet,q",
 				Usage: "Only display IDs",
 			},
@@ -52,10 +56,24 @@ type PsData struct {
 	ID            string
 }
 
+type ContainerPsData struct {
+	ID            string
+	Container     client.Container
+	CombinedState string
+}
+
 func servicePs(ctx *cli.Context) error {
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	if ctx.Bool("containers") {
+		return hostContainerPs(ctx, c)
+	}
+
+	if len(ctx.Args()) > 0 {
+		return serviceContainersPs(ctx, c, ctx.Args())
 	}
 
 	env, err := GetEnvironment(c)
@@ -82,6 +100,7 @@ func servicePs(ctx *cli.Context) error {
 		{"STATE", "CombinedState"},
 		{"SCALE", "Service.Scale"},
 		{"ENDPOINTS", "{{endpoint .Service.PublicEndpoints}}"},
+		{"DETAIL", "Service.TransitioningMessage"},
 	}, ctx)
 
 	defer writer.Close()
@@ -99,6 +118,81 @@ func servicePs(ctx *cli.Context) error {
 			ID:            item.Id,
 			Service:       item,
 			Stack:         stackMap[item.EnvironmentId],
+			CombinedState: combined,
+		})
+	}
+
+	return writer.Err()
+}
+
+func serviceContainersPs(ctx *cli.Context, c *client.RancherClient, names []string) error {
+	containerList := []client.Container{}
+
+	for _, name := range names {
+		service, err := Lookup(c, name, "service")
+		if err != nil {
+			return err
+		}
+
+		var containers client.ContainerCollection
+		if err := c.GetLink(*service, "instances", &containers); err != nil {
+			return err
+		}
+
+		containerList = append(containerList, containers.Data...)
+	}
+
+	return containerPs(ctx, containerList)
+}
+
+func hostContainerPs(ctx *cli.Context, c *client.RancherClient) error {
+	if len(ctx.Args()) == 0 {
+		containerList, err := c.Container.List(nil)
+		if err != nil {
+			return err
+		}
+		return containerPs(ctx, containerList.Data)
+	}
+
+	containers := []client.Container{}
+	for _, hostname := range ctx.Args() {
+		host, err := Lookup(c, hostname, "host")
+		if err != nil {
+			return err
+		}
+
+		var containerList client.ContainerCollection
+		if err := c.GetLink(*host, "instances", &containerList); err != nil {
+			return err
+		}
+
+		containers = append(containers, containerList.Data...)
+	}
+
+	return containerPs(ctx, containers)
+}
+
+func containerPs(ctx *cli.Context, containers []client.Container) error {
+	writer := NewTableWriter([][]string{
+		{"ID", "ID"},
+		{"NAME", "Container.Name"},
+		{"IMAGE", "Container.ImageUuid"},
+		{"STATE", "CombinedState"},
+		{"HOST", "Container.HostId"},
+		{"DETAIL", "Container.TransitioningMessage"},
+		//TODO: {"PORTS", "{{ports .Container.Ports}}"},
+	}, ctx)
+	defer writer.Close()
+
+	for _, container := range containers {
+		container.ImageUuid = strings.TrimPrefix(container.ImageUuid, "docker:")
+		combined := container.HealthState
+		if container.State != "running" || combined == "" {
+			combined = container.State
+		}
+		writer.Write(ContainerPsData{
+			Container:     container,
+			ID:            container.Id,
 			CombinedState: combined,
 		})
 	}

@@ -91,6 +91,27 @@ func getHostByHostname(c *client.RancherClient, name string) (client.ResourceCol
 	return result, nil
 }
 
+func getServiceByName(c *client.RancherClient, name string) (client.ResourceCollection, error) {
+	var result client.ResourceCollection
+	env, serviceName, err := ParseName(c, name)
+
+	services, err := c.Service.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"environmentId": env.Id,
+			"name":          serviceName,
+		},
+	})
+	if err != nil {
+		return result, err
+	}
+
+	for _, service := range services.Data {
+		result.Data = append(result.Data, service.Resource)
+	}
+
+	return result, nil
+}
+
 func Lookup(c *client.RancherClient, name string, types ...string) (*client.Resource, error) {
 	var byName *client.Resource
 
@@ -125,6 +146,8 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 			switch schemaType {
 			case "host":
 				collection, err = getHostByHostname(c, name)
+			case "service":
+				collection, err = getServiceByName(c, name)
 			}
 			if err != nil {
 				return nil, err
@@ -189,6 +212,7 @@ func printTemplate(out io.Writer, templateContent string, obj interface{}) error
 	funcMap := map[string]interface{}{
 		"endpoint": FormatEndpoint,
 		"ips":      FormatIPAddresses,
+		"json":     FormatJson,
 	}
 	tmpl, err := template.New("").Funcs(funcMap).Parse(templateContent)
 	if err != nil {

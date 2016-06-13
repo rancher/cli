@@ -28,7 +28,7 @@ func mainErr() error {
 	app.Author = "Rancher Labs, Inc."
 	app.Email = ""
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
+		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "Debug logging",
 		},
@@ -68,6 +68,14 @@ func mainErr() error {
 		cmd.HostCommand(),
 		cmd.SSHCommand(),
 		cmd.DockerCommand(),
+		cmd.ScaleCommand(),
+		cmd.ExecCommand(),
+		cmd.ExportCommand(),
+		cmd.StopCommand(),
+		cmd.StartCommand(),
+		cmd.RestartCommand(),
+		cmd.EventsCommand(),
+		cmd.TuiCommand(),
 	}
 
 	return app.Run(os.Args)

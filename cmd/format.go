@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -47,4 +48,9 @@ func FormatIPAddresses(data interface{}) string {
 	}
 
 	return strings.Join(ipStrings, ", ")
+}
+
+func FormatJson(data interface{}) (string, error) {
+	bytes, err := json.MarshalIndent(data, "", "    ")
+	return string(bytes) + "\n", err
 }

@@ -486,6 +486,11 @@ func (rancherClient *RancherBaseClient) Reload(existing *Resource, output interf
 	return rancherClient.doGet(selfUrl, NewListOpts(), output)
 }
 
+func (rancherClient *RancherBaseClient) Action(schemaType string, action string,
+	existing *Resource, inputObject, respObject interface{}) error {
+	return rancherClient.doAction(schemaType, action, existing, inputObject, respObject)
+}
+
 func (rancherClient *RancherBaseClient) doAction(schemaType string, action string,
 	existing *Resource, inputObject, respObject interface{}) error {
 

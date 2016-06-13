@@ -27,7 +27,16 @@ func HostCommand() cli.Command {
 type HostsData struct {
 	ID          string
 	Host        client.Host
+	State       string
 	IPAddresses []client.IpAddress
+}
+
+func getHostState(host *client.Host) string {
+	state := host.State
+	if state == "active" && host.AgentState != "" {
+		state = host.AgentState
+	}
+	return state
 }
 
 func hostLs(ctx *cli.Context) error {
@@ -53,8 +62,8 @@ func hostLs(ctx *cli.Context) error {
 	writer := NewTableWriter([][]string{
 		{"ID", "Host.Id"},
 		{"HOSTNAME", "Host.Hostname"},
-		{"STATE", "Host.State"},
-		{"IP", "{{ips .IpAddresses}}"},
+		{"STATE", "State"},
+		{"IP", "{{ips .IPAddresses}}"},
 	}, ctx)
 
 	defer writer.Close()
@@ -69,6 +78,7 @@ func hostLs(ctx *cli.Context) error {
 		writer.Write(&HostsData{
 			ID:          item.Id,
 			Host:        item,
+			State:       getHostState(&item),
 			IPAddresses: ips.Data,
 		})
 	}

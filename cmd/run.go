@@ -111,7 +111,7 @@ func RunCommand() cli.Command {
 
 func ParseName(c *client.RancherClient, name string) (*client.Environment, string, error) {
 	stackName := ""
-	serviceName := ""
+	serviceName := name
 
 	parts := strings.SplitN(name, "/", 2)
 	if len(parts) == 2 {

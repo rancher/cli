@@ -35,7 +35,7 @@ func (m *Monitor) Subscribe() *Subscription {
 	m.subCounter++
 	sub := &Subscription{
 		id: m.subCounter,
-		c:  make(chan *Event, 1024),
+		C:  make(chan *Event, 1024),
 	}
 	m.subscriptions[sub.id] = sub
 
@@ -46,19 +46,20 @@ func (m *Monitor) Unsubscribe(sub *Subscription) {
 	m.Lock()
 	defer m.Unlock()
 
-	close(sub.c)
+	close(sub.C)
 	delete(m.subscriptions, sub.id)
 }
 
 type Subscription struct {
 	id int
-	c  chan *Event
+	C  chan *Event
 }
 
 func New(c *client.RancherClient) *Monitor {
 	return &Monitor{
-		c:     c,
-		cache: cache.New(5*time.Minute, 30*time.Second),
+		c:             c,
+		cache:         cache.New(5*time.Minute, 30*time.Second),
+		subscriptions: map[int]*Subscription{},
 	}
 }
 
@@ -130,7 +131,7 @@ func (m *Monitor) put(resourceType, resourceID string, event *Event) {
 	defer m.Unlock()
 
 	for _, sub := range m.subscriptions {
-		sub.c <- event
+		sub.C <- event
 	}
 }
 
