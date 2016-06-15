@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	rmTypes = cli.StringSlice([]string{"service", "container", "hosts"})
+	rmTypes = cli.StringSlice([]string{"service", "container", "host", "environment"})
 )
 
 func RmCommand() cli.Command {

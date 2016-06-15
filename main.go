@@ -75,7 +75,6 @@ func mainErr() error {
 		cmd.StartCommand(),
 		cmd.RestartCommand(),
 		cmd.EventsCommand(),
-		cmd.TuiCommand(),
 	}
 
 	return app.Run(os.Args)
