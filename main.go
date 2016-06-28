@@ -33,6 +33,16 @@ func mainErr() error {
 			Usage: "Debug logging",
 		},
 		cli.StringFlag{
+			Name:   "config,c",
+			Usage:  "Client configuration file (default ${HOME}/.rancher/cli.json)",
+			EnvVar: "RANCHER_CLIENT_CONFIG",
+		},
+		cli.StringFlag{
+			Name:   "environment,e",
+			Usage:  "Environment name or ID",
+			EnvVar: "RANCHER_ENVIRONMENT",
+		},
+		cli.StringFlag{
 			Name:   "url",
 			Usage:  "Specify the Rancher API endpoint URL",
 			EnvVar: "RANCHER_URL",
@@ -75,6 +85,9 @@ func mainErr() error {
 		cmd.StartCommand(),
 		cmd.RestartCommand(),
 		cmd.EventsCommand(),
+		cmd.EnvCommand(),
+		cmd.ConfigCommand(),
+		cmd.VolumeCommand(),
 	}
 
 	return app.Run(os.Args)

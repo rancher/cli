@@ -44,17 +44,24 @@ func (t *TableWriter) Err() error {
 	return t.err
 }
 
-func (t *TableWriter) Write(obj interface{}) {
-	if t.err != nil {
-		return
-	}
-
+func (t *TableWriter) writeHeader() {
 	if t.HeaderFormat != "" && !t.headerPrinted {
 		t.headerPrinted = true
 		t.err = printTemplate(t.Writer, t.HeaderFormat, struct{}{})
 		if t.err != nil {
 			return
 		}
+	}
+}
+
+func (t *TableWriter) Write(obj interface{}) {
+	if t.err != nil {
+		return
+	}
+
+	t.writeHeader()
+	if t.err != nil {
+		return
 	}
 
 	if t.ValueFormat == "json" {
@@ -70,6 +77,10 @@ func (t *TableWriter) Write(obj interface{}) {
 }
 
 func (t *TableWriter) Close() error {
+	if t.err != nil {
+		return t.err
+	}
+	t.writeHeader()
 	if t.err != nil {
 		return t.err
 	}

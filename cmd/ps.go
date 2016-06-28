@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/pkg/errors"
 	"github.com/rancher/go-rancher/client"
 )
 
@@ -76,20 +77,11 @@ func servicePs(ctx *cli.Context) error {
 		return serviceContainersPs(ctx, c, ctx.Args())
 	}
 
-	env, err := GetEnvironment(c)
-	if err != nil {
-		return err
-	}
-
 	stackMap := GetStackMap(c)
 
-	collection, err := c.Service.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"accountId": env.Id,
-		},
-	})
+	collection, err := c.Service.List(nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "service list failed")
 	}
 
 	writer := NewTableWriter([][]string{
@@ -113,6 +105,9 @@ func servicePs(ctx *cli.Context) error {
 		combined := item.HealthState
 		if item.State != "active" || combined == "" {
 			combined = item.State
+		}
+		if item.LaunchConfig == nil {
+			item.LaunchConfig = &client.LaunchConfig{}
 		}
 		writer.Write(PsData{
 			ID:            item.Id,

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,33 +16,135 @@ import (
 	"github.com/rancher/go-rancher/client"
 )
 
-func GetClient(ctx *cli.Context) (*client.RancherClient, error) {
-	url := ctx.GlobalString("url")
-	accessKey := ctx.GlobalString("access-key")
-	secretKey := ctx.GlobalString("secret-key")
+var (
+	errNoEnv = errors.New("Failed to find the current environment")
+)
 
-	if url == "" {
-		return nil, fmt.Errorf("RANCHER_URL environment or --url is not set")
+func GetRawClient(ctx *cli.Context) (*client.RancherClient, error) {
+	config, err := lookupConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	idx := strings.LastIndex(config.URL, "/v1")
+	if idx == -1 {
+		return nil, fmt.Errorf("Invalid URL %s, must contain /v1")
 	}
 
 	return client.NewRancherClient(&client.ClientOpts{
-		Url:       url,
-		AccessKey: accessKey,
-		SecretKey: secretKey,
+		Url:       config.URL[:idx] + "/v1",
+		AccessKey: config.AccessKey,
+		SecretKey: config.SecretKey,
 	})
 }
 
-func GetEnvironment(c *client.RancherClient) (*client.Project, error) {
+func lookupConfig(ctx *cli.Context) (Config, error) {
+	path := ctx.GlobalString("config")
+	if path == "" {
+		path = os.ExpandEnv("${HOME}/.rancher/cli.json")
+	}
+
+	config, err := LoadConfig(path)
+	if err != nil {
+		return config, err
+	}
+
+	url := ctx.GlobalString("url")
+	accessKey := ctx.GlobalString("access-key")
+	secretKey := ctx.GlobalString("secret-key")
+	envName := ctx.GlobalString("environment")
+
+	if url != "" {
+		config.URL = url
+	}
+	if accessKey != "" {
+		config.AccessKey = accessKey
+	}
+	if secretKey != "" {
+		config.SecretKey = secretKey
+	}
+	if envName != "" {
+		config.Environment = envName
+	}
+
+	if config.URL == "" {
+		return config, fmt.Errorf("RANCHER_URL environment or --url is not set, run `config`")
+	}
+
+	return config, nil
+}
+
+func GetClient(ctx *cli.Context) (*client.RancherClient, error) {
+	config, err := lookupConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	projectId := config.Environment
+	if projectId == "" || !strings.HasPrefix(projectId, "1a") {
+		c, err := client.NewRancherClient(&client.ClientOpts{
+			Url:       config.URL,
+			AccessKey: config.AccessKey,
+			SecretKey: config.SecretKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+		project, err := GetEnvironment(config.Environment, c)
+		if err != nil {
+			return nil, err
+		}
+		projectId = project.Id
+	}
+
+	idx := strings.LastIndex(config.URL, "/v1")
+	if idx == -1 {
+		return nil, fmt.Errorf("Invalid URL %s, must contain /v1")
+	}
+
+	url := config.URL[:idx] + "/v1/projects/" + projectId
+	return client.NewRancherClient(&client.ClientOpts{
+		Url:       url + "/schemas",
+		AccessKey: config.AccessKey,
+		SecretKey: config.SecretKey,
+	})
+}
+
+func GetEnvironment(def string, c *client.RancherClient) (*client.Project, error) {
 	resp, err := c.Project.List(nil)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(resp.Data) == 0 {
-		return nil, fmt.Errorf("Failed to find the current environment")
+		return nil, errNoEnv
 	}
 
-	return &resp.Data[0], nil
+	if len(resp.Data) == 1 {
+		return &resp.Data[0], nil
+	}
+
+	if def == "" {
+		names := []string{}
+		for _, p := range resp.Data {
+			names = append(names, fmt.Sprintf("%s(%s)", p.Name, p.Id))
+		}
+
+		idx := selectFromList("Environments:", names)
+		return &resp.Data[idx], nil
+	} else {
+		return LookupEnvironment(c, def)
+	}
+}
+
+func LookupEnvironment(c *client.RancherClient, name string) (*client.Project, error) {
+	env, err := Lookup(c, name, "account")
+	if err != nil {
+		return nil, err
+	}
+	if env.Type != "project" {
+		return nil, fmt.Errorf("Failed to find environment: %s", name)
+	}
+	return c.Project.ById(env.Id)
 }
 
 func GetOrCreateDefaultStack(c *client.RancherClient, name string) (*client.Environment, error) {
@@ -119,7 +222,7 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 		var resource client.Resource
 		if err := c.ById(schemaType, name, &resource); !client.IsNotFound(err) && err != nil {
 			return nil, err
-		} else if err == nil {
+		} else if err == nil && resource.Id == name { // The ID check is because of an oddity in the id obfuscation
 			return &resource, nil
 		}
 
@@ -200,11 +303,12 @@ func SimpleFormat(values [][]string) (string, string) {
 	return headerBuffer.String(), valueBuffer.String()
 }
 
-func errorWrapper(f func(*cli.Context) error) func(*cli.Context) {
-	return func(ctx *cli.Context) {
+func errorWrapper(f func(*cli.Context) error) func(*cli.Context) error {
+	return func(ctx *cli.Context) error {
 		if err := f(ctx); err != nil {
 			logrus.Fatal(err)
 		}
+		return nil
 	}
 }
 

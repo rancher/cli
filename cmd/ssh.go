@@ -131,6 +131,10 @@ func getSSHKey(hostname string, physicalHost client.PhysicalHost) ([]byte, error
 		return nil, err
 	}
 
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("%s", tarGz)
+	}
+
 	gzipIn, err := gzip.NewReader(bytes.NewBuffer(tarGz))
 	if err != nil {
 		return nil, err

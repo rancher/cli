@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	stopTypes = cli.StringSlice([]string{"service", "container", "host"})
+	stopTypes = cli.StringSlice([]string{"service", "container", "host", "account"})
 )
 
 func StopCommand() cli.Command {
@@ -44,12 +44,17 @@ func stopResources(ctx *cli.Context) error {
 			continue
 		}
 
-		action := "deactivate"
+		action := ""
 		if _, ok := resource.Actions["stop"]; ok {
 			action = "stop"
+		} else if _, ok := resource.Actions["deactivate"]; ok {
+			action = "deactivate"
 		}
 
-		if err := c.Action(resource.Type, action, resource, nil, resource); err != nil {
+		if action == "" {
+			lastErr = fmt.Errorf("stop or deactivate not available on %s", id)
+			fmt.Println(lastErr)
+		} else if err := c.Action(resource.Type, action, resource, nil, resource); err != nil {
 			lastErr = err
 			fmt.Println(lastErr)
 		} else {

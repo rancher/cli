@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/codegangsta/cli"
@@ -21,6 +23,10 @@ func ExecCommand() cli.Command {
 }
 
 func execCommand(ctx *cli.Context) error {
+	return processExitCode(execCommandInternal(ctx))
+}
+
+func execCommandInternal(ctx *cli.Context) error {
 	if isHelp(ctx.Args()) {
 		return runDockerHelp("exec")
 	}
@@ -118,18 +124,29 @@ func getHostnameAndContainerIdFromList(c *client.RancherClient, containers clien
 		names = append(names, fmt.Sprintf("%s (%s)", name, container.PrimaryIpAddress))
 	}
 
-	index := selectFromList(names)
+	index := selectFromList("Containers:", names)
 	return containers.Data[index].HostId, containers.Data[index].ExternalId, nil
 }
 
-func selectFromList(choices []string) int {
+func selectFromList(header string, choices []string) int {
+	if header != "" {
+		fmt.Println(header)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
 	selected := -1
 	for selected <= 0 || selected > len(choices) {
 		for i, choice := range choices {
 			fmt.Printf("[%d] %s\n", i+1, choice)
 		}
 		fmt.Print("Select: ")
-		fmt.Scan(&selected)
+
+		text, _ := reader.ReadString('\n')
+		text = strings.TrimSpace(text)
+		num, err := strconv.Atoi(text)
+		if err == nil {
+			selected = num
+		}
 	}
 	return selected - 1
 }

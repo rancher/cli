@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,10 +10,10 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -277,7 +276,11 @@ func (rancherClient *RancherBaseClient) doGet(url string, opts *ListOpts, respOb
 		fmt.Println("Response <= " + string(byteContent))
 	}
 
-	return json.Unmarshal(byteContent, respObject)
+	if err := json.Unmarshal(byteContent, respObject); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Failed to parse: %s", byteContent))
+	}
+
+	return nil
 }
 
 func (rancherClient *RancherBaseClient) List(schemaType string, opts *ListOpts, respObject interface{}) error {

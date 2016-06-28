@@ -45,16 +45,7 @@ func hostLs(ctx *cli.Context) error {
 		return err
 	}
 
-	env, err := GetEnvironment(c)
-	if err != nil {
-		return err
-	}
-
-	collection, err := c.Host.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"accountId": env.Id,
-		},
-	})
+	collection, err := c.Host.List(nil)
 	if err != nil {
 		return err
 	}
