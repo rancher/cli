@@ -19,6 +19,7 @@ import (
 
 var (
 	errNoEnv = errors.New("Failed to find the current environment")
+	errNoURL = errors.New("RANCHER_URL environment or --url is not set, run `config`")
 )
 
 func GetRawClient(ctx *cli.Context) (*client.RancherClient, error) {
@@ -68,7 +69,7 @@ func lookupConfig(ctx *cli.Context) (Config, error) {
 	}
 
 	if config.URL == "" {
-		return config, fmt.Errorf("RANCHER_URL environment or --url is not set, run `config`")
+		return config, errNoURL
 	}
 
 	return config, nil
