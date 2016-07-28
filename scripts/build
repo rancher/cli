@@ -1,9 +1,33 @@
-#!/bin/bash
-set -e
+#!/bin/bash -e
 
 source $(dirname $0)/version
 
 cd $(dirname $0)/..
 
-mkdir -p bin
-go build -ldflags "-X main.VERSION=$VERSION -linkmode external -extldflags -static" -o bin/cli
+OS_PLATFORM_ARG=(linux windows darwin)
+OS_ARCH_ARG=(amd64 arm)
+
+go build -ldflags="-w -s -X main.VERSION=$VERSION" -o bin/rancher
+
+if [ -n "$CROSS" ]; then
+    rm -rf build/bin
+    mkdir -p build/bin
+    for OS in ${OS_PLATFORM_ARG[@]}; do
+        for ARCH in ${OS_ARCH_ARG[@]}; do
+            OUTPUT_BIN="build/bin/rancher_$OS-$ARCH"
+            if test "$ARCH" = "arm"; then
+                if test "$OS" = "windows" || test "$OS" = "darwin"; then
+                    # windows/arm and darwin/arm does not compile without cgo :-|
+                    continue
+                fi
+            fi
+            if test "$OS" = "windows"; then
+                OUTPUT_BIN="${OUTPUT_BIN}.exe"
+            fi
+            echo "Building binary for $OS/$ARCH..."
+            GOARCH=$ARCH GOOS=$OS CGO_ENABLED=0 go build \
+                  -ldflags="-w -X main.VERSION=$VERSION" \
+                  -o ${OUTPUT_BIN} ./
+        done
+    done
+fi
