@@ -1,18 +1,42 @@
 Rancher CLI
 ===========
 
-It takes arguments and outputs text.  Trust me, this is going to be great!
-
-Coming Summer of '16
-
-## Building
-
-`make`
-
+The Rancher Command Line Interface (CLI)is a unified tool to manage your Rancher server. With this tool, you can control your services, containers and hosts within a Rancher environment and automate them through scripts. 
 
 ## Running
 
-`./bin/rancher`
+You can check the [releases page](https://github.com/rancher/cli/releases) for direct downloads of the binary or [build your own](#building). 
+
+## Setting up Rancher CLI with Rancher Server 
+
+To enable the CLI to connect to Rancher server, you can configure the environment variables needed. The environment variables that are required are `RANCHER_URL`, `RANCHER_ACCESS_KEY` and `RANCHER_SECRET_KEY`. 
+
+The access key and secret key should be an [account API key](http://docs.rancher.com/rancher/latest/en/api/api-keys/#account-api-keys). In your Rancher setup, you can create an account API key under the **API** tab and expand the **Advanced Options**. 
+
+You can run `rancher config` to set these environment variables for the CLI. 
+
+```
+$ rancher --url http://<RANCHER_SERVER_URL> config
+URL [http://<RANCHER_SERVER_URL>]: 
+Access Key [http://<RANCHER_SERVER_URL>]: <ACCESS_KEY>
+Secret Key [http://<RANCHER_SERVER_URL>]: <SECRET_KEY>
+INFO[0102] Saving config to /Users/<username>/.rancher/cli.json 
+```
+
+> Note: The `<RANCHER_SERVER_URL>` includes whatever port was exposed when installing Rancher server. If you had followed the installation instructions, your URL would be `http://<server_ip>:8080/`.
+
+## Building
+
+The binaries will be located in `/build/bin`.
+
+### Linux binary
+
+Run `make`.
+
+### Mac binary
+
+Run `CROSS=1 make build`
+
 
 ## License
 Copyright (c) 2014-2016 [Rancher Labs, Inc.](http://rancher.com)
