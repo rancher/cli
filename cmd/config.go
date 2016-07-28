@@ -93,7 +93,7 @@ func ConfigCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "dump",
-				Usage: "Dump the effective configuration",
+				Usage: "Dump the current configuration",
 			},
 		},
 	}
@@ -120,7 +120,7 @@ func getConfig(reader *bufio.Reader, text, def string) (string, error) {
 
 func configSetup(ctx *cli.Context) error {
 	config, err := lookupConfig(ctx)
-	if err != nil {
+	if err != nil && err != errNoURL {
 		return err
 	}
 
