@@ -18,10 +18,10 @@ import (
 
 func SSHCommand() cli.Command {
 	return cli.Command{
-		Name:            "ssh",
-		Usage:           "SSH into host",
-		Action:          hostSSH,
-		SkipFlagParsing: true,
+		Name:   "ssh",
+		Usage:  "SSH into host",
+		Action: hostSSH,
+		Flags:  []cli.Flag{},
 	}
 }
 

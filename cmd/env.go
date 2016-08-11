@@ -14,11 +14,11 @@ func EnvCommand() cli.Command {
 		Name:      "environment",
 		ShortName: "env",
 		Usage:     "Interact with environments",
-		Action:    errorWrapper(envLs),
+		Action:    defaultAction(envLs),
 		Subcommands: []cli.Command{
 			cli.Command{
 				Name:   "ls",
-				Usage:  "list environments",
+				Usage:  "List environments",
 				Action: errorWrapper(envLs),
 				Flags: []cli.Flag{
 					cli.BoolFlag{
@@ -27,18 +27,18 @@ func EnvCommand() cli.Command {
 					},
 					cli.StringFlag{
 						Name:  "format",
-						Usage: "'json' or Custom format: {{.Id}} {{.Name}",
+						Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
 					},
 				},
 			},
 			cli.Command{
 				Name:   "create",
-				Usage:  "create environment",
+				Usage:  "Create an environment",
 				Action: errorWrapper(envCreate),
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "orchestration,o",
-						Usage: "Name",
+						Usage: "Orchestration framework",
 					},
 				},
 			},
@@ -46,6 +46,7 @@ func EnvCommand() cli.Command {
 				Name:   "rm",
 				Usage:  "Remove environment(s) by ID",
 				Action: errorWrapper(envRm),
+				Flags:  []cli.Flag{},
 			},
 			cli.Command{
 				Name:   "update",

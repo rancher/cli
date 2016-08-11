@@ -12,12 +12,12 @@ import (
 func EventsCommand() cli.Command {
 	return cli.Command{
 		Name:   "events",
-		Usage:  "Show services/containers",
+		Usage:  "Displays resource change events",
 		Action: events,
 		Flags: []cli.Flag{
 			//cli.StringFlag{
 			//	Name:  "format",
-			//	Usage: "'json' or Custom format: {{.Id}} {{.Name}",
+			//	Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
 			//},
 			cli.BoolFlag{
 				Name:  "reconnect,r",

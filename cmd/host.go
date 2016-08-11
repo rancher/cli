@@ -10,23 +10,28 @@ func HostCommand() cli.Command {
 		Name:      "hosts",
 		ShortName: "host",
 		Usage:     "Operations on hosts",
-		Action:    defaultAction,
+		Action:    defaultAction(hostLs),
 		Subcommands: []cli.Command{
+			cli.Command{
+				Name:   "ls",
+				Usage:  "List hosts",
+				Action: errorWrapper(hostLs),
+				Flags: []cli.Flag{
+					cli.BoolFlag{
+						Name:  "quiet,q",
+						Usage: "Only display IDs",
+					},
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+					},
+				},
+			},
 			cli.Command{
 				Name:            "create",
 				Usage:           "Create a host",
 				SkipFlagParsing: true,
-				Action:          hostCreate,
-			},
-		},
-		Flags: []cli.Flag{
-			cli.BoolFlag{
-				Name:  "quiet,q",
-				Usage: "Only display IDs",
-			},
-			cli.StringFlag{
-				Name:  "format",
-				Usage: "'json' or Custom format: {{.Id}} {{.Name}",
+				Action:          errorWrapper(hostCreate),
 			},
 		},
 	}
@@ -45,15 +50,6 @@ func getHostState(host *client.Host) string {
 		state = host.AgentState
 	}
 	return state
-}
-
-func defaultAction(ctx *cli.Context) error {
-	if ctx.Bool("help") || len(ctx.Args()) > 0 {
-		cli.ShowAppHelp(ctx)
-		return nil
-	}
-
-	return hostLs(ctx)
 }
 
 func hostLs(ctx *cli.Context) error {

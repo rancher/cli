@@ -6,11 +6,11 @@ func ContainerCommand() cli.Command {
 	return cli.Command{
 		Name:   "container",
 		Usage:  "Interact with containers",
-		Action: errorWrapper(containerLs),
+		Action: defaultAction(errorWrapper(containerLs)),
 		Subcommands: []cli.Command{
 			cli.Command{
 				Name:   "ls",
-				Usage:  "list containers",
+				Usage:  "List containers",
 				Action: errorWrapper(containerLs),
 				Flags: []cli.Flag{
 					cli.BoolFlag{

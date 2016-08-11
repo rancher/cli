@@ -25,16 +25,15 @@ Commands:
 Run '{{.Name}} COMMAND --help' for more information on a command.
 `
 
-var CommandHelpTemplate = `Usage: rancher {{.Name}}{{if .Flags}} [OPTIONS]{{end}} [arg...]
+var CommandHelpTemplate = `Usage: rancher [global options] {{.Name}}{{if .Flags}} [OPTIONS]{{end}} [arg...]
 
 {{.Usage}}{{if .Description}}
 
 Description:
    {{.Description}}{{end}}{{if .Flags}}
 
-Options:
-   {{range .Flags}}
-   {{.}}{{end}}{{ end }}
+Options:{{range .Flags}}
+	 {{.}}{{end}}{{ end }}
 `
 
 func main() {

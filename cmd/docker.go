@@ -15,10 +15,10 @@ import (
 
 func DockerCommand() cli.Command {
 	return cli.Command{
-		Name:            "docker",
-		Usage:           "Run docker CLI on a host",
-		Action:          hostDocker,
-		SkipFlagParsing: true,
+		Name:   "docker",
+		Usage:  "Run docker CLI on a host",
+		Action: hostDocker,
+		Flags:  []cli.Flag{},
 	}
 }
 
