@@ -15,10 +15,11 @@ import (
 
 func DockerCommand() cli.Command {
 	return cli.Command{
-		Name:            "docker",
-		Usage:           "Run docker CLI on a host",
-		Action:          hostDocker,
-		SkipFlagParsing: true,
+		Name:        "docker",
+		Usage:       "Run docker CLI on a host",
+		Description: "\nUses the $RANCHER_DOCKER_HOST to run docker commands. Use `--host <hostID>` or `--host <hostName>` to select a different host.\n\nExample:\n\t$ rancher --host 1h1 docker ps\n",
+		Action:      hostDocker,
+		Flags:       []cli.Flag{},
 	}
 }
 

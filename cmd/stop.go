@@ -13,10 +13,12 @@ var (
 
 func StopCommand() cli.Command {
 	return cli.Command{
-		Name:      "stop",
-		ShortName: "deactivate",
-		Usage:     "Stop or deactivate " + strings.Join(stopTypes, ", "),
-		Action:    stopResources,
+		Name:        "stop",
+		ShortName:   "deactivate",
+		Usage:       "Stop or deactivate " + strings.Join(stopTypes, ", "),
+		Description: "\nStop resources by ID or name in the current $RANCHER_ENVIRONMENT.  Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher stop 1s70\n\t$ rancher --env 1a5 stop stackName/serviceName \n",
+		ArgsUsage:   "[ID NAME...]",
+		Action:      stopResources,
 		Flags: []cli.Flag{
 			cli.StringSliceFlag{
 				Name:  "type",

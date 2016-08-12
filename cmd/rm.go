@@ -12,9 +12,11 @@ var (
 
 func RmCommand() cli.Command {
 	return cli.Command{
-		Name:   "rm",
-		Usage:  "Delete resources",
-		Action: deleteResources,
+		Name:        "rm",
+		Usage:       "Delete resources",
+		Description: "\nDeletes resources by ID or name in the current $RANCHER_ENVIRONMENT.  Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher rm 1s70\n\t$ rancher --env 1a5 rm stackName/serviceName \n",
+		ArgsUsage:   "[ID NAME...]",
+		Action:      deleteResources,
 		Flags: []cli.Flag{
 			cli.StringSliceFlag{
 				Name:  "type",

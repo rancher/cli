@@ -14,7 +14,7 @@ func VolumeCommand() cli.Command {
 		Name:      "volumes",
 		ShortName: "volume",
 		Usage:     "Operations on volumes",
-		Action:    volumeLs,
+		Action:    defaultAction(volumeLs),
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "quiet,q",
@@ -22,11 +22,11 @@ func VolumeCommand() cli.Command {
 			},
 			cli.StringFlag{
 				Name:  "format",
-				Usage: "'json' or Custom format: {{.Id}} {{.Name}",
+				Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
 			},
 		},
 		Subcommands: []cli.Command{
-			{
+			cli.Command{
 				Name:   "ls",
 				Usage:  "List volumes",
 				Action: volumeLs,
@@ -37,16 +37,16 @@ func VolumeCommand() cli.Command {
 					},
 					cli.StringFlag{
 						Name:  "format",
-						Usage: "'json' or Custom format: {{.Id}} {{.Name}",
+						Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
 					},
 				},
 			},
-			{
+			cli.Command{
 				Name:   "rm",
 				Usage:  "Delete volume",
 				Action: volumeRm,
 			},
-			{
+			cli.Command{
 				Name:   "create",
 				Usage:  "Create volume",
 				Action: volumeCreate,

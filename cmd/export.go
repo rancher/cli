@@ -11,9 +11,11 @@ import (
 
 func ExportCommand() cli.Command {
 	return cli.Command{
-		Name:   "export",
-		Usage:  "Export configuration yml for a service",
-		Action: exportService,
+		Name:        "export",
+		Usage:       "Export configuration yml for a stack",
+		Description: "\nExports the docker-compose.yml and rancher-compose.yml for the specified stack.\n\nExample:\n\t$ rancher export mystack\n",
+		ArgsUsage:   "[STACKNAME...]",
+		Action:      exportService,
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "output,o",

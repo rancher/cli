@@ -294,6 +294,16 @@ func errorWrapper(f func(*cli.Context) error) func(*cli.Context) error {
 	}
 }
 
+func defaultAction(fn func(ctx *cli.Context) error) func(ctx *cli.Context) error {
+	return func(ctx *cli.Context) error {
+		if ctx.Bool("help") {
+			cli.ShowAppHelp(ctx)
+			return nil
+		}
+		return fn(ctx)
+	}
+}
+
 func printTemplate(out io.Writer, templateContent string, obj interface{}) error {
 	funcMap := map[string]interface{}{
 		"endpoint": FormatEndpoint,

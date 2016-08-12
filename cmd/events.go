@@ -11,13 +11,15 @@ import (
 
 func EventsCommand() cli.Command {
 	return cli.Command{
-		Name:   "events",
-		Usage:  "Show services/containers",
-		Action: events,
+		Name:        "events",
+		Usage:       "Displays resource change events",
+		Description: "\nOnly events that are actively occuring in Rancher are listed.\n",
+		ArgsUsage:   "None",
+		Action:      events,
 		Flags: []cli.Flag{
 			//cli.StringFlag{
 			//	Name:  "format",
-			//	Usage: "'json' or Custom format: {{.Id}} {{.Name}",
+			//	Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
 			//},
 			cli.BoolFlag{
 				Name:  "reconnect,r",

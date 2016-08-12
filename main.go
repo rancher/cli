@@ -10,9 +10,9 @@ import (
 
 var VERSION = "dev"
 
-var AppHelpTemplate = `Usage: {{.Name}} {{if .Flags}}[OPTIONS] {{end}}COMMAND [arg...]
+var AppHelpTemplate = `{{.Usage}}
 
-{{.Usage}}
+Usage: {{.Name}} {{if .Flags}}[OPTIONS] {{end}}COMMAND [arg...]
 
 Version: {{.Version}}
 {{if .Flags}}
@@ -25,16 +25,12 @@ Commands:
 Run '{{.Name}} COMMAND --help' for more information on a command.
 `
 
-var CommandHelpTemplate = `Usage: rancher {{.Name}}{{if .Flags}} [OPTIONS]{{end}} [arg...]
+var CommandHelpTemplate = `{{.Usage}}
+{{if .Description}}{{.Description}}{{end}}
+Usage: rancher [global options] {{.Name}} {{if .Flags}}[OPTIONS] {{end}}{{if ne "None" .ArgsUsage}}{{if ne "" .ArgsUsage}}{{.ArgsUsage}}{{else}}[arg...]{{end}}{{end}}
 
-{{.Usage}}{{if .Description}}
-
-Description:
-   {{.Description}}{{end}}{{if .Flags}}
-
-Options:
-   {{range .Flags}}
-   {{.}}{{end}}{{ end }}
+{{if .Flags}}Options:{{range .Flags}}
+	 {{.}}{{end}}{{end}}
 `
 
 func main() {

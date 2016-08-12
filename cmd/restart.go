@@ -14,9 +14,11 @@ var (
 
 func RestartCommand() cli.Command {
 	return cli.Command{
-		Name:   "restart",
-		Usage:  "Restart " + strings.Join(restartTypes, ", "),
-		Action: restartResources,
+		Name:        "restart",
+		Usage:       "Restart " + strings.Join(restartTypes, ", "),
+		Description: "\nRestart resources by ID or name in the current $RANCHER_ENVIRONMENT.  Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher restart 1s70\n\t$ rancher --env 1a5 restart stackName/serviceName \n",
+		ArgsUsage:   "[ID NAME...]",
+		Action:      restartResources,
 		Flags: []cli.Flag{
 			cli.StringSliceFlag{
 				Name:  "type",

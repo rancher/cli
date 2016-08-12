@@ -17,10 +17,11 @@ var (
 
 func WaitCommand() cli.Command {
 	return cli.Command{
-		Name:   "wait",
-		Usage:  "Wait for resources",
-		Action: waitForResources,
-		Flags:  []cli.Flag{},
+		Name:      "wait",
+		Usage:     "Wait for resources " + strings.Join(waitTypes, ", "),
+		ArgsUsage: "[ID NAME...]",
+		Action:    waitForResources,
+		Flags:     []cli.Flag{},
 	}
 }
 

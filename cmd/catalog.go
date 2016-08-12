@@ -12,8 +12,42 @@ func CatalogCommand() cli.Command {
 	return cli.Command{
 		Name:   "catalog",
 		Usage:  "Operations with catalogs",
-		Action: catalogLs,
+		Action: defaultAction(catalogLs),
 		Flags:  []cli.Flag{},
+		Subcommands: []cli.Command{
+			cli.Command{
+				Name:        "ls",
+				Usage:       "List catalog templates",
+				Description: "\nList all catalog templates in the current $RANCHER_ENVIRONMENT. Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher --env k8slab catalog ls\n",
+				ArgsUsage:   "None",
+				Action:      catalogLs,
+				Flags: []cli.Flag{
+					cli.BoolFlag{
+						Name:  "quiet,q",
+						Usage: "Only display IDs",
+					},
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+					},
+				},
+			},
+			/*	cli.Command{
+					Name:   "install",
+					Usage:  "Install catalog template",
+					Action: errorWrapper(catalogInstall),
+					ArgsUsage: "[ID or NAME]"
+					Flags:  []cli.Flag{},
+				},
+				cli.Command{
+					Name:   "upgrade",
+					Usage:  "Upgrade catalog template",
+					Action: errorWrapper(envUpdate),
+					ArgsUsage: "[ID or NAME]"
+					Flags:  []cli.Flag{},
+				},
+			*/
+		},
 	}
 }
 
@@ -80,6 +114,80 @@ func catalogLs(ctx *cli.Context) error {
 	}
 
 	return writer.Err()
+}
+
+func catalogInstall(ctx *cli.Context) error {
+	/*config, err := lookupConfig(ctx)
+	if err != nil {
+		return err
+	}
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	proj, err := GetEnvironment(config.Environment, c)
+	if err != nil {
+		return err
+	}
+
+	cc, err := GetCatalogClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	envData := NewEnvData(*proj)
+	envFilter := ""
+	switch envData.Orchestration {
+	case "Kubernetes":
+		envFilter = "kubernetes"
+	case "Swarm":
+		envFilter = "swarm"
+	case "Mesos":
+		envFilter = "mesos"
+	}
+
+	/*TODO add in how to install template */
+
+	return nil
+}
+
+func catalogUpgrade(ctx *cli.Context) error {
+	/*config, err := lookupConfig(ctx)
+	if err != nil {
+		return err
+	}
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	proj, err := GetEnvironment(config.Environment, c)
+	if err != nil {
+		return err
+	}
+
+	cc, err := GetCatalogClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	envData := NewEnvData(*proj)
+	envFilter := ""
+	switch envData.Orchestration {
+	case "Kubernetes":
+		envFilter = "kubernetes"
+	case "Swarm":
+		envFilter = "swarm"
+	case "Mesos":
+		envFilter = "mesos"
+	}
+
+	/*TODO add in how to upgrade template */
+
+	return nil
 }
 
 func templateID(template catalog.Template) string {
