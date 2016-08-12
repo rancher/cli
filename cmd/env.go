@@ -17,9 +17,11 @@ func EnvCommand() cli.Command {
 		Action:    defaultAction(envLs),
 		Subcommands: []cli.Command{
 			cli.Command{
-				Name:   "ls",
-				Usage:  "List environments",
-				Action: errorWrapper(envLs),
+				Name:        "ls",
+				Usage:       "List environments",
+				Description: "\nExample:\n\t$ rancher env ls\n",
+				ArgsUsage:   "None",
+				Action:      errorWrapper(envLs),
 				Flags: []cli.Flag{
 					cli.BoolFlag{
 						Name:  "quiet,q",
@@ -32,9 +34,11 @@ func EnvCommand() cli.Command {
 				},
 			},
 			cli.Command{
-				Name:   "create",
-				Usage:  "Create an environment",
-				Action: errorWrapper(envCreate),
+				Name:        "create",
+				Usage:       "Create an environment",
+				Description: "\nBy default, an environment with cattle orchestration framework will be created.\n\nExample:\n\t$ rancher env create newEnv\n\t$ rancher env create -o kubernetes newK8sEnv\n\t$ rancher env create -o mesos newMesosEnv\n\t$ rancher env create -o swarm newSwarmEnv\n",
+				ArgsUsage:   "[NEWENVNAME...]",
+				Action:      errorWrapper(envCreate),
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "orchestration,o",
@@ -43,15 +47,19 @@ func EnvCommand() cli.Command {
 				},
 			},
 			cli.Command{
-				Name:   "rm",
-				Usage:  "Remove environment(s) by ID",
-				Action: errorWrapper(envRm),
-				Flags:  []cli.Flag{},
+				Name:        "rm",
+				Usage:       "Remove environment(s) by ID",
+				Description: "\nExample:\n\t$ rancher env rm 1a5\n",
+				ArgsUsage:   "[ENVID...]",
+				Action:      errorWrapper(envRm),
+				Flags:       []cli.Flag{},
 			},
 			cli.Command{
-				Name:   "update",
-				Usage:  "Update environment",
-				Action: errorWrapper(envUpdate),
+				Name:        "update",
+				Usage:       "Update environment",
+				Description: "\nChange the orchestration framework of the environment.\n\nExample:\n\t$ rancher env update -o kubernetes 1a5\n",
+				ArgsUsage:   "[ENVID ENVNAME...]",
+				Action:      errorWrapper(envUpdate),
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "orchestration,o",
@@ -143,7 +151,7 @@ func envUpdate(ctx *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(env.Id)
+	fmt.Println(env.Name + " (" + env.Id + ")")
 	return nil
 }
 
@@ -169,7 +177,7 @@ func envCreate(ctx *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(newEnv.Id)
+	fmt.Println(newEnv.Name + " (" + newEnv.Id + ")")
 	return nil
 }
 

@@ -11,9 +11,11 @@ import (
 
 func ScaleCommand() cli.Command {
 	return cli.Command{
-		Name:   "scale",
-		Usage:  "Scale a service",
-		Action: serviceScale,
+		Name:        "scale",
+		Usage:       "Set number of containers to run for a service",
+		Action:      serviceScale,
+		Description: "\nNumbers are specified in the form `service=num` as arguments.\n\nExample:\n\t$ rancher scale web=2 worker=3\n",
+		ArgsUsage:   "[SERVICE=NUM...]",
 	}
 }
 

@@ -16,9 +16,11 @@ func CatalogCommand() cli.Command {
 		Flags:  []cli.Flag{},
 		Subcommands: []cli.Command{
 			cli.Command{
-				Name:   "ls",
-				Usage:  "List catalog templates",
-				Action: catalogLs,
+				Name:        "ls",
+				Usage:       "List catalog templates",
+				Description: "\nList all catalog templates in the current $RANCHER_ENVIRONMENT. Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher --env k8slab catalog ls\n",
+				ArgsUsage:   "None",
+				Action:      catalogLs,
 				Flags: []cli.Flag{
 					cli.BoolFlag{
 						Name:  "quiet,q",
@@ -34,12 +36,15 @@ func CatalogCommand() cli.Command {
 					Name:   "install",
 					Usage:  "Install catalog template",
 					Action: errorWrapper(catalogInstall),
+					ArgsUsage: "[ID or NAME]"
 					Flags:  []cli.Flag{},
 				},
 				cli.Command{
 					Name:   "upgrade",
 					Usage:  "Upgrade catalog template",
 					Action: errorWrapper(envUpdate),
+					ArgsUsage: "[ID or NAME]"
+					Flags:  []cli.Flag{},
 				},
 			*/
 		},

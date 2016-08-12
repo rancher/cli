@@ -87,9 +87,10 @@ func LoadConfig(path string) (Config, error) {
 
 func ConfigCommand() cli.Command {
 	return cli.Command{
-		Name:   "config",
-		Usage:  "Setup client configuration",
-		Action: errorWrapper(configSetup),
+		Name:      "config",
+		Usage:     "Setup client configuration",
+		Action:    errorWrapper(configSetup),
+		ArgsUsage: "None",
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "dump",

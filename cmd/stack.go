@@ -12,15 +12,24 @@ func StackCommand() cli.Command {
 		Name:      "stacks",
 		ShortName: "stack",
 		Usage:     "Operations on stacks",
-		Action:    stackLs,
-		Flags: []cli.Flag{
-			cli.BoolFlag{
-				Name:  "quiet,q",
-				Usage: "Only display IDs",
-			},
-			cli.StringFlag{
-				Name:  "format",
-				Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+		Action:    defaultAction(stackLs),
+		Subcommands: []cli.Command{
+			cli.Command{
+				Name:        "ls",
+				Usage:       "List stacks",
+				Description: "\nLists all stacks in the current $RANCHER_ENVIRONMENT. Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher stacks ls\n\t$ rancher --env 1a5 stacks ls\n",
+				ArgsUsage:   "None",
+				Action:      stackLs,
+				Flags: []cli.Flag{
+					cli.BoolFlag{
+						Name:  "quiet,q",
+						Usage: "Only display IDs",
+					},
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+					},
+				},
 			},
 		},
 	}

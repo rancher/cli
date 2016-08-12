@@ -23,10 +23,12 @@ var loggerFactory = logger.NewColorLoggerFactory()
 
 func LogsCommand() cli.Command {
 	return cli.Command{
-		Name:     "logs",
-		Usage:    "Fetch the logs of a container",
-		HideHelp: true,
-		Action:   logsCommand,
+		Name:        "logs",
+		Usage:       "Fetch the logs of a container",
+		Description: "\nExample:\n\t$ rancher logs web\n",
+		ArgsUsage:   "[CONTAINERNAME CONTAINERID...]",
+		HideHelp:    true,
+		Action:      logsCommand,
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "follow,f",
