@@ -210,7 +210,12 @@ func envLs(ctx *cli.Context) error {
 	}, ctx)
 	defer writer.Close()
 
-	collection, err := c.Project.List(nil)
+	collection := client.ProjectCollection{}
+	err = c.List("account", &client.ListOpts{
+		Filters: map[string]interface{}{
+			"kind": "project",
+		},
+	}, &collection)
 	if err != nil {
 		return err
 	}
