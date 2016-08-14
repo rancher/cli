@@ -19,7 +19,7 @@ func EnvCommand() cli.Command {
 			cli.Command{
 				Name:        "ls",
 				Usage:       "List environments",
-				Description: "\nExample:\n\t$ rancher env ls\n",
+				Description: "\nWith an account API key, all environments in Rancher will be listed. If you are using an environment API key, it will only list the environment of the API key. \n\nExample:\n\t$ rancher env ls\n",
 				ArgsUsage:   "None",
 				Action:      errorWrapper(envLs),
 				Flags: []cli.Flag{
@@ -36,7 +36,7 @@ func EnvCommand() cli.Command {
 			cli.Command{
 				Name:        "create",
 				Usage:       "Create an environment",
-				Description: "\nBy default, an environment with cattle orchestration framework will be created.\n\nExample:\n\t$ rancher env create newEnv\n\t$ rancher env create -o kubernetes newK8sEnv\n\t$ rancher env create -o mesos newMesosEnv\n\t$ rancher env create -o swarm newSwarmEnv\n",
+				Description: "\nBy default, an environment with cattle orchestration framework will be created. This command only works for Account API keys.\n\nExample:\n\t$ rancher env create newEnv\n\t$ rancher env create -o kubernetes newK8sEnv\n\t$ rancher env create -o mesos newMesosEnv\n\t$ rancher env create -o swarm newSwarmEnv\n",
 				ArgsUsage:   "[NEWENVNAME...]",
 				Action:      errorWrapper(envCreate),
 				Flags: []cli.Flag{
@@ -57,7 +57,7 @@ func EnvCommand() cli.Command {
 			cli.Command{
 				Name:        "update",
 				Usage:       "Update environment",
-				Description: "\nChange the orchestration framework of the environment.\n\nExample:\n\t$ rancher env update -o kubernetes 1a5\n",
+				Description: "\nChange the orchestration framework of the environment. This command only works for Account API keys.\n\nExample:\n\t$ rancher env update -o kubernetes 1a5\n",
 				ArgsUsage:   "[ENVID ENVNAME...]",
 				Action:      errorWrapper(envUpdate),
 				Flags: []cli.Flag{
