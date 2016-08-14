@@ -12,9 +12,9 @@ import (
 func ExportCommand() cli.Command {
 	return cli.Command{
 		Name:        "export",
-		Usage:       "Export configuration yml for a stack",
-		Description: "\nExports the docker-compose.yml and rancher-compose.yml for the specified stack.\n\nExample:\n\t$ rancher export mystack\n",
-		ArgsUsage:   "[STACKNAME...]",
+		Usage:       "Export configuration yml for a stack as a tar archive",
+		Description: "\nExports the docker-compose.yml and rancher-compose.yml for the specified stack as a tar archive.\n\nExample:\n\t$ rancher export mystack > files.tar\n\t$ rancher export -o files.tar mystack\n",
+		ArgsUsage:   "[STACKNAME STACKID...]",
 		Action:      exportService,
 		Flags: []cli.Flag{
 			cli.StringFlag{
@@ -40,7 +40,7 @@ func exportService(ctx *cli.Context) error {
 	}
 
 	if len(ctx.Args()) != 1 {
-		return fmt.Errorf("One stack name is required as an argument")
+		return fmt.Errorf("One stack name or ID is required as an argument")
 	}
 
 	resource, err := Lookup(c, ctx.Args()[0], "environment")
