@@ -27,7 +27,6 @@ func LogsCommand() cli.Command {
 		Usage:       "Fetch the logs of a container",
 		Description: "\nExample:\n\t$ rancher logs web\n",
 		ArgsUsage:   "[CONTAINERNAME CONTAINERID...]",
-		HideHelp:    true,
 		Action:      logsCommand,
 		Flags: []cli.Flag{
 			cli.BoolFlag{
