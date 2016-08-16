@@ -14,11 +14,16 @@ import (
 
 func ExecCommand() cli.Command {
 	return cli.Command{
-		Name:            "exec",
-		Usage:           "Run a command on a container",
-		SkipFlagParsing: true,
-		HideHelp:        true,
-		Action:          execCommand,
+		Name:        "exec",
+		Usage:       "Run a command on a container",
+		Description: "\nThe command will find the container on the host and use `docker exec` to access the container. Any options that `docker exec` uses can be passed as an option for `rancher exec`.\n\nExample:\n\t$ rancher exec -i -t 1i1\n",
+		Action:      execCommand,
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "help-docker",
+				Usage: "Display the `docker exec --help`",
+			},
+		},
 	}
 }
 
@@ -27,7 +32,7 @@ func execCommand(ctx *cli.Context) error {
 }
 
 func execCommandInternal(ctx *cli.Context) error {
-	if isHelp(ctx.Args()) {
+	if ctx.Bool("help-docker") {
 		return runDockerHelp("exec")
 	}
 

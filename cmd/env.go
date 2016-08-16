@@ -48,16 +48,16 @@ func EnvCommand() cli.Command {
 			},
 			cli.Command{
 				Name:        "rm",
-				Usage:       "Remove environment(s) by ID",
-				Description: "\nExample:\n\t$ rancher env rm 1a5\n",
-				ArgsUsage:   "[ENVID...]",
+				Usage:       "Remove environment(s)",
+				Description: "\nExample:\n\t$ rancher env rm 1a5\n\t$ rancher env rm newEnv\n",
+				ArgsUsage:   "[ENVID ENVNAME...]",
 				Action:      errorWrapper(envRm),
 				Flags:       []cli.Flag{},
 			},
 			cli.Command{
 				Name:        "update",
 				Usage:       "Update environment",
-				Description: "\nChange the orchestration framework of the environment. This command only works for Account API keys.\n\nExample:\n\t$ rancher env update -o kubernetes 1a5\n",
+				Description: "\nChange the orchestration framework of the environment. This command only works for Account API keys.\n\nExample:\n\t$ rancher env update -o kubernetes 1a5\n\t$ rancher env update -o cattle Default\n\t$ rancher env update -o swarm 1a5\n\t$ rancher env update -o mesos 1a5\n",
 				ArgsUsage:   "[ENVID ENVNAME...]",
 				Action:      errorWrapper(envUpdate),
 				Flags: []cli.Flag{
