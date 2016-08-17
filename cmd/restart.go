@@ -45,14 +45,24 @@ func restartResources(ctx *cli.Context) error {
 		return err
 	}
 
+	w, err := NewWaiter(ctx)
+	if err != nil {
+		return err
+	}
+
 	types := ctx.StringSlice("type")
 
 	var lastErr error
+	var envErr error
 	for _, id := range ctx.Args() {
 		resource, err := Lookup(c, id, types...)
 		if err != nil {
 			lastErr = err
-			fmt.Println(lastErr)
+			if _, envErr = LookupEnvironment(c, id); envErr != nil {
+				fmt.Println("Incorrect usage: Environments cannot be restarted.")
+			} else {
+				fmt.Println(lastErr)
+			}
 			continue
 		}
 
@@ -65,9 +75,14 @@ func restartResources(ctx *cli.Context) error {
 			lastErr = err
 			fmt.Println(lastErr)
 		} else {
-			fmt.Println(resource.Id)
+			w.Add(resource.Id)
+			//fmt.Println(resource.Id)
+		}
+
+		if lastErr != nil && envErr == nil {
+			return lastErr
 		}
 	}
 
-	return lastErr
+	return w.Wait()
 }

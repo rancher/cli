@@ -43,11 +43,16 @@ func startResources(ctx *cli.Context) error {
 	}
 
 	var lastErr error
+	var envErr error
 	for _, id := range ctx.Args() {
 		resource, err := Lookup(c, id, types...)
 		if err != nil {
 			lastErr = err
-			fmt.Println(lastErr)
+			if _, envErr = LookupEnvironment(c, id); envErr != nil {
+				fmt.Println("Incorrect usage: Use `rancher env start`.")
+			} else {
+				fmt.Println(lastErr)
+			}
 			continue
 		}
 
@@ -64,7 +69,7 @@ func startResources(ctx *cli.Context) error {
 		}
 	}
 
-	if lastErr != nil {
+	if lastErr != nil && envErr == nil {
 		return lastErr
 	}
 
