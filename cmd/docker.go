@@ -43,10 +43,7 @@ func doDocker(ctx *cli.Context) error {
 	}
 
 	if len(args) > 0 && args[0] == "--help-docker" {
-		cmd := exec.Command("docker", "--help")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Run()
+		return runDockerHelp("")
 	}
 
 	hostname := ctx.GlobalString("host")
