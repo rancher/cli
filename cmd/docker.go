@@ -67,7 +67,7 @@ func runDocker(hostname string, c *client.RancherClient, args []string) error {
 	return runDockerWithOutput(hostname, c, args, os.Stdout, os.Stderr)
 }
 
-func determineApiVersion(host *client.Host) string {
+func determineAPIVersion(host *client.Host) string {
 	version := host.Labels["io.rancher.host.docker_version"]
 	parts := strings.Split(fmt.Sprint(version), ".")
 	if len(parts) != 2 {
@@ -98,7 +98,7 @@ func runDockerWithOutput(hostname string, c *client.RancherClient, args []string
 		return fmt.Errorf("Can not contact host %s in state %s", hostname, state)
 	}
 
-	apiVersion := determineApiVersion(host)
+	apiVersion := determineAPIVersion(host)
 
 	tempfile, err := ioutil.TempFile("", "docker-sock")
 	if err != nil {
