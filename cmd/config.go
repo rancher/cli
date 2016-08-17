@@ -93,8 +93,8 @@ func ConfigCommand() cli.Command {
 		ArgsUsage: "None",
 		Flags: []cli.Flag{
 			cli.BoolFlag{
-				Name:  "dump",
-				Usage: "Dump the current configuration",
+				Name:  "print",
+				Usage: "Print the current configuration",
 			},
 		},
 	}
