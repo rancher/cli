@@ -14,10 +14,11 @@ import (
 
 func ExecCommand() cli.Command {
 	return cli.Command{
-		Name:        "exec",
-		Usage:       "Run a command on a container",
-		Description: "\nThe command will find the container on the host and use `docker exec` to access the container. Any options that `docker exec` uses can be passed as an option for `rancher exec`.\n\nExample:\n\t$ rancher exec -i -t 1i1\n",
-		Action:      execCommand,
+		Name:            "exec",
+		Usage:           "Run a command on a container",
+		Description:     "\nThe command will find the container on the host and use `docker exec` to access the container. Any options that `docker exec` uses can be passed as an option for `rancher exec`.\n\nExample:\n\t$ rancher exec -i -t 1i1\n",
+		Action:          execCommand,
+		SkipFlagParsing: true,
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "help-docker",
@@ -32,7 +33,12 @@ func execCommand(ctx *cli.Context) error {
 }
 
 func execCommandInternal(ctx *cli.Context) error {
-	if ctx.Bool("help-docker") {
+	args := ctx.Args()
+	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
+		return cli.ShowCommandHelp(ctx, "exec")
+	}
+
+	if len(args) > 0 && args[0] == "--help-docker" {
 		return runDockerHelp("exec")
 	}
 
@@ -46,12 +52,14 @@ func execCommandInternal(ctx *cli.Context) error {
 		return err
 	}
 
+	// this is a massive hack. Need to fix the real issue
+	args = append([]string{"-i"}, args...)
 	return runDockerCommand(hostID, c, "exec", args)
 }
 
 func isHelp(args []string) bool {
 	for _, i := range args {
-		if i == "--help" {
+		if i == "--help" || i == "-h" {
 			return true
 		}
 	}
@@ -175,7 +183,11 @@ func getHostnameAndContainerID(c *client.RancherClient, containerID string) (str
 }
 
 func runDockerHelp(subcommand string) error {
-	cmd := exec.Command("docker", subcommand, "--help")
+	args := []string{"--help"}
+	if subcommand != "" {
+		args = []string{subcommand, "--help"}
+	}
+	cmd := exec.Command("docker", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
