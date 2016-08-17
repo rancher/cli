@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/signal"
+	"strconv"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/client"
@@ -19,7 +22,13 @@ func DockerCommand() cli.Command {
 		Usage:       "Run docker CLI on a host",
 		Description: "\nUses the $RANCHER_DOCKER_HOST to run docker commands. Use `--host <hostID>` or `--host <hostName>` to select a different host.\n\nExample:\n\t$ rancher --host 1h1 docker ps\n",
 		Action:      hostDocker,
-		Flags:       []cli.Flag{},
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "help-docker",
+				Usage: "Display the 'docker --help'",
+			},
+		},
+		SkipFlagParsing: true,
 	}
 }
 
@@ -28,8 +37,19 @@ func hostDocker(ctx *cli.Context) error {
 }
 
 func doDocker(ctx *cli.Context) error {
-	hostname := ctx.GlobalString("host")
+	args := ctx.Args()
+	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
+		return cli.ShowCommandHelp(ctx, "docker")
+	}
 
+	if len(args) > 0 && args[0] == "--help-docker" {
+		cmd := exec.Command("docker", "--help")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
+	}
+
+	hostname := ctx.GlobalString("host")
 	if hostname == "" {
 		return fmt.Errorf("--host is required")
 	}
@@ -39,7 +59,7 @@ func doDocker(ctx *cli.Context) error {
 		return err
 	}
 
-	return runDocker(hostname, c, ctx.Args())
+	return runDocker(hostname, c, args)
 }
 
 func runDockerCommand(hostname string, c *client.RancherClient, command string, args []string) error {
@@ -48,6 +68,20 @@ func runDockerCommand(hostname string, c *client.RancherClient, command string, 
 
 func runDocker(hostname string, c *client.RancherClient, args []string) error {
 	return runDockerWithOutput(hostname, c, args, os.Stdout, os.Stderr)
+}
+
+func determineApiVersion(host *client.Host) string {
+	version := host.Labels["io.rancher.host.docker_version"]
+	parts := strings.Split(fmt.Sprint(version), ".")
+	if len(parts) != 2 {
+		return ""
+	}
+	num, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("1.%d", num+12)
 }
 
 func runDockerWithOutput(hostname string, c *client.RancherClient, args []string,
@@ -66,6 +100,8 @@ func runDockerWithOutput(hostname string, c *client.RancherClient, args []string
 	if state != "active" {
 		return fmt.Errorf("Can not contact host %s in state %s", hostname, state)
 	}
+
+	apiVersion := determineApiVersion(host)
 
 	tempfile, err := ioutil.TempFile("", "docker-sock")
 	if err != nil {
@@ -88,8 +124,12 @@ func runDockerWithOutput(hostname string, c *client.RancherClient, args []string
 	}()
 
 	var cmd *exec.Cmd
-	if len(args) == 1 && args[0] == "--" {
-		cmd = exec.Command(os.Getenv("SHELL"), args[1:]...)
+	if len(args) > 0 && args[0] == "--" {
+		if len(args) > 1 {
+			cmd = exec.Command(args[1], args[2:]...)
+		} else {
+			cmd = exec.Command(os.Getenv("SHELL"))
+		}
 		cmd.Env = append(os.Environ(), "debian_chroot=docker:"+hostname)
 	} else {
 		cmd = exec.Command("docker", args...)
@@ -97,9 +137,13 @@ func runDockerWithOutput(hostname string, c *client.RancherClient, args []string
 	}
 
 	cmd.Env = append(cmd.Env, "DOCKER_HOST="+dockerHost)
+	if apiVersion != "" {
+		cmd.Env = append(cmd.Env, "DOCKER_API_VERSION="+apiVersion)
+	}
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = out
 	cmd.Stderr = outErr
 
+	signal.Ignore(os.Interrupt)
 	return cmd.Run()
 }
