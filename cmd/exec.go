@@ -21,7 +21,7 @@ func ExecCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "help-docker",
-				Usage: "Display the `docker exec --help`",
+				Usage: "Display the 'docker exec --help'",
 			},
 		},
 	}
