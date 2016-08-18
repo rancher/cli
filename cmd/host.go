@@ -17,7 +17,7 @@ func HostCommand() cli.Command {
 				Usage:       "List hosts",
 				Description: "\nLists all hosts in the current $RANCHER_ENVIRONMENT. Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher hosts ls\n\t$ rancher --env 1a5 hosts ls\n",
 				ArgsUsage:   "None",
-				Action:      errorWrapper(hostLs),
+				Action:      hostLs,
 				Flags: []cli.Flag{
 					cli.BoolFlag{
 						Name:  "quiet,q",
@@ -35,7 +35,7 @@ func HostCommand() cli.Command {
 				Description:     "\nCreates a host in the $RANCHER_ENVIRONMENT. Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher --env k8slab host create newHostName\n",
 				ArgsUsage:       "[NEWHOSTNAME...]",
 				SkipFlagParsing: true,
-				Action:          errorWrapper(hostCreate),
+				Action:          hostCreate,
 			},
 		},
 	}

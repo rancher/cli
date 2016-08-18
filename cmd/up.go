@@ -8,15 +8,34 @@ import (
 
 func UpCommand() cli.Command {
 	factory := &projectFactory{}
-	return rancherApp.UpCommand(factory)
+	cmd := rancherApp.UpCommand(factory)
+	cmd.Flags = append(cmd.Flags, []cli.Flag{
+		cli.StringFlag{
+			Name:  "rancher-file",
+			Usage: "Specify an alternate Rancher compose file (default: rancher-compose.yml)",
+		},
+		cli.StringFlag{
+			Name:  "env-file,e",
+			Usage: "Specify a file from which to read environment variables",
+		},
+		cli.StringSliceFlag{
+			Name:   "file,f",
+			Usage:  "Specify one or more alternate compose files (default: docker-compose.yml)",
+			Value:  &cli.StringSlice{},
+			EnvVar: "COMPOSE_FILE",
+		},
+		cli.StringFlag{
+			Name:  "stack,s",
+			Usage: "Specify an alternate project name (default: directory name)",
+		},
+	}...)
+	return cmd
 }
 
 type projectFactory struct {
 }
 
 func (p *projectFactory) Create(c *cli.Context) (project.APIProject, error) {
-	factory := &rancherApp.ProjectFactory{}
-
 	config, err := lookupConfig(c)
 	if err != nil {
 		return nil, err
@@ -27,10 +46,19 @@ func (p *projectFactory) Create(c *cli.Context) (project.APIProject, error) {
 		return nil, err
 	}
 
+	// from config
 	c.GlobalSet("url", url)
 	c.GlobalSet("access-key", config.AccessKey)
 	c.GlobalSet("secret-key", config.SecretKey)
-	c.GlobalSet("project-name", c.GlobalString("stack"))
 
+	// copy from flags
+	c.GlobalSet("rancher-file", c.String("rancher-file"))
+	c.GlobalSet("env-file", c.String("env-file"))
+	c.GlobalSet("project-name", c.String("stack"))
+	for _, f := range c.StringSlice("file") {
+		c.GlobalSet("file", f)
+	}
+
+	factory := &rancherApp.ProjectFactory{}
 	return factory.Create(c)
 }

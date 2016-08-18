@@ -16,6 +16,7 @@ func PsCommand() cli.Command {
 		ArgsUsage:   "None",
 		Action:      servicePs,
 		Flags: []cli.Flag{
+			listAllFlag(),
 			cli.BoolFlag{
 				Name:  "containers,c",
 				Usage: "Display containers",
@@ -34,13 +35,7 @@ func PsCommand() cli.Command {
 
 func GetStackMap(c *client.RancherClient) map[string]client.Environment {
 	result := map[string]client.Environment{}
-
-	stacks, err := c.Environment.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"limit": -1,
-		},
-	})
-
+	stacks, err := c.Environment.List(defaultListOpts(nil))
 	if err != nil {
 		return result
 	}
@@ -82,7 +77,7 @@ func servicePs(ctx *cli.Context) error {
 
 	stackMap := GetStackMap(c)
 
-	collection, err := c.Service.List(nil)
+	collection, err := c.Service.List(defaultListOpts(ctx))
 	if err != nil {
 		return errors.Wrap(err, "service list failed")
 	}
@@ -145,7 +140,7 @@ func serviceContainersPs(ctx *cli.Context, c *client.RancherClient, names []stri
 
 func hostContainerPs(ctx *cli.Context, c *client.RancherClient) error {
 	if len(ctx.Args()) == 0 {
-		containerList, err := c.Container.List(nil)
+		containerList, err := c.Container.List(defaultListOpts(ctx))
 		if err != nil {
 			return err
 		}

@@ -88,9 +88,12 @@ func (r ResourceID) Type() string {
 	return str[:strings.Index(str, ":")]
 }
 
-func (w *Waiter) Add(resource string) {
-	fmt.Println(resource)
-	w.resources = append(w.resources, resource)
+func (w *Waiter) Add(resources ...string) *Waiter {
+	for _, resource := range resources {
+		fmt.Println(resource)
+		w.resources = append(w.resources, resource)
+	}
+	return w
 }
 
 func (w *Waiter) done(resourceType, id string) (bool, error) {
