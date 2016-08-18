@@ -1,14 +1,14 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/rancher/go-rancher/client"
 	"github.com/urfave/cli"
 )
 
 var (
-	stopTypes = cli.StringSlice([]string{"service", "container", "host"})
+	stopTypes = []string{"service", "container", "host"}
 )
 
 func StopCommand() cli.Command {
@@ -20,63 +20,17 @@ func StopCommand() cli.Command {
 		ArgsUsage:   "[ID NAME...]",
 		Action:      stopResources,
 		Flags: []cli.Flag{
-			cli.StringSliceFlag{
-				Name:  "type",
-				Usage: "Restrict stop to specific types",
-				Value: &stopTypes,
-			},
+			typesStringFlag(stopTypes),
 		},
 	}
 }
 
 func stopResources(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	types := ctx.StringSlice("type")
-
-	w, err := NewWaiter(ctx)
-	if err != nil {
-		return err
-	}
-
-	var lastErr error
-	var envErr error
-	for _, id := range ctx.Args() {
-		resource, err := Lookup(c, id, types...)
+	return forEachResource(ctx, stopTypes, func(c *client.RancherClient, resource *client.Resource) (string, error) {
+		action, err := pickAction(resource, "stop", "deactivate")
 		if err != nil {
-			lastErr = err
-			if _, envErr = LookupEnvironment(c, id); envErr != nil {
-				fmt.Println("Incorrect usage: Use `rancher env stop`.")
-			} else {
-				fmt.Println(lastErr)
-			}
-			continue
+			return "", err
 		}
-
-		action := ""
-		if _, ok := resource.Actions["stop"]; ok {
-			action = "stop"
-		} else if _, ok := resource.Actions["deactivate"]; ok {
-			action = "deactivate"
-		}
-
-		if action == "" {
-			lastErr = fmt.Errorf("stop or deactivate not available on %s", id)
-			fmt.Println(lastErr)
-		} else if err := c.Action(resource.Type, action, resource, nil, resource); err != nil {
-			lastErr = err
-			fmt.Println(lastErr)
-		} else {
-			w.Add(resource.Id)
-		}
-	}
-
-	if lastErr != nil && envErr == nil {
-		return lastErr
-	}
-
-	return w.Wait()
+		return resource.Id, c.Action(resource.Type, action, resource, nil, resource)
+	})
 }

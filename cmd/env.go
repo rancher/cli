@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/client"
 	"github.com/urfave/cli"
 )
@@ -21,8 +20,9 @@ func EnvCommand() cli.Command {
 				Usage:       "List environments",
 				Description: "\nWith an account API key, all environments in Rancher will be listed. If you are using an environment API key, it will only list the environment of the API key. \n\nExample:\n\t$ rancher env ls\n",
 				ArgsUsage:   "None",
-				Action:      errorWrapper(envLs),
+				Action:      envLs,
 				Flags: []cli.Flag{
+					listAllFlag(),
 					cli.BoolFlag{
 						Name:  "quiet,q",
 						Usage: "Only display IDs",
@@ -38,7 +38,7 @@ func EnvCommand() cli.Command {
 				Usage:       "Create an environment",
 				Description: "\nBy default, an environment with cattle orchestration framework will be created. This command only works for Account API keys.\n\nExample:\n\t$ rancher env create newEnv\n\t$ rancher env create -o kubernetes newK8sEnv\n\t$ rancher env create -o mesos newMesosEnv\n\t$ rancher env create -o swarm newSwarmEnv\n",
 				ArgsUsage:   "[NEWENVNAME...]",
-				Action:      errorWrapper(envCreate),
+				Action:      envCreate,
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "orchestration,o",
@@ -51,7 +51,7 @@ func EnvCommand() cli.Command {
 				Usage:       "Remove environment(s)",
 				Description: "\nExample:\n\t$ rancher env rm 1a5\n\t$ rancher env rm newEnv\n",
 				ArgsUsage:   "[ENVID ENVNAME...]",
-				Action:      errorWrapper(envRm),
+				Action:      envRm,
 				Flags:       []cli.Flag{},
 			},
 			cli.Command{
@@ -59,13 +59,41 @@ func EnvCommand() cli.Command {
 				Usage:       "Update environment",
 				Description: "\nChange the orchestration framework of the environment. This command only works for Account API keys.\n\nExample:\n\t$ rancher env update -o kubernetes 1a5\n\t$ rancher env update -o cattle Default\n\t$ rancher env update -o swarm 1a5\n\t$ rancher env update -o mesos 1a5\n",
 				ArgsUsage:   "[ENVID ENVNAME...]",
-				Action:      errorWrapper(envUpdate),
+				Action:      envUpdate,
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "orchestration,o",
 						Usage: "Orchestration framework",
 					},
 				},
+			},
+			cli.Command{
+				Name:  "deactivate",
+				Usage: "Deactivate environment(s)",
+				Description: `
+Deactivate an environment by ID or name
+
+Example:
+	$ rancher env deactivate 1a5
+	$ rancher env deactivate Default
+`,
+				ArgsUsage: "[ID NAME...]",
+				Action:    envDeactivate,
+				Flags:     []cli.Flag{},
+			},
+			cli.Command{
+				Name:  "activate",
+				Usage: "Activate environment(s)",
+				Description: `
+Activate an environment by ID or name
+
+Example:
+	$ rancher env activate 1a5
+	$ rancher env activate Default
+`,
+				ArgsUsage: "[ID NAME...]",
+				Action:    envActivate,
+				Flags:     []cli.Flag{},
 			},
 		},
 	}
@@ -102,23 +130,9 @@ func envRm(ctx *cli.Context) error {
 		return err
 	}
 
-	var lastErr error
-	for _, id := range ctx.Args() {
-		env, err := Lookup(c, id, "account")
-		if err != nil {
-			logrus.Errorf("Failed to delete %s: %v", id, err)
-			lastErr = err
-			continue
-		}
-		if err := c.Delete(env); err != nil {
-			logrus.Errorf("Failed to delete %s: %v", id, err)
-			lastErr = err
-			continue
-		}
-		fmt.Println(env.Id)
-	}
-
-	return lastErr
+	return forEachResourceWithClient(c, ctx, []string{"project"}, func(c *client.RancherClient, resource *client.Resource) (string, error) {
+		return resource.Id, c.Delete(resource)
+	})
 }
 
 func envUpdate(ctx *cli.Context) error {
@@ -151,7 +165,7 @@ func envUpdate(ctx *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(env.Name + " (" + env.Id + ")")
+	fmt.Println(env.Id)
 	return nil
 }
 
@@ -177,7 +191,7 @@ func envCreate(ctx *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(newEnv.Name + " (" + newEnv.Id + ")")
+	fmt.Println(newEnv.Id)
 	return nil
 }
 
@@ -211,12 +225,9 @@ func envLs(ctx *cli.Context) error {
 	defer writer.Close()
 
 	collection := client.ProjectCollection{}
-	err = c.List("account", &client.ListOpts{
-		Filters: map[string]interface{}{
-			"kind": "project",
-		},
-	}, &collection)
-	if err != nil {
+	listOpts := defaultListOpts(ctx)
+	listOpts.Filters["kind"] = "project"
+	if err = c.List("account", listOpts, &collection); err != nil {
 		return err
 	}
 
@@ -225,4 +236,34 @@ func envLs(ctx *cli.Context) error {
 	}
 
 	return writer.Err()
+}
+
+func envDeactivate(ctx *cli.Context) error {
+	c, err := GetRawClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	return forEachResourceWithClient(c, ctx, []string{"project"}, func(c *client.RancherClient, resource *client.Resource) (string, error) {
+		action, err := pickAction(resource, "deactivate")
+		if err != nil {
+			return "", err
+		}
+		return resource.Id, c.Action(resource.Type, action, resource, nil, resource)
+	})
+}
+
+func envActivate(ctx *cli.Context) error {
+	c, err := GetRawClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	return forEachResourceWithClient(c, ctx, []string{"project"}, func(c *client.RancherClient, resource *client.Resource) (string, error) {
+		action, err := pickAction(resource, "activate")
+		if err != nil {
+			return "", err
+		}
+		return resource.Id, c.Action(resource.Type, action, resource, nil, resource)
+	})
 }

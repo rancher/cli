@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -20,6 +21,22 @@ type Config struct {
 	URL         string `json:"url"`
 	Environment string `json:"environment"`
 	Path        string `json:"path,omitempty"`
+}
+
+func baseURL(fullURL string) (string, error) {
+	idx := strings.LastIndex(fullURL, "/v1")
+	if idx == -1 {
+		u, err := url.Parse(fullURL)
+		if err != nil {
+			return "", err
+		}
+		newURL := url.URL{
+			Scheme: u.Scheme,
+			Host:   u.Host,
+		}
+		return newURL.String(), nil
+	}
+	return fullURL[:idx], nil
 }
 
 func (c Config) EnvironmentURL() (string, error) {
@@ -40,12 +57,11 @@ func (c Config) EnvironmentURL() (string, error) {
 		projectID = project.Id
 	}
 
-	idx := strings.LastIndex(c.URL, "/v1")
-	if idx == -1 {
-		return "", fmt.Errorf("Invalid URL %s, must contain /v1", c.URL)
+	url, err := baseURL(c.URL)
+	if err != nil {
+		return "", err
 	}
-
-	url := c.URL[:idx] + "/v1/projects/" + projectID + "/schemas"
+	url = url + "/v1/projects/" + projectID + "/schemas"
 	return url, nil
 }
 
@@ -89,7 +105,7 @@ func ConfigCommand() cli.Command {
 	return cli.Command{
 		Name:      "config",
 		Usage:     "Setup client configuration",
-		Action:    errorWrapper(configSetup),
+		Action:    configSetup,
 		ArgsUsage: "None",
 		Flags: []cli.Flag{
 			cli.BoolFlag{

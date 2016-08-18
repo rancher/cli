@@ -17,8 +17,8 @@ Usage: {{.Name}} {{if .Flags}}[OPTIONS] {{end}}COMMAND [arg...]
 Version: {{.Version}}
 {{if .Flags}}
 Options:
-  {{range .Flags}}{{.}}
-  {{end}}{{end}}
+  {{range .Flags}}{{if .Hidden}}{{else}}{{.}}
+  {{end}}{{end}}{{end}}
 Commands:
   {{range .Commands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
   {{end}}
@@ -90,24 +90,6 @@ func mainErr() error {
 			Usage:  "Host used for docker command",
 			EnvVar: "RANCHER_DOCKER_HOST",
 		},
-		cli.StringFlag{
-			Name:  "rancher-file,r",
-			Usage: "Specify an alternate Rancher compose file (default: rancher-compose.yml)",
-		},
-		cli.StringFlag{
-			Name:  "env-file,e",
-			Usage: "Specify a file from which to read environment variables",
-		},
-		cli.StringSliceFlag{
-			Name:   "file,f",
-			Usage:  "Specify one or more alternate compose files (default: docker-compose.yml)",
-			Value:  &cli.StringSlice{},
-			EnvVar: "COMPOSE_FILE",
-		},
-		cli.StringFlag{
-			Name:  "stack,s",
-			Usage: "Specify an alternate project name (default: directory name)",
-		},
 		cli.BoolFlag{
 			Name:  "wait,w",
 			Usage: "Wait for resource to reach resting state",
@@ -120,6 +102,23 @@ func mainErr() error {
 		cli.StringFlag{
 			Name:  "wait-state",
 			Usage: "State to wait for (active, healthy, etc)",
+		},
+		// Below four flags are for rancher-compose code capability.  The users doesn't use them directly
+		cli.StringFlag{
+			Name:   "rancher-file",
+			Hidden: true,
+		},
+		cli.StringFlag{
+			Name:   "env-file",
+			Hidden: true,
+		},
+		cli.StringSliceFlag{
+			Name:   "file,f",
+			Hidden: true,
+		},
+		cli.StringFlag{
+			Name:   "project-name",
+			Hidden: true,
 		},
 	}
 	app.Commands = []cli.Command{
@@ -143,6 +142,7 @@ func mainErr() error {
 		cmd.StopCommand(),
 		cmd.UpCommand(),
 		//cmd.VolumeCommand(),
+		cmd.InspectCommand(),
 		cmd.WaitCommand(),
 	}
 

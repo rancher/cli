@@ -21,7 +21,11 @@ type DigitaloceanConfig struct {
 
 	Size string `json:"size,omitempty" yaml:"size,omitempty"`
 
+	SshPort string `json:"sshPort,omitempty" yaml:"ssh_port,omitempty"`
+
 	SshUser string `json:"sshUser,omitempty" yaml:"ssh_user,omitempty"`
+
+	Userdata string `json:"userdata,omitempty" yaml:"userdata,omitempty"`
 }
 
 type DigitaloceanConfigCollection struct {

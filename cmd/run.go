@@ -12,9 +12,6 @@ import (
   --add-host=[]                   Add a custom host-to-IP mapping (host:ip)
   --blkio-weight                  Block IO (relative weight), between 10 and 1000
   --blkio-weight-device=[]        Block IO weight (relative device weight)
-  x--cpu-shares                    CPU shares (relative weight)
-  x--cap-add=[]                    Add Linux capabilities
-  x--cap-drop=[]                   Drop Linux capabilities
   --cgroup-parent                 Optional parent cgroup for the container
   --cidfile                       Write the container ID to the file
   --cpu-period                    Limit CPU CFS (Completely Fair Scheduler) period
@@ -23,23 +20,16 @@ import (
   --cpuset-mems                   MEMs in which to allow execution (0-3, 0,1)
   -d, --detach                    Run container in background and print container ID
   --detach-keys                   Override the key sequence for detaching a container
-  x--device=[]                     Add a host device to the container
   --device-read-bps=[]            Limit read rate (bytes per second) from a device
   --device-read-iops=[]           Limit read rate (IO per second) from a device
   --device-write-bps=[]           Limit write rate (bytes per second) to a device
   --device-write-iops=[]          Limit write rate (IO per second) to a device
   --disable-content-trust=true    Skip image verification
-  x--dns=[]                        Set custom DNS servers
   --dns-opt=[]                    Set DNS options
-  x--dns-search=[]                 Set custom DNS search domains
   -e, --env=[]                    Set environment variables
-  x--entrypoint                    Overwrite the default ENTRYPOINT of the image
   --env-file=[]                   Read in a file of environment variables
-  x--expose=[]                     Expose a port or a range of ports
   --group-add=[]                  Add additional groups to join
-  x-h, --hostname                  Container host name
   --help                          Print usage
-  x-i, --interactive               Keep STDIN open even if not attached
   --ip                            Container IPv4 address (e.g. 172.30.100.104)
   --ip6                           Container IPv6 address (e.g. 2001:db8::33)
   --ipc                           IPC namespace to use
@@ -50,35 +40,23 @@ import (
   --link=[]                       Add link to another container
   --log-driver                    Logging driver for container
   --log-opt=[]                    Log driver options
-  x-m, --memory                    Memory limit
   --mac-address                   Container MAC address (e.g. 92:d0:c6:0a:29:33)
   --memory-reservation            Memory soft limit
-  x--memory-swap                   Swap limit equal to memory plus swap: '-1' to enable unlimited swap
   --memory-swappiness=-1          Tune container memory swappiness (0 to 100)
-  x--name                          Assign a name to the container
   --net=default                   Connect a container to a network
   --net-alias=[]                  Add network-scoped alias for the container
   --oom-kill-disable              Disable OOM Killer
   --oom-score-adj                 Tune host's OOM preferences (-1000 to 1000)
-  x-P, --publish-all               Publish all exposed ports to random ports
-  x-p, --publish=[]                Publish a container's port(s) to the host
-  x--pid                           PID namespace to use
-  x--privileged                    Give extended privileges to this container
-  x--read-only                     Mount the container's root filesystem as read only
   --restart=no                    Restart policy to apply when a container exits
   --rm                            Automatically remove the container when it exits
-  x--security-opt=[]               Security Options
   --shm-size                      Size of /dev/shm, default value is 64MB
   --sig-proxy=true                Proxy received signals to the process
   --stop-signal=SIGTERM           Signal to stop a container, SIGTERM by default
   --tmpfs=[]                      Mount a tmpfs directory
-  x-u, --user                      Username or UID (format: <name|uid>[:<group|gid>])
   --ulimit=[]                     Ulimit options
   --uts                           UTS namespace to use
   -v, --volume=[]                 Bind mount a volume
-  x--volume-driver                 Optional volume driver for the container
   --volumes-from=[]               Mount volumes from the specified container(s)
-  x-w, --workdir                   Working directory inside the container
 */
 
 func RunCommand() cli.Command {
@@ -179,6 +157,19 @@ func RunCommand() cli.Command {
 				Name:  "workdir, w",
 				Usage: "Working directory inside the container",
 			},
+			cli.StringFlag{
+				Name:  "log-driver",
+				Usage: "Logging driver for container",
+			},
+			cli.StringSliceFlag{
+				Name:  "log-opt",
+				Usage: "Log driver options",
+			},
+			cli.StringFlag{
+				Name:  "net",
+				Usage: "Connect a container to a network: host, none, bridge, managed",
+				Value: "managed",
+			},
 		},
 	}
 }
@@ -216,7 +207,6 @@ func serviceRun(ctx *cli.Context) error {
 	}
 
 	launchConfig := &client.LaunchConfig{
-
 		//BlkioDeviceOptions:
 		CapAdd:  ctx.StringSlice("cap-add"),
 		CapDrop: ctx.StringSlice("cap-drop"),
@@ -235,7 +225,7 @@ func serviceRun(ctx *cli.Context) error {
 		Memory:     ctx.Int64("memory"),
 		MemorySwap: ctx.Int64("memory-swap"),
 		//NetworkIds: ctx.StringSlice("networkids"),
-		//NetworkMode: ctx.String("network"),
+		NetworkMode:     ctx.String("net"),
 		PidMode:         ctx.String("pid"),
 		Ports:           ctx.StringSlice("publish"),
 		Privileged:      ctx.Bool("privileged"),
@@ -247,6 +237,21 @@ func serviceRun(ctx *cli.Context) error {
 		User:            ctx.String("user"),
 		VolumeDriver:    ctx.String("volume-driver"),
 		WorkingDir:      ctx.String("workdir"),
+	}
+
+	if ctx.String("log-driver") != "" || len(ctx.StringSlice("log-opt")) > 0 {
+		launchConfig.LogConfig = &client.LogConfig{
+			Driver: ctx.String("log-driver"),
+			Config: map[string]interface{}{},
+		}
+		for _, opt := range ctx.StringSlice("log-opt") {
+			parts := strings.SplitN(opt, "=", 2)
+			if len(parts) > 1 {
+				launchConfig.LogConfig.Config[parts[0]] = parts[1]
+			} else {
+				launchConfig.LogConfig.Config[parts[0]] = ""
+			}
+		}
 	}
 
 	args := ctx.Args()[1:]

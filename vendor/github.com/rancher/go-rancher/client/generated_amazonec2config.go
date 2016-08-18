@@ -11,6 +11,8 @@ type Amazonec2Config struct {
 
 	Ami string `json:"ami,omitempty" yaml:"ami,omitempty"`
 
+	DeviceName string `json:"deviceName,omitempty" yaml:"device_name,omitempty"`
+
 	IamInstanceProfile string `json:"iamInstanceProfile,omitempty" yaml:"iam_instance_profile,omitempty"`
 
 	InstanceType string `json:"instanceType,omitempty" yaml:"instance_type,omitempty"`
@@ -33,11 +35,19 @@ type Amazonec2Config struct {
 
 	SpotPrice string `json:"spotPrice,omitempty" yaml:"spot_price,omitempty"`
 
+	SshKeypath string `json:"sshKeypath,omitempty" yaml:"ssh_keypath,omitempty"`
+
 	SshUser string `json:"sshUser,omitempty" yaml:"ssh_user,omitempty"`
 
 	SubnetId string `json:"subnetId,omitempty" yaml:"subnet_id,omitempty"`
 
+	Tags string `json:"tags,omitempty" yaml:"tags,omitempty"`
+
+	UseEbsOptimizedInstance bool `json:"useEbsOptimizedInstance,omitempty" yaml:"use_ebs_optimized_instance,omitempty"`
+
 	UsePrivateAddress bool `json:"usePrivateAddress,omitempty" yaml:"use_private_address,omitempty"`
+
+	VolumeType string `json:"volumeType,omitempty" yaml:"volume_type,omitempty"`
 
 	VpcId string `json:"vpcId,omitempty" yaml:"vpc_id,omitempty"`
 
