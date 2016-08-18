@@ -115,7 +115,13 @@ func appendFilters(urlString string, filters map[string]interface{}) (string, er
 
 	q := u.Query()
 	for k, v := range filters {
-		q.Add(k, fmt.Sprintf("%v", v))
+		if l, ok := v.([]string); ok {
+			for _, v := range l {
+				q.Add(k, v)
+			}
+		} else {
+			q.Add(k, fmt.Sprintf("%v", v))
+		}
 	}
 
 	u.RawQuery = q.Encode()
