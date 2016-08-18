@@ -125,7 +125,7 @@ func configSetup(ctx *cli.Context) error {
 		return err
 	}
 
-	if ctx.Bool("dump") {
+	if ctx.Bool("print") {
 		return json.NewEncoder(os.Stdout).Encode(config)
 	}
 

@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	stopTypes = cli.StringSlice([]string{"service", "container", "host", "account"})
+	stopTypes = cli.StringSlice([]string{"service", "container", "host"})
 )
 
 func StopCommand() cli.Command {
@@ -43,11 +43,16 @@ func stopResources(ctx *cli.Context) error {
 	}
 
 	var lastErr error
+	var envErr error
 	for _, id := range ctx.Args() {
 		resource, err := Lookup(c, id, types...)
 		if err != nil {
 			lastErr = err
-			fmt.Println(lastErr)
+			if _, envErr = LookupEnvironment(c, id); envErr != nil {
+				fmt.Println("Incorrect usage: Use `rancher env stop`.")
+			} else {
+				fmt.Println(lastErr)
+			}
 			continue
 		}
 
@@ -69,7 +74,7 @@ func stopResources(ctx *cli.Context) error {
 		}
 	}
 
-	if lastErr != nil {
+	if lastErr != nil && envErr == nil {
 		return lastErr
 	}
 
