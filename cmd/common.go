@@ -153,25 +153,6 @@ func GetOrCreateDefaultStack(c *client.RancherClient, name string) (*client.Envi
 	})
 }
 
-func getProjectByName(c *client.RancherClient, name string) (client.ResourceCollection, error) {
-	var result client.ResourceCollection
-	err := c.List("account", &client.ListOpts{
-		Filters: map[string]interface{}{
-			"kind":  "project",
-			"limit": "-2",
-			"name":  name,
-		},
-	}, &result)
-	for i, resource := range result.Data {
-		err := c.ById("project", resource.Id, &resource)
-		if err != nil {
-			return result, err
-		}
-		result.Data[i] = resource
-	}
-	return result, err
-}
-
 func getHostByHostname(c *client.RancherClient, name string) (client.ResourceCollection, error) {
 	var result client.ResourceCollection
 	allHosts, err := c.Host.List(nil)
@@ -225,16 +206,13 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 		}
 
 		var collection client.ResourceCollection
-		// search by name for project doesn't work
-		if schemaType != "project" {
-			if err := c.List(schemaType, &client.ListOpts{
-				Filters: map[string]interface{}{
-					"name":         name,
-					"removed_null": 1,
-				},
-			}, &collection); err != nil {
-				return nil, err
-			}
+		if err := c.List(schemaType, &client.ListOpts{
+			Filters: map[string]interface{}{
+				"name":         name,
+				"removed_null": 1,
+			},
+		}, &collection); err != nil {
+			return nil, err
 		}
 
 		if len(collection.Data) > 1 {
@@ -249,8 +227,6 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 			var err error
 			// Per type specific logic
 			switch schemaType {
-			case "project":
-				collection, err = getProjectByName(c, name)
 			case "host":
 				collection, err = getHostByHostname(c, name)
 			case "service":
