@@ -226,8 +226,7 @@ func envLs(ctx *cli.Context) error {
 
 	collection := client.ProjectCollection{}
 	listOpts := defaultListOpts(ctx)
-	listOpts.Filters["kind"] = "project"
-	if err = c.List("account", listOpts, &collection); err != nil {
+	if err = c.List("project", listOpts, &collection); err != nil {
 		return err
 	}
 
