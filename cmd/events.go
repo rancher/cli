@@ -6,6 +6,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/cli/monitor"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
 

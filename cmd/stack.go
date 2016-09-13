@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
 
@@ -38,7 +38,7 @@ func StackCommand() cli.Command {
 type StackData struct {
 	ID      string
 	Catalog string
-	Stack   client.Environment
+	Stack   client.Stack
 	State   string
 	System  bool
 }
@@ -49,7 +49,7 @@ func stackLs(ctx *cli.Context) error {
 		return err
 	}
 
-	collection, err := c.Environment.List(nil)
+	collection, err := c.Stack.List(defaultListOpts(nil))
 	if err != nil {
 		return err
 	}

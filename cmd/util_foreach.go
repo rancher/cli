@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
 
@@ -35,7 +35,7 @@ func forEachResourceWithClient(c *client.RancherClient, ctx *cli.Context, types 
 			resourceID = resource.Id
 		}
 		lastErr = printErr(resource.Id, lastErr, err)
-		if resourceID != "" {
+		if resourceID != "" && resourceID != "-" {
 			w.Add(resourceID)
 		}
 	}

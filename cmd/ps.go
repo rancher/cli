@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
 
@@ -49,7 +51,7 @@ func GetStackMap(c *client.RancherClient) map[string]client.Environment {
 
 type PsData struct {
 	Service       client.Service
-	Stack         client.Environment
+	Stack         client.Stack
 	CombinedState string
 	ID            string
 }

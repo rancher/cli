@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 func FormatEndpoint(data interface{}) string {

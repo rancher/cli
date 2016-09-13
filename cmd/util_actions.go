@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 func pickAction(resource *client.Resource, actions ...string) (string, error) {
@@ -19,6 +19,5 @@ func pickAction(resource *client.Resource, actions ...string) (string, error) {
 }
 
 func replaceTypeNames(msg string) string {
-	msg = strings.Replace(msg, "environment", "stack", -1)
 	return strings.Replace(msg, "project", "enviroment", -1)
 }

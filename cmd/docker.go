@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/rancher-docker-api-proxy"
 	"github.com/urfave/cli"
 )

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/rancher/go-rancher/v2"
 	"io"
 	"os"
 	"os/exec"
@@ -12,7 +13,6 @@ import (
 	"text/template"
 
 	"github.com/docker/docker/pkg/namesgenerator"
-	"github.com/rancher/go-rancher/client"
 	"github.com/urfave/cli"
 )
 
@@ -129,12 +129,12 @@ func LookupEnvironment(c *client.RancherClient, name string) (*client.Project, e
 	return c.Project.ById(env.Id)
 }
 
-func GetOrCreateDefaultStack(c *client.RancherClient, name string) (*client.Environment, error) {
+func GetOrCreateDefaultStack(c *client.RancherClient, name string) (*client.Stack, error) {
 	if name == "" {
 		name = "Default"
 	}
 
-	resp, err := c.Environment.List(&client.ListOpts{
+	resp, err := c.Stack.List(&client.ListOpts{
 		Filters: map[string]interface{}{
 			"name":         name,
 			"removed_null": 1,
@@ -148,7 +148,7 @@ func GetOrCreateDefaultStack(c *client.RancherClient, name string) (*client.Envi
 		return &resp.Data[0], nil
 	}
 
-	return c.Environment.Create(&client.Environment{
+	return c.Stack.Create(&client.Stack{
 		Name: name,
 	})
 }
@@ -175,12 +175,12 @@ func RandomName() string {
 
 func getServiceByName(c *client.RancherClient, name string) (client.ResourceCollection, error) {
 	var result client.ResourceCollection
-	env, serviceName, err := ParseName(c, name)
+	stack, serviceName, err := ParseName(c, name)
 
 	services, err := c.Service.List(&client.ListOpts{
 		Filters: map[string]interface{}{
-			"environmentId": env.Id,
-			"name":          serviceName,
+			"stackId": stack.Id,
+			"name":    serviceName,
 		},
 	})
 	if err != nil {
