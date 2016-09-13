@@ -11,8 +11,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 
-	rancher "github.com/rancher/go-rancher/client"
 	"github.com/rancher/go-rancher/hostaccess"
+	rancher "github.com/rancher/go-rancher/v2"
 )
 
 type IoOps interface {

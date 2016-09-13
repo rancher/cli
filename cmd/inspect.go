@@ -3,12 +3,12 @@ package cmd
 import (
 	"strings"
 
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
 
 var (
-	inspectTypes = []string{"service", "container", "host", "project", "environment"}
+	inspectTypes = []string{"service", "container", "host", "project", "stack"}
 )
 
 func InspectCommand() cli.Command {
@@ -44,14 +44,14 @@ func inspectResources(ctx *cli.Context) error {
 		mapResource := map[string]interface{}{}
 		err := c.ById(resource.Type, resource.Id, &mapResource)
 		if err != nil {
-			return "", err
+			return "-", err
 		}
 		if !ctx.Bool("links") {
 			delete(mapResource, "links")
 			delete(mapResource, "actions")
 		}
 		writer.Write(mapResource)
-		return "", nil
+		return "-", nil
 	})
 	return writer.Err()
 }

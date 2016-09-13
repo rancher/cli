@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"github.com/rancher/go-rancher/v2"
 	"strings"
 
-	"github.com/rancher/go-rancher/client"
 	"github.com/urfave/cli"
 )
 
@@ -174,7 +174,7 @@ func RunCommand() cli.Command {
 	}
 }
 
-func ParseName(c *client.RancherClient, name string) (*client.Environment, string, error) {
+func ParseName(c *client.RancherClient, name string) (*client.Stack, string, error) {
 	stackName := ""
 	serviceName := name
 
@@ -267,7 +267,7 @@ func serviceRun(ctx *cli.Context) error {
 
 	service := &client.Service{
 		Name:          name,
-		EnvironmentId: stack.Id,
+		StackId:       stack.Id,
 		LaunchConfig:  launchConfig,
 		StartOnCreate: true,
 	}

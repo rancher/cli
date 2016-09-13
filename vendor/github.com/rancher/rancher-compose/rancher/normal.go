@@ -5,7 +5,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/libcompose/utils"
-	rancherClient "github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/rancher-compose/digest"
 )
 
@@ -41,7 +41,7 @@ func (f *NormalFactory) configAndHash(r *RancherService) (digest.ServiceHash, *C
 	return hash, rancherService, nil
 }
 
-func (f *NormalFactory) config(r *RancherService) (*CompositeService, *rancherClient.LaunchConfig, []rancherClient.SecondaryLaunchConfig, error) {
+func (f *NormalFactory) config(r *RancherService) (*CompositeService, *client.LaunchConfig, []client.SecondaryLaunchConfig, error) {
 	launchConfig, secondaryLaunchConfigs, err := createLaunchConfigs(r)
 	if err != nil {
 		return nil, nil, nil, err
@@ -50,13 +50,13 @@ func (f *NormalFactory) config(r *RancherService) (*CompositeService, *rancherCl
 	rancherConfig, _ := r.context.RancherConfig[r.name]
 
 	service := &CompositeService{
-		Service: rancherClient.Service{
+		Service: client.Service{
 			Name:              r.name,
 			Metadata:          r.Metadata(),
 			Scale:             int64(r.getConfiguredScale()),
 			ScalePolicy:       rancherConfig.ScalePolicy,
 			RetainIp:          rancherConfig.RetainIp,
-			EnvironmentId:     r.Context().Environment.Id,
+			StackId:           r.Context().Stack.Id,
 			SelectorContainer: r.SelectorContainer(),
 			SelectorLink:      r.SelectorLink(),
 		},
@@ -81,11 +81,11 @@ func (f *NormalFactory) Create(r *RancherService) error {
 	logrus.Debugf("Creating service %s with hash: %#v", r.name, hash)
 	switch FindServiceType(r) {
 	case ExternalServiceType:
-		return r.context.Client.Create(rancherClient.EXTERNAL_SERVICE_TYPE, &service, nil)
+		return r.context.Client.Create(client.EXTERNAL_SERVICE_TYPE, &service, nil)
 	case DnsServiceType:
-		return r.context.Client.Create(rancherClient.DNS_SERVICE_TYPE, &service, nil)
+		return r.context.Client.Create(client.DNS_SERVICE_TYPE, &service, nil)
 	case LbServiceType:
-		return r.context.Client.Create(rancherClient.LOAD_BALANCER_SERVICE_TYPE, &service, nil)
+		return r.context.Client.Create(client.LOAD_BALANCER_SERVICE_TYPE, &service, nil)
 	default:
 		_, err = r.context.Client.Service.Create(&service.Service)
 	}
@@ -157,14 +157,14 @@ func (f *NormalFactory) Upgrade(r *RancherService, force bool, selected []string
 	return f.upgrade(r, existingService, service, launchConfig, secondaryNames, removedSecondaryNames)
 }
 
-func (f *NormalFactory) upgrade(r *RancherService, existingService *rancherClient.Service, service, launchConfig bool, secondaryNames, removedSecondaryNames []string) error {
+func (f *NormalFactory) upgrade(r *RancherService, existingService *client.Service, service, launchConfig bool, secondaryNames, removedSecondaryNames []string) error {
 	_, config, err := f.configAndHash(r)
 	if err != nil {
 		return err
 	}
 
-	serviceUpgrade := &rancherClient.ServiceUpgrade{
-		InServiceStrategy: &rancherClient.InServiceUpgradeStrategy{
+	serviceUpgrade := &client.ServiceUpgrade{
+		InServiceStrategy: &client.InServiceUpgradeStrategy{
 			BatchSize:      r.context.BatchSize,
 			IntervalMillis: r.context.Interval,
 			StartFirst:     r.RancherConfig().UpgradeStrategy.StartFirst,
@@ -179,7 +179,7 @@ func (f *NormalFactory) upgrade(r *RancherService, existingService *rancherClien
 
 	for _, name := range secondaryNames {
 		for _, v := range config.SecondaryLaunchConfigs {
-			if secondaryLaunchConfig, ok := v.(rancherClient.SecondaryLaunchConfig); ok {
+			if secondaryLaunchConfig, ok := v.(client.SecondaryLaunchConfig); ok {
 				if secondaryLaunchConfig.Name == name {
 					serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs = append(serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs, secondaryLaunchConfig)
 				}
@@ -188,7 +188,7 @@ func (f *NormalFactory) upgrade(r *RancherService, existingService *rancherClien
 	}
 
 	for _, removedSecondaryName := range removedSecondaryNames {
-		serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs = append(serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs, &rancherClient.SecondaryLaunchConfig{
+		serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs = append(serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs, &client.SecondaryLaunchConfig{
 			Name:      removedSecondaryName,
 			ImageUuid: "rancher/none",
 		})
@@ -199,14 +199,14 @@ func (f *NormalFactory) upgrade(r *RancherService, existingService *rancherClien
 		config.Scale = existingService.Scale
 
 		logrus.Infof("Updating %s", r.Name())
-		schemaType := rancherClient.SERVICE_TYPE
+		schemaType := client.SERVICE_TYPE
 		switch FindServiceType(r) {
 		case ExternalServiceType:
-			schemaType = rancherClient.EXTERNAL_SERVICE_TYPE
+			schemaType = client.EXTERNAL_SERVICE_TYPE
 		case DnsServiceType:
-			schemaType = rancherClient.DNS_SERVICE_TYPE
+			schemaType = client.DNS_SERVICE_TYPE
 		case LbServiceType:
-			schemaType = rancherClient.LOAD_BALANCER_SERVICE_TYPE
+			schemaType = client.LOAD_BALANCER_SERVICE_TYPE
 		}
 
 		if err := r.context.Client.Update(schemaType, &existingService.Resource, config, existingService); err != nil {

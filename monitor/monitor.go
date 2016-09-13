@@ -10,7 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/patrickmn/go-cache"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 type Event struct {

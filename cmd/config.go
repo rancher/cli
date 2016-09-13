@@ -10,8 +10,9 @@ import (
 	"path"
 	"strings"
 
+	"github.com/rancher/go-rancher/v2"
+
 	"github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/client"
 	"github.com/urfave/cli"
 )
 
@@ -24,7 +25,7 @@ type Config struct {
 }
 
 func baseURL(fullURL string) (string, error) {
-	idx := strings.LastIndex(fullURL, "/v1")
+	idx := strings.LastIndex(fullURL, "/v2-beta")
 	if idx == -1 {
 		u, err := url.Parse(fullURL)
 		if err != nil {
@@ -61,7 +62,7 @@ func (c Config) EnvironmentURL() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	url = url + "/v1/projects/" + projectID + "/schemas"
+	url = url + "/v2-beta/projects/" + projectID + "/schemas"
 	return url, nil
 }
 

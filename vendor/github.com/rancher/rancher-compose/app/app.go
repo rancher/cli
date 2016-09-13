@@ -38,7 +38,7 @@ func (p *ProjectFactory) Create(c *cli.Context) (project.APIProject, error) {
 
 	context := &rancher.Context{
 		Context: project.Context{
-			ResourceLookup:    &rLookup.FileConfigLookup{},
+			ResourceLookup:    &rLookup.FileResourceLookup{},
 			EnvironmentLookup: envLookup,
 			LoggerFactory:     logger.NewColorLoggerFactory(),
 		},

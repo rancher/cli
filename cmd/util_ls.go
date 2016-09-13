@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
 
@@ -16,6 +16,7 @@ func defaultListOpts(ctx *cli.Context) *client.ListOpts {
 	listOpts := &client.ListOpts{
 		Filters: map[string]interface{}{
 			"limit": -2,
+			"all":   true,
 		},
 	}
 	if ctx != nil && !ctx.Bool("all") {
@@ -25,6 +26,7 @@ func defaultListOpts(ctx *cli.Context) *client.ListOpts {
 			"stopped",
 			"removing",
 		}
+		delete(listOpts.Filters, "all")
 	}
 	return listOpts
 }

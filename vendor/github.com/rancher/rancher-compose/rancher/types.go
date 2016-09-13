@@ -1,6 +1,6 @@
 package rancher
 
-import rancherClient "github.com/rancher/go-rancher/client"
+import "github.com/rancher/go-rancher/v2"
 
 const (
 	LB_IMAGE       = "rancher/load-balancer-service"
@@ -30,15 +30,15 @@ func FindServiceType(r *RancherService) ServiceType {
 }
 
 type CompositeService struct {
-	rancherClient.Service
+	client.Service
 
 	//LoadBalancer Fields
-	CertificateIds       []string                          `json:"certificateIds,omitempty" yaml:"certificate_ids,omitempty"`
-	DefaultCertificateId string                            `json:"defaultCertificateId,omitempty" yaml:"default_certificate_id,omitempty"`
-	LoadBalancerConfig   *rancherClient.LoadBalancerConfig `json:"loadBalancerConfig,omitempty" yaml:"load_balancer_config,omitempty"`
+	CertificateIds       []string                   `json:"certificateIds,omitempty" yaml:"certificate_ids,omitempty"`
+	DefaultCertificateId string                     `json:"defaultCertificateId,omitempty" yaml:"default_certificate_id,omitempty"`
+	LoadBalancerConfig   *client.LoadBalancerConfig `json:"loadBalancerConfig,omitempty" yaml:"load_balancer_config,omitempty"`
 
 	// External Service Fields
-	ExternalIpAddresses []string                           `json:"externalIpAddresses,omitempty" yaml:"external_ip_addresses,omitempty"`
-	Hostname            string                             `json:"hostname,omitempty" yaml:"hostname,omitempty"`
-	HealthCheck         *rancherClient.InstanceHealthCheck `json:"healthCheck,omitempty" yaml:"health_check,omitempty"`
+	ExternalIpAddresses []string                    `json:"externalIpAddresses,omitempty" yaml:"external_ip_addresses,omitempty"`
+	Hostname            string                      `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	HealthCheck         *client.InstanceHealthCheck `json:"healthCheck,omitempty" yaml:"health_check,omitempty"`
 }

@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
 
@@ -33,9 +35,9 @@ func PsCommand() cli.Command {
 	}
 }
 
-func GetStackMap(c *client.RancherClient) map[string]client.Environment {
-	result := map[string]client.Environment{}
-	stacks, err := c.Environment.List(defaultListOpts(nil))
+func GetStackMap(c *client.RancherClient) map[string]client.Stack {
+	result := map[string]client.Stack{}
+	stacks, err := c.Stack.List(defaultListOpts(nil))
 	if err != nil {
 		return result
 	}
@@ -49,7 +51,9 @@ func GetStackMap(c *client.RancherClient) map[string]client.Environment {
 
 type PsData struct {
 	Service       client.Service
-	Stack         client.Environment
+	Name          string
+	LaunchConfig  client.LaunchConfig
+	Stack         client.Stack
 	CombinedState string
 	ID            string
 }
@@ -85,8 +89,8 @@ func servicePs(ctx *cli.Context) error {
 	writer := NewTableWriter([][]string{
 		{"ID", "Service.Id"},
 		{"TYPE", "Service.Type"},
-		{"NAME", "{{.Stack.Name}}/{{.Service.Name}}"},
-		{"IMAGE", "Service.LaunchConfig.ImageUuid"},
+		{"NAME", "Name"},
+		{"IMAGE", "LaunchConfig.ImageUuid"},
 		{"STATE", "CombinedState"},
 		{"SCALE", "Service.Scale"},
 		{"ENDPOINTS", "{{endpoint .Service.PublicEndpoints}}"},
@@ -110,9 +114,32 @@ func servicePs(ctx *cli.Context) error {
 		writer.Write(PsData{
 			ID:            item.Id,
 			Service:       item,
-			Stack:         stackMap[item.EnvironmentId],
+			Name:          fmt.Sprintf("%s/%s", stackMap[item.StackId].Name, item.Name),
+			LaunchConfig:  *item.LaunchConfig,
+			Stack:         stackMap[item.StackId],
 			CombinedState: combined,
 		})
+		for _, sidekick := range item.SecondaryLaunchConfigs {
+			var sidekickLaunchConfig client.LaunchConfig
+			var sidekickSecondaryLaunchConfig client.SecondaryLaunchConfig
+			if err := mapstructure.Decode(sidekick, &sidekickLaunchConfig); err != nil {
+				return err
+			}
+			if err := mapstructure.Decode(sidekick, &sidekickSecondaryLaunchConfig); err != nil {
+				return err
+			}
+			sidekickLaunchConfig.ImageUuid = strings.TrimPrefix(sidekickLaunchConfig.ImageUuid, "docker:")
+			item.Type = "sidekick"
+			writer.Write(PsData{
+				ID:      item.Id,
+				Service: item,
+				Name: fmt.Sprintf("%s/%s/%s", stackMap[item.StackId].Name, item.Name,
+					sidekickSecondaryLaunchConfig.Name),
+				LaunchConfig:  sidekickLaunchConfig,
+				Stack:         stackMap[item.StackId],
+				CombinedState: combined,
+			})
+		}
 	}
 
 	return writer.Err()

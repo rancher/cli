@@ -48,12 +48,12 @@ func exportService(ctx *cli.Context) error {
 		return err
 	}
 
-	env, err := c.Environment.ById(resource.Id)
+	env, err := c.Stack.ById(resource.Id)
 	if err != nil {
 		return err
 	}
 
-	config, err := c.Environment.ActionExportconfig(env, nil)
+	config, err := c.Stack.ActionExportconfig(env, nil)
 	if err != nil {
 		return err
 	}

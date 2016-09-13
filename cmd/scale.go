@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
 

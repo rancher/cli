@@ -1,8 +1,8 @@
 package rancher
 
-import rancherClient "github.com/rancher/go-rancher/client"
+import "github.com/rancher/go-rancher/v2"
 
-func populateLbFields(r *RancherService, launchConfig *rancherClient.LaunchConfig, service *CompositeService) error {
+func populateLbFields(r *RancherService, launchConfig *client.LaunchConfig, service *CompositeService) error {
 	config, ok := r.context.RancherConfig[r.name]
 	if ok {
 		service.LoadBalancerConfig = config.LoadBalancerConfig

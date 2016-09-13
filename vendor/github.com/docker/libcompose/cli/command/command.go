@@ -2,6 +2,7 @@ package command
 
 import (
 	"os"
+	"strings"
 
 	"github.com/docker/libcompose/cli/app"
 	"github.com/docker/libcompose/project"
@@ -10,7 +11,14 @@ import (
 
 // Populate updates the specified project context based on command line arguments and subcommands.
 func Populate(context *project.Context, c *cli.Context) {
-	context.ComposeFiles = c.GlobalStringSlice("file")
+	// urfave/cli does not distinguish whether the first string in the slice comes from the envvar
+	// or is from a flag. Worse off, it appends the flag values to the envvar value instead of
+	// overriding it. To ensure the multifile envvar case is always handled, the first string
+	// must always be split. It gives a more consistent behavior, then, to split each string in
+	// the slice.
+	for _, v := range c.GlobalStringSlice("file") {
+		context.ComposeFiles = append(context.ComposeFiles, strings.Split(v, string(os.PathListSeparator))...)
+	}
 
 	if len(context.ComposeFiles) == 0 {
 		context.ComposeFiles = []string{"docker-compose.yml"}
@@ -42,6 +50,15 @@ func CreateCommand(factory app.ProjectFactory) cli.Command {
 				Usage: "Don't build an image, even if it's missing.",
 			},
 		},
+	}
+}
+
+// ConfigCommand defines the libcompose config subcommand
+func ConfigCommand(factory app.ProjectFactory) cli.Command {
+	return cli.Command{
+		Name:   "config",
+		Usage:  "Validate and view the compose file.",
+		Action: app.WithProject(factory, app.ProjectConfig),
 	}
 }
 
@@ -126,6 +143,10 @@ func UpCommand(factory app.ProjectFactory) cli.Command {
 			cli.BoolFlag{
 				Name:  "force-recreate",
 				Usage: "Recreate containers even if their configuration and image haven't changed. Incompatible with --no-recreate.",
+			},
+			cli.BoolFlag{
+				Name:  "build",
+				Usage: "Build images before starting containers.",
 			},
 		},
 	}
