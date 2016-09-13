@@ -8,7 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/libcompose/project"
 	"github.com/docker/libcompose/project/options"
-	rancherClient "github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/rancher-compose/rancher"
 )
 
@@ -87,8 +87,8 @@ func Upgrade(p project.APIProject, from, to string, opts UpgradeOpts) error {
 		return fmt.Errorf("Upgrade is not supported for global services")
 	}
 
-	upgradeOpts := &rancherClient.ServiceUpgrade{
-		ToServiceStrategy: &rancherClient.ToServiceUpgradeStrategy{
+	upgradeOpts := &client.ServiceUpgrade{
+		ToServiceStrategy: &client.ToServiceUpgradeStrategy{
 			UpdateLinks:    opts.UpdateLinks,
 			FinalScale:     int64(opts.FinalScale),
 			BatchSize:      int64(opts.BatchSize),
@@ -139,7 +139,7 @@ func Upgrade(p project.APIProject, from, to string, opts UpgradeOpts) error {
 	return nil
 }
 
-func upgradeInfo(up bool, p project.APIProject, from, to string, opts UpgradeOpts) (*rancherClient.Service, *rancherClient.Service, *rancherClient.RancherClient, error) {
+func upgradeInfo(up bool, p project.APIProject, from, to string, opts UpgradeOpts) (*client.Service, *client.Service, *client.RancherClient, error) {
 	fromService, err := p.CreateService(from)
 	if err != nil {
 		return nil, nil, nil, err

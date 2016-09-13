@@ -8,13 +8,13 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/engine-api/types/container"
 	"github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/docker"
+	"github.com/docker/libcompose/docker/service"
 	"github.com/docker/libcompose/utils"
-	rancherClient "github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
-func createLaunchConfigs(r *RancherService) (rancherClient.LaunchConfig, []rancherClient.SecondaryLaunchConfig, error) {
-	secondaryLaunchConfigs := []rancherClient.SecondaryLaunchConfig{}
+func createLaunchConfigs(r *RancherService) (client.LaunchConfig, []client.SecondaryLaunchConfig, error) {
+	secondaryLaunchConfigs := []client.SecondaryLaunchConfig{}
 	launchConfig, err := createLaunchConfig(r, r.Name(), r.Config())
 	if err != nil {
 		return launchConfig, nil, err
@@ -34,7 +34,7 @@ func createLaunchConfigs(r *RancherService) (rancherClient.LaunchConfig, []ranch
 			}
 			launchConfig.HealthCheck = r.HealthCheck(secondaryName)
 
-			var secondaryLaunchConfig rancherClient.SecondaryLaunchConfig
+			var secondaryLaunchConfig client.SecondaryLaunchConfig
 			utils.Convert(launchConfig, &secondaryLaunchConfig)
 			secondaryLaunchConfig.Name = secondaryName
 
@@ -48,15 +48,15 @@ func createLaunchConfigs(r *RancherService) (rancherClient.LaunchConfig, []ranch
 	return launchConfig, secondaryLaunchConfigs, nil
 }
 
-func createLaunchConfig(r *RancherService, name string, serviceConfig *config.ServiceConfig) (rancherClient.LaunchConfig, error) {
-	var result rancherClient.LaunchConfig
+func createLaunchConfig(r *RancherService, name string, serviceConfig *config.ServiceConfig) (client.LaunchConfig, error) {
+	var result client.LaunchConfig
 
 	rancherConfig := r.context.RancherConfig[name]
 
 	schemasUrl := strings.SplitN(r.Context().Client.Schemas.Links["self"], "/schemas", 2)[0]
 	scriptsUrl := schemasUrl + "/scripts/transform"
 
-	config, hostConfig, err := docker.Convert(serviceConfig, r.context.Context)
+	config, hostConfig, err := service.Convert(serviceConfig, r.context.Context)
 	if err != nil {
 		return result, err
 	}
@@ -86,9 +86,9 @@ func createLaunchConfig(r *RancherService, name string, serviceConfig *config.Se
 	}
 
 	result.Kind = rancherConfig.Type
-	result.Vcpu = rancherConfig.Vcpu
+	result.Vcpu = int64(rancherConfig.Vcpu)
 	result.Userdata = rancherConfig.Userdata
-	result.MemoryMb = rancherConfig.Memory
+	result.MemoryMb = int64(rancherConfig.Memory)
 	result.Disks = []interface{}{}
 	for _, i := range rancherConfig.Disks {
 		result.Disks = append(result.Disks, i)
@@ -105,7 +105,7 @@ func createLaunchConfig(r *RancherService, name string, serviceConfig *config.Se
 	return result, err
 }
 
-func setupNetworking(netMode string, launchConfig *rancherClient.LaunchConfig) {
+func setupNetworking(netMode string, launchConfig *client.LaunchConfig) {
 	if netMode == "" {
 		launchConfig.NetworkMode = "managed"
 	} else if container.IpcMode(netMode).IsContainer() {
@@ -117,13 +117,13 @@ func setupNetworking(netMode string, launchConfig *rancherClient.LaunchConfig) {
 	}
 }
 
-func setupVolumesFrom(volumesFrom []string, launchConfig *rancherClient.LaunchConfig) {
+func setupVolumesFrom(volumesFrom []string, launchConfig *client.LaunchConfig) {
 	launchConfig.DataVolumesFromLaunchConfigs = volumesFrom
 }
 
-func setupBuild(r *RancherService, name string, result *rancherClient.LaunchConfig, serviceConfig *config.ServiceConfig) error {
+func setupBuild(r *RancherService, name string, result *client.LaunchConfig, serviceConfig *config.ServiceConfig) error {
 	if serviceConfig.Build.Context != "" {
-		result.Build = &rancherClient.DockerBuild{
+		result.Build = &client.DockerBuild{
 			Remote:     serviceConfig.Build.Context,
 			Dockerfile: serviceConfig.Build.Dockerfile,
 		}
@@ -145,7 +145,7 @@ func setupBuild(r *RancherService, name string, result *rancherClient.LaunchConf
 				serviceConfig.Image = image
 			}
 
-			result.Build = &rancherClient.DockerBuild{
+			result.Build = &client.DockerBuild{
 				Context:    url,
 				Dockerfile: serviceConfig.Build.Dockerfile,
 			}

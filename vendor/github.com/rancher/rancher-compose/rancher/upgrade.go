@@ -2,11 +2,11 @@ package rancher
 
 import (
 	"github.com/Sirupsen/logrus"
-	rancherClient "github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/rancher-compose/digest"
 )
 
-func (r *RancherService) upgrade(service *rancherClient.Service, force bool, selected []string) (*rancherClient.Service, error) {
+func (r *RancherService) upgrade(service *client.Service, force bool, selected []string) (*client.Service, error) {
 	factory, err := GetFactory(r)
 	if err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func (r *RancherService) upgrade(service *rancherClient.Service, force bool, sel
 	return r.FindExisting(r.name)
 }
 
-func (r *RancherService) rollback(service *rancherClient.Service) (*rancherClient.Service, error) {
+func (r *RancherService) rollback(service *client.Service) (*client.Service, error) {
 	factory, err := GetFactory(r)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func (r *RancherService) rollback(service *rancherClient.Service) (*rancherClien
 	return r.FindExisting(r.name)
 }
 
-func (r *RancherService) shouldUpgrade(service *rancherClient.Service) bool {
+func (r *RancherService) shouldUpgrade(service *client.Service) bool {
 	switch FindServiceType(r) {
 	case ExternalServiceType:
 		return false
@@ -60,7 +60,7 @@ func (r *RancherService) shouldUpgrade(service *rancherClient.Service) bool {
 	return false
 }
 
-func (r *RancherService) isOutOfSync(service *rancherClient.Service) bool {
+func (r *RancherService) isOutOfSync(service *client.Service) bool {
 	if service == nil {
 		return false
 	}
@@ -86,7 +86,7 @@ func (r *RancherService) isOutOfSync(service *rancherClient.Service) bool {
 	return !hash.Equals(newHash)
 }
 
-func hasOldHash(service *rancherClient.Service) bool {
+func hasOldHash(service *client.Service) bool {
 	_, ok := digest.LookupHash(service)
 	return ok
 }

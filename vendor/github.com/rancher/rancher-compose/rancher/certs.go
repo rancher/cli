@@ -3,12 +3,12 @@ package rancher
 import (
 	"fmt"
 
-	rancherClient "github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
-func populateCerts(client *rancherClient.RancherClient, lbService *CompositeService, rancherConfig *RancherConfig) error {
+func populateCerts(apiClient *client.RancherClient, lbService *CompositeService, rancherConfig *RancherConfig) error {
 	if rancherConfig.DefaultCert != "" {
-		if certId, err := findCertByName(client, rancherConfig.DefaultCert); err != nil {
+		if certId, err := findCertByName(apiClient, rancherConfig.DefaultCert); err != nil {
 			return err
 		} else {
 			lbService.DefaultCertificateId = certId
@@ -17,7 +17,7 @@ func populateCerts(client *rancherClient.RancherClient, lbService *CompositeServ
 
 	lbService.CertificateIds = []string{}
 	for _, certName := range rancherConfig.Certs {
-		if certId, err := findCertByName(client, certName); err != nil {
+		if certId, err := findCertByName(apiClient, certName); err != nil {
 			return err
 
 		} else {
@@ -28,8 +28,8 @@ func populateCerts(client *rancherClient.RancherClient, lbService *CompositeServ
 	return nil
 }
 
-func findCertByName(client *rancherClient.RancherClient, name string) (string, error) {
-	certs, err := client.Certificate.List(&rancherClient.ListOpts{
+func findCertByName(apiClient *client.RancherClient, name string) (string, error) {
+	certs, err := apiClient.Certificate.List(&client.ListOpts{
 		Filters: map[string]interface{}{
 			"removed_null": nil,
 			"name":         name,

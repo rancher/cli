@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"github.com/docker/libcompose/utils"
-	rancherClient "github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	rUtils "github.com/rancher/rancher-compose/utils"
 )
 
@@ -24,7 +24,7 @@ var (
 		"scale",
 		"selector_container",
 		"selector_link",
-		"environment_id",
+		"stack_id",
 	}
 )
 
@@ -49,7 +49,7 @@ func toString(obj interface{}) string {
 	return fmt.Sprintf("%v", obj)
 }
 
-func LookupHash(service *rancherClient.Service) (ServiceHash, bool) {
+func LookupHash(service *client.Service) (ServiceHash, bool) {
 	ret := ServiceHash{
 		SecondaryLaunchConfigs: map[string]string{},
 	}
@@ -58,7 +58,7 @@ func LookupHash(service *rancherClient.Service) (ServiceHash, bool) {
 	ret.LaunchConfig = toString(service.LaunchConfig.Labels[ServiceHashKey])
 
 	for _, rawSecondaryLaunchConfig := range service.SecondaryLaunchConfigs {
-		var secondaryLaunchConfig rancherClient.SecondaryLaunchConfig
+		var secondaryLaunchConfig client.SecondaryLaunchConfig
 		if err := utils.Convert(rawSecondaryLaunchConfig, &secondaryLaunchConfig); err != nil {
 			return ret, false
 		}
@@ -68,7 +68,7 @@ func LookupHash(service *rancherClient.Service) (ServiceHash, bool) {
 	return ret, ret.Service != ""
 }
 
-func CreateServiceHash(rancherService interface{}, launchConfig *rancherClient.LaunchConfig, secondaryLaunchConfigs []rancherClient.SecondaryLaunchConfig) (ServiceHash, error) {
+func CreateServiceHash(rancherService interface{}, launchConfig *client.LaunchConfig, secondaryLaunchConfigs []client.SecondaryLaunchConfig) (ServiceHash, error) {
 	var err error
 	result := ServiceHash{}
 	if err != nil {

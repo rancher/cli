@@ -3,7 +3,6 @@ package catalog
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,10 +10,10 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -116,7 +115,13 @@ func appendFilters(urlString string, filters map[string]interface{}) (string, er
 
 	q := u.Query()
 	for k, v := range filters {
-		q.Add(k, fmt.Sprintf("%v", v))
+		if l, ok := v.([]string); ok {
+			for _, v := range l {
+				q.Add(k, v)
+			}
+		} else {
+			q.Add(k, fmt.Sprintf("%v", v))
+		}
 	}
 
 	u.RawQuery = q.Encode()
@@ -277,7 +282,11 @@ func (rancherClient *RancherBaseClient) doGet(url string, opts *ListOpts, respOb
 		fmt.Println("Response <= " + string(byteContent))
 	}
 
-	return json.Unmarshal(byteContent, respObject)
+	if err := json.Unmarshal(byteContent, respObject); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Failed to parse: %s", byteContent))
+	}
+
+	return nil
 }
 
 func (rancherClient *RancherBaseClient) List(schemaType string, opts *ListOpts, respObject interface{}) error {
@@ -484,6 +493,11 @@ func (rancherClient *RancherBaseClient) Reload(existing *Resource, output interf
 	}
 
 	return rancherClient.doGet(selfUrl, NewListOpts(), output)
+}
+
+func (rancherClient *RancherBaseClient) Action(schemaType string, action string,
+	existing *Resource, inputObject, respObject interface{}) error {
+	return rancherClient.doAction(schemaType, action, existing, inputObject, respObject)
 }
 
 func (rancherClient *RancherBaseClient) doAction(schemaType string, action string,

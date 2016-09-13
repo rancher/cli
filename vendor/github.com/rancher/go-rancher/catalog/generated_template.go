@@ -21,6 +21,8 @@ type Template struct {
 
 	IsSystem string `json:"isSystem,omitempty" yaml:"is_system,omitempty"`
 
+	Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
+
 	License string `json:"license,omitempty" yaml:"license,omitempty"`
 
 	Links map[string]interface{} `json:"links,omitempty" yaml:"links,omitempty"`
@@ -38,6 +40,8 @@ type Template struct {
 	TemplateVersionRancherVersion map[string]interface{} `json:"templateVersionRancherVersion,omitempty" yaml:"template_version_rancher_version,omitempty"`
 
 	Type string `json:"type,omitempty" yaml:"type,omitempty"`
+
+	UpgradeFrom string `json:"upgradeFrom,omitempty" yaml:"upgrade_from,omitempty"`
 
 	UpgradeVersionLinks map[string]interface{} `json:"upgradeVersionLinks,omitempty" yaml:"upgrade_version_links,omitempty"`
 

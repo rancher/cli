@@ -32,6 +32,7 @@ func BeforeApp(c *cli.Context) error {
 	if c.GlobalBool("verbose") {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
+
 	if version.ShowWarning() {
 		logrus.Warning("Note: This is an experimental alternate implementation of the Compose CLI (https://github.com/docker/compose)")
 	}
@@ -52,11 +53,15 @@ func WithProject(factory ProjectFactory, action ProjectAction) func(context *cli
 // ProjectPs lists the containers.
 func ProjectPs(p project.APIProject, c *cli.Context) error {
 	qFlag := c.Bool("q")
-	allInfo, err := p.Ps(context.Background(), qFlag, c.Args()...)
+	allInfo, err := p.Ps(context.Background(), c.Args()...)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
-	os.Stdout.WriteString(allInfo.String(!qFlag))
+	columns := []string{"Name", "Command", "State", "Ports"}
+	if qFlag {
+		columns = []string{"Id"}
+	}
+	os.Stdout.WriteString(allInfo.String(columns, !qFlag))
 	return nil
 }
 
@@ -137,6 +142,7 @@ func ProjectUp(p project.APIProject, c *cli.Context) error {
 			NoRecreate:    c.Bool("no-recreate"),
 			ForceRecreate: c.Bool("force-recreate"),
 			NoBuild:       c.Bool("no-build"),
+			ForceBuild:    c.Bool("build"),
 		},
 	}
 	ctx, cancelFun := context.WithCancel(context.Background())
@@ -174,7 +180,7 @@ func ProjectUp(p project.APIProject, c *cli.Context) error {
 
 // ProjectRun runs a given command within a service's container.
 func ProjectRun(p project.APIProject, c *cli.Context) error {
-	if len(c.Args()) == 1 {
+	if len(c.Args()) == 0 {
 		logrus.Fatal("No service specified")
 	}
 
@@ -230,10 +236,10 @@ func ProjectPull(p project.APIProject, c *cli.Context) error {
 
 // ProjectDelete deletes services.
 func ProjectDelete(p project.APIProject, c *cli.Context) error {
-	if !c.Bool("force") && len(c.Args()) == 0 {
-		logrus.Fatal("Will not remove all services without --force")
+	options := options.Delete{
+		RemoveVolume: c.Bool("v"),
 	}
-	err := p.Delete(context.Background(), options.Delete{}, c.Args()...)
+	err := p.Delete(context.Background(), options, c.Args()...)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
@@ -246,6 +252,16 @@ func ProjectKill(p project.APIProject, c *cli.Context) error {
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
+	return nil
+}
+
+// ProjectConfig validates and print the compose file.
+func ProjectConfig(p project.APIProject, c *cli.Context) error {
+	yaml, err := p.Config()
+	if err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
+	fmt.Println(yaml)
 	return nil
 }
 
@@ -288,7 +304,7 @@ func ProjectScale(p project.APIProject, c *cli.Context) error {
 
 	err := p.Scale(context.Background(), c.Int("timeout"), servicesScale)
 	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
+		return cli.NewExitError(err.Error(), 0)
 	}
 	return nil
 }

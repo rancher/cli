@@ -3,10 +3,10 @@ package rancher
 import (
 	"time"
 
-	rancherClient "github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
-func (r *RancherService) WaitFor(resource *rancherClient.Resource, output interface{}, transitioning func() string) error {
+func (r *RancherService) WaitFor(resource *client.Resource, output interface{}, transitioning func() string) error {
 	for {
 		if transitioning() != "yes" {
 			return nil
@@ -21,13 +21,13 @@ func (r *RancherService) WaitFor(resource *rancherClient.Resource, output interf
 	}
 }
 
-func (r *RancherService) Wait(service *rancherClient.Service) error {
+func (r *RancherService) Wait(service *client.Service) error {
 	return r.WaitFor(&service.Resource, service, func() string {
 		return service.Transitioning
 	})
 }
 
-func (r *RancherService) waitInstance(instance *rancherClient.Instance) error {
+func (r *RancherService) waitInstance(instance *client.Instance) error {
 	return r.WaitFor(&instance.Resource, instance, func() string {
 		return instance.Transitioning
 	})

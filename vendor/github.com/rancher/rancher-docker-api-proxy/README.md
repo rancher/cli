@@ -14,7 +14,7 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
-	rancher "github.com/rancher/go-rancher/client"
+	rancher "github.com/rancher/go-rancher/v2"
 )
 
 func main() {

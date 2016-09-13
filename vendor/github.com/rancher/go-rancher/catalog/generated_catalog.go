@@ -9,6 +9,8 @@ type Catalog struct {
 
 	Actions map[string]interface{} `json:"actions,omitempty" yaml:"actions,omitempty"`
 
+	Branch string `json:"branch,omitempty" yaml:"branch,omitempty"`
+
 	CatalogRoot string `json:"catalogRoot,omitempty" yaml:"catalog_root,omitempty"`
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`

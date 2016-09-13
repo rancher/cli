@@ -77,9 +77,9 @@ func (f *QuestionLookup) Lookup(key, serviceName string, config *config.ServiceC
 	}
 
 	if f.Context != nil {
-		env, err := f.Context.LoadEnv()
-		if err == nil && env != nil {
-			if v, ok := env.Environment[key]; ok {
+		stack, err := f.Context.LoadStack()
+		if err == nil && stack != nil {
+			if v, ok := stack.Environment[key]; ok {
 				return join(key, fmt.Sprintf("%v", v))
 			}
 		}

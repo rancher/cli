@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/docker/docker/pkg/urlutil"
 	"github.com/docker/libcompose/utils"
 	composeYaml "github.com/docker/libcompose/yaml"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -90,6 +90,7 @@ func readEnvFile(resourceLookup ResourceLookup, inFile string, serviceData RawSe
 	}
 
 	var envFiles composeYaml.Stringorslice
+
 	if err := utils.Convert(serviceData["env_file"], &envFiles); err != nil {
 		return nil, err
 	}
@@ -103,6 +104,7 @@ func readEnvFile(resourceLookup ResourceLookup, inFile string, serviceData RawSe
 	}
 
 	var vars composeYaml.MaporEqualSlice
+
 	if _, ok := serviceData["environment"]; ok {
 		if err := utils.Convert(serviceData["environment"], &vars); err != nil {
 			return nil, err
@@ -116,21 +118,28 @@ func readEnvFile(resourceLookup ResourceLookup, inFile string, serviceData RawSe
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
+
 		scanner := bufio.NewScanner(bytes.NewBuffer(content))
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
-			key := strings.SplitAfter(line, "=")[0]
 
-			found := false
-			for _, v := range vars {
-				if strings.HasPrefix(v, key) {
-					found = true
-					break
+			if len(line) > 0 && !strings.HasPrefix(line, "#") {
+				key := strings.SplitAfter(line, "=")[0]
+
+				found := false
+				for _, v := range vars {
+					if strings.HasPrefix(v, key) {
+						found = true
+						break
+					}
 				}
-			}
 
-			if !found {
-				vars = append(vars, line)
+				if !found {
+					vars = append(vars, line)
+				}
 			}
 		}
 
