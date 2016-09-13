@@ -31,7 +31,7 @@ Example:
 			},
 			cli.StringFlag{
 				Name:  "format",
-				Usage: "'json' or Custom format: {{.id]} {{.name}}",
+				Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
 				Value: "json",
 			},
 		},
