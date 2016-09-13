@@ -292,7 +292,7 @@ func doLog(single bool, ctx *cli.Context, instance client.Instance, dockerClient
 	} else if single {
 		_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, responseBody)
 	} else {
-		l := loggerFactory.Create(instance.Name)
+		l := loggerFactory.CreateContainerLogger(instance.Name)
 		_, err = stdcopy.StdCopy(writerFunc(l.Out), writerFunc(l.Err), responseBody)
 	}
 	return err

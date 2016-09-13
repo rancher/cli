@@ -33,9 +33,8 @@ func EventsCommand() cli.Command {
 func getClientForSubscribe(ctx *cli.Context) (*client.RancherClient, error) {
 	if ctx.Bool("all") {
 		return GetRawClient(ctx)
-	} else {
-		return GetClient(ctx)
 	}
+	return GetClient(ctx)
 }
 
 func events(ctx *cli.Context) error {
@@ -90,6 +89,4 @@ func events(ctx *cli.Context) error {
 			}
 		}
 	}
-
-	return nil
 }
