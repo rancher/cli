@@ -18,10 +18,10 @@ func EventsCommand() cli.Command {
 		ArgsUsage:   "None",
 		Action:      events,
 		Flags: []cli.Flag{
-			//cli.StringFlag{
-			//	Name:  "format",
-			//	Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
-			//},
+			cli.StringFlag{
+				Name:  "format",
+				Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+			},
 			cli.BoolFlag{
 				Name:  "reconnect,r",
 				Usage: "Reconnect on error",
@@ -30,38 +30,64 @@ func EventsCommand() cli.Command {
 	}
 }
 
-func events(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
-	if err != nil {
-		return err
+func getClientForSubscribe(ctx *cli.Context) (*client.RancherClient, error) {
+	if ctx.Bool("all") {
+		return GetRawClient(ctx)
+	} else {
+		return GetClient(ctx)
 	}
+}
 
-	m := monitor.New(c)
-	sub := m.Subscribe()
-	go func() {
-		if ctx.Bool("reconnect") {
-			for {
-				if err := m.Start(); err != nil {
+func events(ctx *cli.Context) error {
+	reconnect := ctx.Bool("reconnect")
+
+	for {
+		c, err := getClientForSubscribe(ctx)
+		if err != nil {
+			if reconnect {
+				logrus.Error(err)
+				time.Sleep(time.Second)
+				continue
+			} else {
+				return err
+			}
+		}
+
+		m := monitor.New(c)
+		sub := m.Subscribe()
+		go func() {
+			if ctx.Bool("reconnect") {
+				for {
+					if err := m.Start(); err != nil {
+						logrus.Error(err)
+					}
+					time.Sleep(time.Second)
+				}
+			} else {
+				logrus.Fatal(m.Start())
+			}
+		}()
+
+		format := ctx.String("format")
+		for event := range sub.C {
+			if format == "" {
+				resource, _ := event.Data["resource"].(map[string]interface{})
+				name, _ := resource["name"].(string)
+				state, _ := resource["state"].(string)
+
+				if name == "ping" {
+					continue
+				}
+
+				message, _ := resource["transitioningMessage"].(string)
+				fmt.Printf("%s %s %s [%s] %v\n", event.ResourceType, event.ResourceID, state, name, message)
+			} else {
+				writer := NewTableWriter(nil, ctx)
+				writer.Write(event)
+				if err := writer.Err(); err != nil {
 					logrus.Error(err)
 				}
-				time.Sleep(time.Second)
 			}
-		} else {
-			logrus.Fatal(m.Start())
-		}
-	}()
-
-	for event := range sub.C {
-		resource, _ := event.Data["resource"].(map[string]interface{})
-		state, _ := resource["state"].(string)
-		name, _ := resource["name"].(string)
-
-		if len(state) > 0 {
-			message := resource["transitioningMessage"]
-			if message == nil {
-				message = ""
-			}
-			fmt.Printf("%s %s %s [%s] %v\n", event.ResourceType, event.ResourceID, state, name, message)
 		}
 	}
 
