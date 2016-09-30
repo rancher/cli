@@ -6,11 +6,23 @@ import (
 )
 
 func HostCommand() cli.Command {
+	hostLsFlags := []cli.Flag{
+		cli.BoolFlag{
+			Name:  "quiet,q",
+			Usage: "Only display IDs",
+		},
+		cli.StringFlag{
+			Name:  "format",
+			Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+		},
+	}
+
 	return cli.Command{
 		Name:      "hosts",
 		ShortName: "host",
 		Usage:     "Operations on hosts",
 		Action:    defaultAction(hostLs),
+		Flags:     hostLsFlags,
 		Subcommands: []cli.Command{
 			cli.Command{
 				Name:        "ls",
@@ -18,16 +30,7 @@ func HostCommand() cli.Command {
 				Description: "\nLists all hosts in the current $RANCHER_ENVIRONMENT. Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher hosts ls\n\t$ rancher --env 1a5 hosts ls\n",
 				ArgsUsage:   "None",
 				Action:      hostLs,
-				Flags: []cli.Flag{
-					cli.BoolFlag{
-						Name:  "quiet,q",
-						Usage: "Only display IDs",
-					},
-					cli.StringFlag{
-						Name:  "format",
-						Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
-					},
-				},
+				Flags:       hostLsFlags,
 			},
 			cli.Command{
 				Name:            "create",

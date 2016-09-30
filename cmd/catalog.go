@@ -9,11 +9,22 @@ import (
 )
 
 func CatalogCommand() cli.Command {
+	catalogLsFlags := []cli.Flag{
+		cli.BoolFlag{
+			Name:  "quiet,q",
+			Usage: "Only display IDs",
+		},
+		cli.StringFlag{
+			Name:  "format",
+			Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+		},
+	}
+
 	return cli.Command{
 		Name:   "catalog",
 		Usage:  "Operations with catalogs",
 		Action: defaultAction(catalogLs),
-		Flags:  []cli.Flag{},
+		Flags:  catalogLsFlags,
 		Subcommands: []cli.Command{
 			cli.Command{
 				Name:        "ls",
@@ -21,16 +32,7 @@ func CatalogCommand() cli.Command {
 				Description: "\nList all catalog templates in the current $RANCHER_ENVIRONMENT. Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher --env k8slab catalog ls\n",
 				ArgsUsage:   "None",
 				Action:      catalogLs,
-				Flags: []cli.Flag{
-					cli.BoolFlag{
-						Name:  "quiet,q",
-						Usage: "Only display IDs",
-					},
-					cli.StringFlag{
-						Name:  "format",
-						Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
-					},
-				},
+				Flags:       catalogLsFlags,
 			},
 			/*	cli.Command{
 					Name:   "install",

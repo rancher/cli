@@ -10,36 +10,29 @@ import (
 )
 
 func VolumeCommand() cli.Command {
+	volumeLsFlags := []cli.Flag{
+		cli.BoolFlag{
+			Name:  "quiet,q",
+			Usage: "Only display IDs",
+		},
+		cli.StringFlag{
+			Name:  "format",
+			Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+		},
+	}
+
 	return cli.Command{
 		Name:      "volumes",
 		ShortName: "volume",
 		Usage:     "Operations on volumes",
 		Action:    defaultAction(volumeLs),
-		Flags: []cli.Flag{
-			cli.BoolFlag{
-				Name:  "quiet,q",
-				Usage: "Only display IDs",
-			},
-			cli.StringFlag{
-				Name:  "format",
-				Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
-			},
-		},
+		Flags:     volumeLsFlags,
 		Subcommands: []cli.Command{
 			cli.Command{
 				Name:   "ls",
 				Usage:  "List volumes",
 				Action: volumeLs,
-				Flags: []cli.Flag{
-					cli.BoolFlag{
-						Name:  "quiet,q",
-						Usage: "Only display IDs",
-					},
-					cli.StringFlag{
-						Name:  "format",
-						Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
-					},
-				},
+				Flags:  volumeLsFlags,
 			},
 			cli.Command{
 				Name:   "rm",
