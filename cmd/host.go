@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"bytes"
+	"strings"
+
 	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
@@ -46,6 +49,7 @@ type HostsData struct {
 	Host        client.Host
 	State       string
 	IPAddresses []client.IpAddress
+	Labels      string
 }
 
 func getHostState(host *client.Host) string {
@@ -54,6 +58,24 @@ func getHostState(host *client.Host) string {
 		state = host.AgentState
 	}
 	return state
+}
+
+func getLabels(host *client.Host) string {
+	var buffer bytes.Buffer
+	it := 0
+	for key, value := range host.Labels {
+		if strings.HasPrefix(key, "io.rancher") {
+			continue
+		} else if it > 0 {
+			buffer.WriteString(",")
+		}
+
+		buffer.WriteString(key)
+		buffer.WriteString("=")
+		buffer.WriteString(value.(string))
+		it++
+	}
+	return buffer.String()
 }
 
 func hostLs(ctx *cli.Context) error {
@@ -101,6 +123,7 @@ func hostLs(ctx *cli.Context) error {
 		{"HOSTNAME", "Host.Hostname"},
 		{"STATE", "State"},
 		{"IP", "{{ips .IPAddresses}}"},
+		{"LABELS", "Labels"},
 		{"DETAIL", "Host.TransitioningMessage"},
 	}, ctx)
 
@@ -115,6 +138,7 @@ func hostLs(ctx *cli.Context) error {
 			ID:          item.Id,
 			Host:        item,
 			State:       getHostState(&item),
+			Labels:      getLabels(&item),
 			IPAddresses: ips.Data,
 		})
 	}
