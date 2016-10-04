@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"github.com/rancher/go-rancher/v2"
 	"strings"
+
+	"github.com/rancher/go-rancher/v2"
 
 	"github.com/urfave/cli"
 )
@@ -170,6 +171,11 @@ func RunCommand() cli.Command {
 				Usage: "Connect a container to a network: host, none, bridge, managed",
 				Value: "managed",
 			},
+			cli.IntFlag{
+				Name:  "scale",
+				Usage: "Number of containers to run",
+				Value: 1,
+			},
 		},
 	}
 }
@@ -270,6 +276,7 @@ func serviceRun(ctx *cli.Context) error {
 		StackId:       stack.Id,
 		LaunchConfig:  launchConfig,
 		StartOnCreate: true,
+		Scale:         int64(ctx.Int("scale")),
 	}
 
 	service, err = c.Service.Create(service)

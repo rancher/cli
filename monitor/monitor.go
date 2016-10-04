@@ -64,7 +64,7 @@ func New(c *client.RancherClient) *Monitor {
 }
 
 func (m *Monitor) Start() error {
-	schema, ok := m.c.Schemas.CheckSchema("subscribe")
+	schema, ok := m.c.GetSchemas().CheckSchema("subscribe")
 	if !ok {
 		return fmt.Errorf("Not authorized to subscribe")
 	}

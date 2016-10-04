@@ -117,8 +117,8 @@ func hostCreate(ctx *cli.Context) error {
 		return err
 	}
 
-	machineSchema := c.Schemas.Schema("machine")
-	flags := buildFlags("", machineSchema, c.Schemas)
+	machineSchema := c.GetSchemas().Schema("machine")
+	flags := buildFlags("", machineSchema, c.GetSchemas())
 	drivers := []string{}
 
 	for name := range machineSchema.ResourceFields {
@@ -132,11 +132,12 @@ func hostCreate(ctx *cli.Context) error {
 	for i := range hostCommand.Subcommands {
 		if hostCommand.Subcommands[i].Name == "create" {
 			hostCommand.Subcommands[i].Flags = append(flags, cli.StringFlag{
-				Name:  "driver,d",
-				Usage: "Driver to use: " + strings.Join(drivers, ", "),
+				Name:   "driver,d",
+				Usage:  "Driver to use: " + strings.Join(drivers, ", "),
+				EnvVar: "MACHINE_DRIVER",
 			})
 			hostCommand.Subcommands[i].Action = func(ctx *cli.Context) error {
-				return hostCreateRun(ctx, c, machineSchema, c.Schemas)
+				return hostCreateRun(ctx, c, machineSchema, c.GetSchemas())
 			}
 			hostCommand.Subcommands[i].SkipFlagParsing = false
 		}

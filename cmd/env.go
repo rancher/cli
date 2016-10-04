@@ -37,17 +37,22 @@ func EnvCommand() cli.Command {
 				Flags:       envLsFlags,
 			},
 			cli.Command{
-				Name:        "create",
-				Usage:       "Create an environment",
-				Description: "\nBy default, an environment with cattle orchestration framework will be created. This command only works for Account API keys.\n\nExample:\n\t$ rancher env create newEnv\n\t$ rancher env create -o kubernetes newK8sEnv\n\t$ rancher env create -o mesos newMesosEnv\n\t$ rancher env create -o swarm newSwarmEnv\n",
-				ArgsUsage:   "[NEWENVNAME...]",
-				Action:      envCreate,
-				Flags: []cli.Flag{
-					cli.StringFlag{
-						Name:  "orchestration,o",
-						Usage: "Orchestration framework",
-					},
-				},
+				Name:  "create",
+				Usage: "Create an environment",
+				Description: `
+By default, an environment with cattle orchestration framework will be created. This command only works for Account API keys.
+
+Example:
+
+	$ rancher env create newEnv
+
+To add an orchestration framework do TODO
+	$ rancher env create -o kubernetes newK8sEnv
+	$ rancher env create -o mesos newMesosEnv
+	$ rancher env create -o swarm newSwarmEnv
+`,
+				ArgsUsage: "[NEWENVNAME...]",
+				Action:    envCreate,
 			},
 			cli.Command{
 				Name:        "rm",
@@ -56,19 +61,6 @@ func EnvCommand() cli.Command {
 				ArgsUsage:   "[ENVID ENVNAME...]",
 				Action:      envRm,
 				Flags:       []cli.Flag{},
-			},
-			cli.Command{
-				Name:        "update",
-				Usage:       "Update environment",
-				Description: "\nChange the orchestration framework of the environment. This command only works for Account API keys.\n\nExample:\n\t$ rancher env update -o kubernetes 1a5\n\t$ rancher env update -o cattle Default\n\t$ rancher env update -o swarm 1a5\n\t$ rancher env update -o mesos 1a5\n",
-				ArgsUsage:   "[ENVID ENVNAME...]",
-				Action:      envUpdate,
-				Flags: []cli.Flag{
-					cli.StringFlag{
-						Name:  "orchestration,o",
-						Usage: "Orchestration framework",
-					},
-				},
 			},
 			cli.Command{
 				Name:  "deactivate",
@@ -103,27 +95,14 @@ Example:
 }
 
 type EnvData struct {
-	ID            string
-	Environment   *client.Project
-	Orchestration string
+	ID          string
+	Environment *client.Project
 }
 
 func NewEnvData(project client.Project) *EnvData {
-	orch := "Cattle"
-
-	switch {
-	case project.Swarm:
-		orch = "Swarm"
-	case project.Mesos:
-		orch = "Mesos"
-	case project.Kubernetes:
-		orch = "Kubernetes"
-	}
-
 	return &EnvData{
-		ID:            project.Id,
-		Environment:   &project,
-		Orchestration: orch,
+		ID:          project.Id,
+		Environment: &project,
 	}
 }
 
@@ -136,40 +115,6 @@ func envRm(ctx *cli.Context) error {
 	return forEachResourceWithClient(c, ctx, []string{"project"}, func(c *client.RancherClient, resource *client.Resource) (string, error) {
 		return resource.Id, c.Delete(resource)
 	})
-}
-
-func envUpdate(ctx *cli.Context) error {
-	c, err := GetRawClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	if ctx.NArg() < 1 {
-		return cli.NewExitError("Environment name/id is required as the first argument", 1)
-	}
-
-	orch := ctx.String("orchestration")
-	if orch == "" {
-		return nil
-	}
-
-	env, err := LookupEnvironment(c, ctx.Args()[0])
-	if err != nil {
-		return err
-	}
-
-	data := map[string]interface{}{}
-	setFields(ctx, data)
-
-	var newEnv client.Project
-
-	err = c.Update("project", &env.Resource, data, &newEnv)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(env.Id)
-	return nil
 }
 
 func envCreate(ctx *cli.Context) error {
@@ -221,15 +166,14 @@ func envLs(ctx *cli.Context) error {
 	writer := NewTableWriter([][]string{
 		{"ID", "ID"},
 		{"NAME", "Environment.Name"},
-		{"ORCHESTRATION", "Orchestration"},
+		{"ORCHESTRATION", "Environment.Orchestration"},
 		{"STATE", "Environment.State"},
 		{"CREATED", "Environment.Created"},
 	}, ctx)
 	defer writer.Close()
 
-	collection := client.ProjectCollection{}
-	listOpts := defaultListOpts(ctx)
-	if err = c.List("project", listOpts, &collection); err != nil {
+	collection, err := c.Project.List(defaultListOpts(ctx))
+	if err != nil {
 		return err
 	}
 

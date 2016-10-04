@@ -1,11 +1,19 @@
 package cmd
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/rancher/go-rancher/catalog"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
+)
+
+const (
+	orchestrationSupported = "io.rancher.orchestration.supported"
 )
 
 func CatalogCommand() cli.Command {
@@ -17,6 +25,10 @@ func CatalogCommand() cli.Command {
 		cli.StringFlag{
 			Name:  "format",
 			Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+		},
+		cli.BoolFlag{
+			Name:  "system,s",
+			Usage: "Show system templates, not user",
 		},
 	}
 
@@ -34,13 +46,27 @@ func CatalogCommand() cli.Command {
 				Action:      catalogLs,
 				Flags:       catalogLsFlags,
 			},
-			/*	cli.Command{
-					Name:   "install",
-					Usage:  "Install catalog template",
-					Action: errorWrapper(catalogInstall),
-					ArgsUsage: "[ID or NAME]"
-					Flags:  []cli.Flag{},
+			cli.Command{
+				Name:      "install",
+				Usage:     "Install catalog template",
+				Action:    catalogInstall,
+				ArgsUsage: "[ID or NAME]...",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "answers,a",
+						Usage: "Answer file",
+					},
+					cli.StringFlag{
+						Name:  "name",
+						Usage: "Name of stack to create",
+					},
+					cli.BoolFlag{
+						Name:  "system,s",
+						Usage: "Install a system template",
+					},
 				},
+			},
+			/*
 				cli.Command{
 					Name:   "upgrade",
 					Usage:  "Upgrade catalog template",
@@ -58,39 +84,83 @@ type CatalogData struct {
 	Template catalog.Template
 }
 
+func getEnvFilter(proj *client.Project, ctx *cli.Context) string {
+	envFilter := proj.Orchestration
+	if envFilter == "cattle" {
+		envFilter = ""
+	}
+	if ctx.Bool("system") {
+		envFilter = "system"
+	}
+	return envFilter
+}
+
+func isInCSV(value, csv string) bool {
+	for _, part := range strings.Split(csv, ",") {
+		if value == part {
+			return true
+		}
+	}
+	return false
+}
+
+func isOrchestrationSupported(ctx *cli.Context, proj *client.Project, labels map[string]interface{}) bool {
+	// Only check for system templates
+	if !ctx.Bool("system") {
+		return true
+	}
+
+	if supported, ok := labels[orchestrationSupported]; ok {
+		supportedString := fmt.Sprint(supported)
+		if supportedString != "" && !isInCSV(proj.Orchestration, supportedString) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func isSupported(ctx *cli.Context, proj *client.Project, item catalog.Template) bool {
+	envFilter := getEnvFilter(proj, ctx)
+	if item.TemplateBase != envFilter {
+		return false
+	}
+	return isOrchestrationSupported(ctx, proj, item.Labels)
+}
+
 func catalogLs(ctx *cli.Context) error {
-	config, err := lookupConfig(ctx)
+	writer := NewTableWriter([][]string{
+		{"NAME", "Template.Name"},
+		{"CATEGORY", "Template.Category"},
+		{"ID", "ID"},
+	}, ctx)
+	defer writer.Close()
+
+	err := forEachTemplate(ctx, func(item catalog.Template) error {
+		writer.Write(CatalogData{
+			ID:       templateID(item),
+			Template: item,
+		})
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return writer.Err()
+}
+
+func forEachTemplate(ctx *cli.Context, f func(item catalog.Template) error) error {
+	_, c, proj, cc, err := setupCatalogContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	c, err := GetClient(ctx)
+	opts, err := getListTemplatesOpts(ctx, c)
 	if err != nil {
 		return err
 	}
 
-	proj, err := GetEnvironment(config.Environment, c)
-	if err != nil {
-		return err
-	}
-
-	cc, err := GetCatalogClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	envData := NewEnvData(*proj)
-	envFilter := ""
-	switch envData.Orchestration {
-	case "Kubernetes":
-		envFilter = "kubernetes"
-	case "Swarm":
-		envFilter = "swarm"
-	case "Mesos":
-		envFilter = "mesos"
-	}
-
-	collection, err := cc.Template.List(nil)
+	collection, err := cc.Template.List(opts)
 	if err != nil {
 		return err
 	}
@@ -103,93 +173,193 @@ func catalogLs(ctx *cli.Context) error {
 	defer writer.Close()
 
 	for _, item := range collection.Data {
-		if item.TemplateBase != envFilter {
+		if !isSupported(ctx, proj, item) {
 			continue
 		}
-		if item.Category == "System" {
-			continue
+		if err := f(item); err != nil {
+			return err
 		}
-		writer.Write(CatalogData{
-			ID:       templateID(item),
-			Template: item,
-		})
 	}
 
-	return writer.Err()
+	return err
+}
+
+func getListTemplatesOpts(ctx *cli.Context, c *client.RancherClient) (*catalog.ListOpts, error) {
+	opts := &catalog.ListOpts{
+		Filters: map[string]interface{}{},
+	}
+	setting, err := c.Setting.ById("rancher.server.version")
+	if err != nil {
+		return nil, err
+	}
+
+	if setting != nil && setting.Value != "" {
+		opts.Filters["minimumRancherVersion_lte"] = setting.Value
+	}
+
+	opts.Filters["category_ne"] = "system"
+	return opts, nil
+}
+
+func setupCatalogContext(ctx *cli.Context) (Config, *client.RancherClient, *client.Project, *catalog.RancherClient, error) {
+	config, err := lookupConfig(ctx)
+	if err != nil {
+		return config, nil, nil, nil, err
+	}
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return config, nil, nil, nil, err
+	}
+
+	proj, err := GetEnvironment(config.Environment, c)
+	if err != nil {
+		return config, nil, nil, nil, err
+	}
+
+	cc, err := GetCatalogClient(ctx)
+	if err != nil {
+		return config, nil, nil, nil, err
+	}
+
+	return config, c, proj, cc, nil
+}
+
+func templateNameAndVersion(name string) (string, string) {
+	parts := strings.Split(name, ":")
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return parts[0], ""
 }
 
 func catalogInstall(ctx *cli.Context) error {
-	/*config, err := lookupConfig(ctx)
+	if len(ctx.Args()) != 1 {
+		return errors.New("Exactly one arguement is required")
+	}
+
+	_, c, proj, cc, err := setupCatalogContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	c, err := GetClient(ctx)
+	templateReference := ctx.Args()[0]
+	name, version := templateNameAndVersion(templateReference)
+
+	template, err := getTemplate(ctx, name)
 	if err != nil {
 		return err
 	}
 
-	proj, err := GetEnvironment(config.Environment, c)
+	templateVersion, err := getTemplateVersion(ctx, cc, template, name, version)
 	if err != nil {
 		return err
 	}
 
-	cc, err := GetCatalogClient(ctx)
+	answers, err := parseAnswers(ctx)
 	if err != nil {
 		return err
 	}
 
-	envData := NewEnvData(*proj)
-	envFilter := ""
-	switch envData.Orchestration {
-	case "Kubernetes":
-		envFilter = "kubernetes"
-	case "Swarm":
-		envFilter = "swarm"
-	case "Mesos":
-		envFilter = "mesos"
+	answers, err = askQuestions(answers, templateVersion)
+	if err != nil {
+		return err
 	}
 
-	/*TODO add in how to install template */
+	stackName := ctx.String("name")
+	if stackName == "" {
+		stackName = strings.Title(strings.Split(name, "/")[1])
+	}
 
-	return nil
+	externalID := fmt.Sprintf("catalog://%s", templateVersion.Id)
+	id := ""
+	switch proj.Orchestration {
+	case "cattle":
+		stack, err := c.Stack.Create(&client.Stack{
+			Name:           stackName,
+			DockerCompose:  toString(templateVersion.Files["docker-compose.yml"]),
+			RancherCompose: toString(templateVersion.Files["rancher-compose.yml"]),
+			Environment:    answers,
+			ExternalId:     externalID,
+			System:         ctx.Bool("system"),
+			StartOnCreate:  true,
+		})
+		if err != nil {
+			return err
+		}
+		id = stack.Id
+	case "kubernetes":
+		stack, err := c.KubernetesStack.Create(&client.KubernetesStack{
+			Name:        stackName,
+			Templates:   templateVersion.Files,
+			ExternalId:  externalID,
+			Environment: answers,
+			System:      ctx.Bool("system"),
+		})
+		if err != nil {
+			return err
+		}
+		id = stack.Id
+	}
+
+	return WaitFor(ctx, id)
 }
 
-func catalogUpgrade(ctx *cli.Context) error {
-	/*config, err := lookupConfig(ctx)
+func toString(s interface{}) string {
+	if s == nil {
+		return ""
+	}
+	return fmt.Sprint(s)
+}
+
+func getTemplateVersion(ctx *cli.Context, cc *catalog.RancherClient, template catalog.Template, name, version string) (catalog.TemplateVersion, error) {
+	templateVersion := catalog.TemplateVersion{}
+
+	if version == "" {
+		version = template.DefaultVersion
+	}
+
+	link, ok := template.VersionLinks[version]
+	if !ok {
+		fmt.Printf("%#v\n", template)
+		return templateVersion, fmt.Errorf("Failed to find the version %s for template %s", version, name)
+	}
+
+	resp, err := http.Get(fmt.Sprint(link))
 	if err != nil {
-		return err
+		return templateVersion, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return templateVersion, fmt.Errorf("Bad response %d looking up %s", resp.StatusCode, link)
+
 	}
 
-	c, err := GetClient(ctx)
-	if err != nil {
-		return err
+	err = json.NewDecoder(resp.Body).Decode(&templateVersion)
+	return templateVersion, err
+}
+
+func getTemplate(ctx *cli.Context, name string) (catalog.Template, error) {
+	found := false
+	foundTemplate := catalog.Template{}
+	err := forEachTemplate(ctx, func(item catalog.Template) error {
+		if found {
+			return nil
+		}
+
+		templateName, _ := templateNameAndVersion(templateID(item))
+		if templateName == name {
+			found = true
+			foundTemplate = item
+		}
+
+		return nil
+	})
+	if !found && err == nil {
+		err = fmt.Errorf("Failed to find template %s", name)
 	}
-
-	proj, err := GetEnvironment(config.Environment, c)
-	if err != nil {
-		return err
-	}
-
-	cc, err := GetCatalogClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	envData := NewEnvData(*proj)
-	envFilter := ""
-	switch envData.Orchestration {
-	case "Kubernetes":
-		envFilter = "kubernetes"
-	case "Swarm":
-		envFilter = "swarm"
-	case "Mesos":
-		envFilter = "mesos"
-	}
-
-	/*TODO add in how to upgrade template */
-
-	return nil
+	return foundTemplate, err
 }
 
 func templateID(template catalog.Template) string {

@@ -92,7 +92,7 @@ func servicePs(ctx *cli.Context) error {
 		{"NAME", "Name"},
 		{"IMAGE", "LaunchConfig.ImageUuid"},
 		{"STATE", "CombinedState"},
-		{"SCALE", "Service.Scale"},
+		{"SCALE", "{{len .Service.InstanceIds}}/{{.Service.Scale}}"},
 		{"ENDPOINTS", "{{endpoint .Service.PublicEndpoints}}"},
 		{"DETAIL", "Service.TransitioningMessage"},
 	}, ctx)
