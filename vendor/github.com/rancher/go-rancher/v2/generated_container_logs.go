@@ -14,7 +14,8 @@ type ContainerLogs struct {
 
 type ContainerLogsCollection struct {
 	Collection
-	Data []ContainerLogs `json:"data,omitempty"`
+	Data   []ContainerLogs `json:"data,omitempty"`
+	client *ContainerLogsClient
 }
 
 type ContainerLogsClient struct {
@@ -50,7 +51,18 @@ func (c *ContainerLogsClient) Update(existing *ContainerLogs, updates interface{
 func (c *ContainerLogsClient) List(opts *ListOpts) (*ContainerLogsCollection, error) {
 	resp := &ContainerLogsCollection{}
 	err := c.rancherClient.doList(CONTAINER_LOGS_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ContainerLogsCollection) Next() (*ContainerLogsCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ContainerLogsCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ContainerLogsClient) ById(id string) (*ContainerLogs, error) {

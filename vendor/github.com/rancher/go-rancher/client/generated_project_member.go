@@ -42,7 +42,8 @@ type ProjectMember struct {
 
 type ProjectMemberCollection struct {
 	Collection
-	Data []ProjectMember `json:"data,omitempty"`
+	Data   []ProjectMember `json:"data,omitempty"`
+	client *ProjectMemberClient
 }
 
 type ProjectMemberClient struct {
@@ -92,7 +93,18 @@ func (c *ProjectMemberClient) Update(existing *ProjectMember, updates interface{
 func (c *ProjectMemberClient) List(opts *ListOpts) (*ProjectMemberCollection, error) {
 	resp := &ProjectMemberCollection{}
 	err := c.rancherClient.doList(PROJECT_MEMBER_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ProjectMemberCollection) Next() (*ProjectMemberCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ProjectMemberCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ProjectMemberClient) ById(id string) (*ProjectMember, error) {

@@ -14,7 +14,8 @@ type RestartPolicy struct {
 
 type RestartPolicyCollection struct {
 	Collection
-	Data []RestartPolicy `json:"data,omitempty"`
+	Data   []RestartPolicy `json:"data,omitempty"`
+	client *RestartPolicyClient
 }
 
 type RestartPolicyClient struct {
@@ -50,7 +51,18 @@ func (c *RestartPolicyClient) Update(existing *RestartPolicy, updates interface{
 func (c *RestartPolicyClient) List(opts *ListOpts) (*RestartPolicyCollection, error) {
 	resp := &RestartPolicyCollection{}
 	err := c.rancherClient.doList(RESTART_POLICY_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *RestartPolicyCollection) Next() (*RestartPolicyCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &RestartPolicyCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *RestartPolicyClient) ById(id string) (*RestartPolicy, error) {

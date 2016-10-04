@@ -24,7 +24,8 @@ type LoadBalancerAppCookieStickinessPolicy struct {
 
 type LoadBalancerAppCookieStickinessPolicyCollection struct {
 	Collection
-	Data []LoadBalancerAppCookieStickinessPolicy `json:"data,omitempty"`
+	Data   []LoadBalancerAppCookieStickinessPolicy `json:"data,omitempty"`
+	client *LoadBalancerAppCookieStickinessPolicyClient
 }
 
 type LoadBalancerAppCookieStickinessPolicyClient struct {
@@ -60,7 +61,18 @@ func (c *LoadBalancerAppCookieStickinessPolicyClient) Update(existing *LoadBalan
 func (c *LoadBalancerAppCookieStickinessPolicyClient) List(opts *ListOpts) (*LoadBalancerAppCookieStickinessPolicyCollection, error) {
 	resp := &LoadBalancerAppCookieStickinessPolicyCollection{}
 	err := c.rancherClient.doList(LOAD_BALANCER_APP_COOKIE_STICKINESS_POLICY_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *LoadBalancerAppCookieStickinessPolicyCollection) Next() (*LoadBalancerAppCookieStickinessPolicyCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &LoadBalancerAppCookieStickinessPolicyCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *LoadBalancerAppCookieStickinessPolicyClient) ById(id string) (*LoadBalancerAppCookieStickinessPolicy, error) {

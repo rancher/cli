@@ -33,7 +33,7 @@ type VirtualMachine struct {
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
-	Disks []interface{} `json:"disks,omitempty" yaml:"disks,omitempty"`
+	Disks []VirtualMachineDisk `json:"disks,omitempty" yaml:"disks,omitempty"`
 
 	Dns []string `json:"dns,omitempty" yaml:"dns,omitempty"`
 
@@ -97,11 +97,15 @@ type VirtualMachine struct {
 
 	SecurityOpt []string `json:"securityOpt,omitempty" yaml:"security_opt,omitempty"`
 
+	ServiceIds []string `json:"serviceIds,omitempty" yaml:"service_ids,omitempty"`
+
 	StartCount int64 `json:"startCount,omitempty" yaml:"start_count,omitempty"`
 
 	StartOnCreate bool `json:"startOnCreate,omitempty" yaml:"start_on_create,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	System bool `json:"system,omitempty" yaml:"system,omitempty"`
 
 	SystemContainer string `json:"systemContainer,omitempty" yaml:"system_container,omitempty"`
 
@@ -126,7 +130,8 @@ type VirtualMachine struct {
 
 type VirtualMachineCollection struct {
 	Collection
-	Data []VirtualMachine `json:"data,omitempty"`
+	Data   []VirtualMachine `json:"data,omitempty"`
+	client *VirtualMachineClient
 }
 
 type VirtualMachineClient struct {
@@ -166,8 +171,6 @@ type VirtualMachineOperations interface {
 
 	ActionRestore(*VirtualMachine) (*Instance, error)
 
-	ActionSetlabels(*VirtualMachine, *SetLabelsInput) (*Container, error)
-
 	ActionStart(*VirtualMachine) (*Instance, error)
 
 	ActionStop(*VirtualMachine, *InstanceStop) (*Instance, error)
@@ -202,7 +205,18 @@ func (c *VirtualMachineClient) Update(existing *VirtualMachine, updates interfac
 func (c *VirtualMachineClient) List(opts *ListOpts) (*VirtualMachineCollection, error) {
 	resp := &VirtualMachineCollection{}
 	err := c.rancherClient.doList(VIRTUAL_MACHINE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *VirtualMachineCollection) Next() (*VirtualMachineCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &VirtualMachineCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *VirtualMachineClient) ById(id string) (*VirtualMachine, error) {
@@ -333,15 +347,6 @@ func (c *VirtualMachineClient) ActionRestore(resource *VirtualMachine) (*Instanc
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(VIRTUAL_MACHINE_TYPE, "restore", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *VirtualMachineClient) ActionSetlabels(resource *VirtualMachine, input *SetLabelsInput) (*Container, error) {
-
-	resp := &Container{}
-
-	err := c.rancherClient.doAction(VIRTUAL_MACHINE_TYPE, "setlabels", &resource.Resource, input, resp)
 
 	return resp, err
 }

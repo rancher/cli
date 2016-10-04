@@ -56,7 +56,8 @@ type Ldapconfig struct {
 
 type LdapconfigCollection struct {
 	Collection
-	Data []Ldapconfig `json:"data,omitempty"`
+	Data   []Ldapconfig `json:"data,omitempty"`
+	client *LdapconfigClient
 }
 
 type LdapconfigClient struct {
@@ -92,7 +93,18 @@ func (c *LdapconfigClient) Update(existing *Ldapconfig, updates interface{}) (*L
 func (c *LdapconfigClient) List(opts *ListOpts) (*LdapconfigCollection, error) {
 	resp := &LdapconfigCollection{}
 	err := c.rancherClient.doList(LDAPCONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *LdapconfigCollection) Next() (*LdapconfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &LdapconfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *LdapconfigClient) ById(id string) (*Ldapconfig, error) {

@@ -48,7 +48,8 @@ type KubernetesService struct {
 
 type KubernetesServiceCollection struct {
 	Collection
-	Data []KubernetesService `json:"data,omitempty"`
+	Data   []KubernetesService `json:"data,omitempty"`
+	client *KubernetesServiceClient
 }
 
 type KubernetesServiceClient struct {
@@ -112,7 +113,18 @@ func (c *KubernetesServiceClient) Update(existing *KubernetesService, updates in
 func (c *KubernetesServiceClient) List(opts *ListOpts) (*KubernetesServiceCollection, error) {
 	resp := &KubernetesServiceCollection{}
 	err := c.rancherClient.doList(KUBERNETES_SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *KubernetesServiceCollection) Next() (*KubernetesServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &KubernetesServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *KubernetesServiceClient) ById(id string) (*KubernetesService, error) {

@@ -44,7 +44,8 @@ type InstanceLink struct {
 
 type InstanceLinkCollection struct {
 	Collection
-	Data []InstanceLink `json:"data,omitempty"`
+	Data   []InstanceLink `json:"data,omitempty"`
+	client *InstanceLinkClient
 }
 
 type InstanceLinkClient struct {
@@ -94,7 +95,18 @@ func (c *InstanceLinkClient) Update(existing *InstanceLink, updates interface{})
 func (c *InstanceLinkClient) List(opts *ListOpts) (*InstanceLinkCollection, error) {
 	resp := &InstanceLinkCollection{}
 	err := c.rancherClient.doList(INSTANCE_LINK_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *InstanceLinkCollection) Next() (*InstanceLinkCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &InstanceLinkCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *InstanceLinkClient) ById(id string) (*InstanceLink, error) {

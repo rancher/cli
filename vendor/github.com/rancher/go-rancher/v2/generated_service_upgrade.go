@@ -14,7 +14,8 @@ type ServiceUpgrade struct {
 
 type ServiceUpgradeCollection struct {
 	Collection
-	Data []ServiceUpgrade `json:"data,omitempty"`
+	Data   []ServiceUpgrade `json:"data,omitempty"`
+	client *ServiceUpgradeClient
 }
 
 type ServiceUpgradeClient struct {
@@ -50,7 +51,18 @@ func (c *ServiceUpgradeClient) Update(existing *ServiceUpgrade, updates interfac
 func (c *ServiceUpgradeClient) List(opts *ListOpts) (*ServiceUpgradeCollection, error) {
 	resp := &ServiceUpgradeCollection{}
 	err := c.rancherClient.doList(SERVICE_UPGRADE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ServiceUpgradeCollection) Next() (*ServiceUpgradeCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ServiceUpgradeCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ServiceUpgradeClient) ById(id string) (*ServiceUpgrade, error) {

@@ -34,7 +34,8 @@ type ExternalHandlerProcess struct {
 
 type ExternalHandlerProcessCollection struct {
 	Collection
-	Data []ExternalHandlerProcess `json:"data,omitempty"`
+	Data   []ExternalHandlerProcess `json:"data,omitempty"`
+	client *ExternalHandlerProcessClient
 }
 
 type ExternalHandlerProcessClient struct {
@@ -84,7 +85,18 @@ func (c *ExternalHandlerProcessClient) Update(existing *ExternalHandlerProcess, 
 func (c *ExternalHandlerProcessClient) List(opts *ListOpts) (*ExternalHandlerProcessCollection, error) {
 	resp := &ExternalHandlerProcessCollection{}
 	err := c.rancherClient.doList(EXTERNAL_HANDLER_PROCESS_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ExternalHandlerProcessCollection) Next() (*ExternalHandlerProcessCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ExternalHandlerProcessCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ExternalHandlerProcessClient) ById(id string) (*ExternalHandlerProcess, error) {

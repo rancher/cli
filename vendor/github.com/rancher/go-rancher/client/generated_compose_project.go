@@ -48,7 +48,8 @@ type ComposeProject struct {
 
 type ComposeProjectCollection struct {
 	Collection
-	Data []ComposeProject `json:"data,omitempty"`
+	Data   []ComposeProject `json:"data,omitempty"`
+	client *ComposeProjectClient
 }
 
 type ComposeProjectClient struct {
@@ -98,7 +99,18 @@ func (c *ComposeProjectClient) Update(existing *ComposeProject, updates interfac
 func (c *ComposeProjectClient) List(opts *ListOpts) (*ComposeProjectCollection, error) {
 	resp := &ComposeProjectCollection{}
 	err := c.rancherClient.doList(COMPOSE_PROJECT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ComposeProjectCollection) Next() (*ComposeProjectCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ComposeProjectCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ComposeProjectClient) ById(id string) (*ComposeProject, error) {

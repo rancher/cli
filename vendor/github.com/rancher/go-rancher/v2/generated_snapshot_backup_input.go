@@ -18,7 +18,8 @@ type SnapshotBackupInput struct {
 
 type SnapshotBackupInputCollection struct {
 	Collection
-	Data []SnapshotBackupInput `json:"data,omitempty"`
+	Data   []SnapshotBackupInput `json:"data,omitempty"`
+	client *SnapshotBackupInputClient
 }
 
 type SnapshotBackupInputClient struct {
@@ -58,7 +59,18 @@ func (c *SnapshotBackupInputClient) Update(existing *SnapshotBackupInput, update
 func (c *SnapshotBackupInputClient) List(opts *ListOpts) (*SnapshotBackupInputCollection, error) {
 	resp := &SnapshotBackupInputCollection{}
 	err := c.rancherClient.doList(SNAPSHOT_BACKUP_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *SnapshotBackupInputCollection) Next() (*SnapshotBackupInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &SnapshotBackupInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *SnapshotBackupInputClient) ById(id string) (*SnapshotBackupInput, error) {

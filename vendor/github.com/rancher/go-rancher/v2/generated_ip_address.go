@@ -40,7 +40,8 @@ type IpAddress struct {
 
 type IpAddressCollection struct {
 	Collection
-	Data []IpAddress `json:"data,omitempty"`
+	Data   []IpAddress `json:"data,omitempty"`
+	client *IpAddressClient
 }
 
 type IpAddressClient struct {
@@ -92,7 +93,18 @@ func (c *IpAddressClient) Update(existing *IpAddress, updates interface{}) (*IpA
 func (c *IpAddressClient) List(opts *ListOpts) (*IpAddressCollection, error) {
 	resp := &IpAddressCollection{}
 	err := c.rancherClient.doList(IP_ADDRESS_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *IpAddressCollection) Next() (*IpAddressCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &IpAddressCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *IpAddressClient) ById(id string) (*IpAddress, error) {

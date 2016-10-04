@@ -19,7 +19,7 @@ type ExternalHandler struct {
 
 	Priority int64 `json:"priority,omitempty" yaml:"priority,omitempty"`
 
-	ProcessConfigs []interface{} `json:"processConfigs,omitempty" yaml:"process_configs,omitempty"`
+	ProcessConfigs []ExternalHandlerProcessConfig `json:"processConfigs,omitempty" yaml:"process_configs,omitempty"`
 
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
@@ -42,7 +42,8 @@ type ExternalHandler struct {
 
 type ExternalHandlerCollection struct {
 	Collection
-	Data []ExternalHandler `json:"data,omitempty"`
+	Data   []ExternalHandler `json:"data,omitempty"`
+	client *ExternalHandlerClient
 }
 
 type ExternalHandlerClient struct {
@@ -92,7 +93,18 @@ func (c *ExternalHandlerClient) Update(existing *ExternalHandler, updates interf
 func (c *ExternalHandlerClient) List(opts *ListOpts) (*ExternalHandlerCollection, error) {
 	resp := &ExternalHandlerCollection{}
 	err := c.rancherClient.doList(EXTERNAL_HANDLER_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ExternalHandlerCollection) Next() (*ExternalHandlerCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ExternalHandlerCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ExternalHandlerClient) ById(id string) (*ExternalHandler, error) {

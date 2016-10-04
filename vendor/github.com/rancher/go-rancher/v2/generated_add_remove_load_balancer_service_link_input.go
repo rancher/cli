@@ -12,7 +12,8 @@ type AddRemoveLoadBalancerServiceLinkInput struct {
 
 type AddRemoveLoadBalancerServiceLinkInputCollection struct {
 	Collection
-	Data []AddRemoveLoadBalancerServiceLinkInput `json:"data,omitempty"`
+	Data   []AddRemoveLoadBalancerServiceLinkInput `json:"data,omitempty"`
+	client *AddRemoveLoadBalancerServiceLinkInputClient
 }
 
 type AddRemoveLoadBalancerServiceLinkInputClient struct {
@@ -48,7 +49,18 @@ func (c *AddRemoveLoadBalancerServiceLinkInputClient) Update(existing *AddRemove
 func (c *AddRemoveLoadBalancerServiceLinkInputClient) List(opts *ListOpts) (*AddRemoveLoadBalancerServiceLinkInputCollection, error) {
 	resp := &AddRemoveLoadBalancerServiceLinkInputCollection{}
 	err := c.rancherClient.doList(ADD_REMOVE_LOAD_BALANCER_SERVICE_LINK_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *AddRemoveLoadBalancerServiceLinkInputCollection) Next() (*AddRemoveLoadBalancerServiceLinkInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &AddRemoveLoadBalancerServiceLinkInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *AddRemoveLoadBalancerServiceLinkInputClient) ById(id string) (*AddRemoveLoadBalancerServiceLinkInput, error) {

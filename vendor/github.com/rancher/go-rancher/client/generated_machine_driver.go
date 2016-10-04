@@ -48,7 +48,8 @@ type MachineDriver struct {
 
 type MachineDriverCollection struct {
 	Collection
-	Data []MachineDriver `json:"data,omitempty"`
+	Data   []MachineDriver `json:"data,omitempty"`
+	client *MachineDriverClient
 }
 
 type MachineDriverClient struct {
@@ -96,7 +97,18 @@ func (c *MachineDriverClient) Update(existing *MachineDriver, updates interface{
 func (c *MachineDriverClient) List(opts *ListOpts) (*MachineDriverCollection, error) {
 	resp := &MachineDriverCollection{}
 	err := c.rancherClient.doList(MACHINE_DRIVER_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *MachineDriverCollection) Next() (*MachineDriverCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &MachineDriverCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *MachineDriverClient) ById(id string) (*MachineDriver, error) {

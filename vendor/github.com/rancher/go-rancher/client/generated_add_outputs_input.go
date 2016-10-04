@@ -12,7 +12,8 @@ type AddOutputsInput struct {
 
 type AddOutputsInputCollection struct {
 	Collection
-	Data []AddOutputsInput `json:"data,omitempty"`
+	Data   []AddOutputsInput `json:"data,omitempty"`
+	client *AddOutputsInputClient
 }
 
 type AddOutputsInputClient struct {
@@ -48,7 +49,18 @@ func (c *AddOutputsInputClient) Update(existing *AddOutputsInput, updates interf
 func (c *AddOutputsInputClient) List(opts *ListOpts) (*AddOutputsInputCollection, error) {
 	resp := &AddOutputsInputCollection{}
 	err := c.rancherClient.doList(ADD_OUTPUTS_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *AddOutputsInputCollection) Next() (*AddOutputsInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &AddOutputsInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *AddOutputsInputClient) ById(id string) (*AddOutputsInput, error) {

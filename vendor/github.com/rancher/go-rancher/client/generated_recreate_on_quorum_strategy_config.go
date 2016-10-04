@@ -12,7 +12,8 @@ type RecreateOnQuorumStrategyConfig struct {
 
 type RecreateOnQuorumStrategyConfigCollection struct {
 	Collection
-	Data []RecreateOnQuorumStrategyConfig `json:"data,omitempty"`
+	Data   []RecreateOnQuorumStrategyConfig `json:"data,omitempty"`
+	client *RecreateOnQuorumStrategyConfigClient
 }
 
 type RecreateOnQuorumStrategyConfigClient struct {
@@ -48,7 +49,18 @@ func (c *RecreateOnQuorumStrategyConfigClient) Update(existing *RecreateOnQuorum
 func (c *RecreateOnQuorumStrategyConfigClient) List(opts *ListOpts) (*RecreateOnQuorumStrategyConfigCollection, error) {
 	resp := &RecreateOnQuorumStrategyConfigCollection{}
 	err := c.rancherClient.doList(RECREATE_ON_QUORUM_STRATEGY_CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *RecreateOnQuorumStrategyConfigCollection) Next() (*RecreateOnQuorumStrategyConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &RecreateOnQuorumStrategyConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *RecreateOnQuorumStrategyConfigClient) ById(id string) (*RecreateOnQuorumStrategyConfig, error) {

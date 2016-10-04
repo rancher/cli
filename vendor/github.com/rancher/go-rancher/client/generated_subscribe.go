@@ -14,7 +14,8 @@ type Subscribe struct {
 
 type SubscribeCollection struct {
 	Collection
-	Data []Subscribe `json:"data,omitempty"`
+	Data   []Subscribe `json:"data,omitempty"`
+	client *SubscribeClient
 }
 
 type SubscribeClient struct {
@@ -50,7 +51,18 @@ func (c *SubscribeClient) Update(existing *Subscribe, updates interface{}) (*Sub
 func (c *SubscribeClient) List(opts *ListOpts) (*SubscribeCollection, error) {
 	resp := &SubscribeCollection{}
 	err := c.rancherClient.doList(SUBSCRIBE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *SubscribeCollection) Next() (*SubscribeCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &SubscribeCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *SubscribeClient) ById(id string) (*Subscribe, error) {

@@ -32,7 +32,8 @@ type InstanceHealthCheck struct {
 
 type InstanceHealthCheckCollection struct {
 	Collection
-	Data []InstanceHealthCheck `json:"data,omitempty"`
+	Data   []InstanceHealthCheck `json:"data,omitempty"`
+	client *InstanceHealthCheckClient
 }
 
 type InstanceHealthCheckClient struct {
@@ -68,7 +69,18 @@ func (c *InstanceHealthCheckClient) Update(existing *InstanceHealthCheck, update
 func (c *InstanceHealthCheckClient) List(opts *ListOpts) (*InstanceHealthCheckCollection, error) {
 	resp := &InstanceHealthCheckCollection{}
 	err := c.rancherClient.doList(INSTANCE_HEALTH_CHECK_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *InstanceHealthCheckCollection) Next() (*InstanceHealthCheckCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &InstanceHealthCheckCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *InstanceHealthCheckClient) ById(id string) (*InstanceHealthCheck, error) {

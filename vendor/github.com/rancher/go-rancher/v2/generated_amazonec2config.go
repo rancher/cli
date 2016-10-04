@@ -13,13 +13,19 @@ type Amazonec2Config struct {
 
 	DeviceName string `json:"deviceName,omitempty" yaml:"device_name,omitempty"`
 
+	Endpoint string `json:"endpoint,omitempty" yaml:"endpoint,omitempty"`
+
 	IamInstanceProfile string `json:"iamInstanceProfile,omitempty" yaml:"iam_instance_profile,omitempty"`
+
+	InsecureTransport bool `json:"insecureTransport,omitempty" yaml:"insecure_transport,omitempty"`
 
 	InstanceType string `json:"instanceType,omitempty" yaml:"instance_type,omitempty"`
 
 	KeypairName string `json:"keypairName,omitempty" yaml:"keypair_name,omitempty"`
 
 	Monitoring bool `json:"monitoring,omitempty" yaml:"monitoring,omitempty"`
+
+	OpenPort []string `json:"openPort,omitempty" yaml:"open_port,omitempty"`
 
 	PrivateAddressOnly bool `json:"privateAddressOnly,omitempty" yaml:"private_address_only,omitempty"`
 
@@ -60,7 +66,8 @@ type Amazonec2Config struct {
 
 type Amazonec2ConfigCollection struct {
 	Collection
-	Data []Amazonec2Config `json:"data,omitempty"`
+	Data   []Amazonec2Config `json:"data,omitempty"`
+	client *Amazonec2ConfigClient
 }
 
 type Amazonec2ConfigClient struct {
@@ -96,7 +103,18 @@ func (c *Amazonec2ConfigClient) Update(existing *Amazonec2Config, updates interf
 func (c *Amazonec2ConfigClient) List(opts *ListOpts) (*Amazonec2ConfigCollection, error) {
 	resp := &Amazonec2ConfigCollection{}
 	err := c.rancherClient.doList(AMAZONEC2CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *Amazonec2ConfigCollection) Next() (*Amazonec2ConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &Amazonec2ConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *Amazonec2ConfigClient) ById(id string) (*Amazonec2Config, error) {

@@ -166,7 +166,8 @@ type LaunchConfig struct {
 
 type LaunchConfigCollection struct {
 	Collection
-	Data []LaunchConfig `json:"data,omitempty"`
+	Data   []LaunchConfig `json:"data,omitempty"`
+	client *LaunchConfigClient
 }
 
 type LaunchConfigClient struct {
@@ -240,7 +241,18 @@ func (c *LaunchConfigClient) Update(existing *LaunchConfig, updates interface{})
 func (c *LaunchConfigClient) List(opts *ListOpts) (*LaunchConfigCollection, error) {
 	resp := &LaunchConfigCollection{}
 	err := c.rancherClient.doList(LAUNCH_CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *LaunchConfigCollection) Next() (*LaunchConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &LaunchConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *LaunchConfigClient) ById(id string) (*LaunchConfig, error) {

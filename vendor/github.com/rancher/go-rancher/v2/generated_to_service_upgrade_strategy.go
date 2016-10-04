@@ -20,7 +20,8 @@ type ToServiceUpgradeStrategy struct {
 
 type ToServiceUpgradeStrategyCollection struct {
 	Collection
-	Data []ToServiceUpgradeStrategy `json:"data,omitempty"`
+	Data   []ToServiceUpgradeStrategy `json:"data,omitempty"`
+	client *ToServiceUpgradeStrategyClient
 }
 
 type ToServiceUpgradeStrategyClient struct {
@@ -56,7 +57,18 @@ func (c *ToServiceUpgradeStrategyClient) Update(existing *ToServiceUpgradeStrate
 func (c *ToServiceUpgradeStrategyClient) List(opts *ListOpts) (*ToServiceUpgradeStrategyCollection, error) {
 	resp := &ToServiceUpgradeStrategyCollection{}
 	err := c.rancherClient.doList(TO_SERVICE_UPGRADE_STRATEGY_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ToServiceUpgradeStrategyCollection) Next() (*ToServiceUpgradeStrategyCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ToServiceUpgradeStrategyCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ToServiceUpgradeStrategyClient) ById(id string) (*ToServiceUpgradeStrategy, error) {

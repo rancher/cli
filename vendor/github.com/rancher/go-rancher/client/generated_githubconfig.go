@@ -26,7 +26,8 @@ type Githubconfig struct {
 
 type GithubconfigCollection struct {
 	Collection
-	Data []Githubconfig `json:"data,omitempty"`
+	Data   []Githubconfig `json:"data,omitempty"`
+	client *GithubconfigClient
 }
 
 type GithubconfigClient struct {
@@ -62,7 +63,18 @@ func (c *GithubconfigClient) Update(existing *Githubconfig, updates interface{})
 func (c *GithubconfigClient) List(opts *ListOpts) (*GithubconfigCollection, error) {
 	resp := &GithubconfigCollection{}
 	err := c.rancherClient.doList(GITHUBCONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *GithubconfigCollection) Next() (*GithubconfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &GithubconfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *GithubconfigClient) ById(id string) (*Githubconfig, error) {

@@ -46,7 +46,8 @@ type StoragePool struct {
 
 type StoragePoolCollection struct {
 	Collection
-	Data []StoragePool `json:"data,omitempty"`
+	Data   []StoragePool `json:"data,omitempty"`
+	client *StoragePoolClient
 }
 
 type StoragePoolClient struct {
@@ -96,7 +97,18 @@ func (c *StoragePoolClient) Update(existing *StoragePool, updates interface{}) (
 func (c *StoragePoolClient) List(opts *ListOpts) (*StoragePoolCollection, error) {
 	resp := &StoragePoolCollection{}
 	err := c.rancherClient.doList(STORAGE_POOL_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *StoragePoolCollection) Next() (*StoragePoolCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &StoragePoolCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *StoragePoolClient) ById(id string) (*StoragePool, error) {

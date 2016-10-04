@@ -134,9 +134,10 @@ type ServiceConfig struct {
 
 // VolumeConfig holds v2 volume configuration
 type VolumeConfig struct {
-	Driver     string            `yaml:"driver,omitempty"`
-	DriverOpts map[string]string `yaml:"driver_opts,omitempty"`
-	External   yaml.External     `yaml:"external,omitempty"`
+	Driver       string            `yaml:"driver,omitempty"`
+	DriverOpts   map[string]string `yaml:"driver_opts,omitempty"`
+	External     yaml.External     `yaml:"external,omitempty"`
+	PerContainer bool              `yaml:"per_container,omitempty"`
 }
 
 // Ipam holds v2 network IPAM information

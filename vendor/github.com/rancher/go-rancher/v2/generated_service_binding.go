@@ -10,13 +10,12 @@ type ServiceBinding struct {
 	Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
 
 	Ports []string `json:"ports,omitempty" yaml:"ports,omitempty"`
-
-	Scale string `json:"scale,omitempty" yaml:"scale,omitempty"`
 }
 
 type ServiceBindingCollection struct {
 	Collection
-	Data []ServiceBinding `json:"data,omitempty"`
+	Data   []ServiceBinding `json:"data,omitempty"`
+	client *ServiceBindingClient
 }
 
 type ServiceBindingClient struct {
@@ -52,7 +51,18 @@ func (c *ServiceBindingClient) Update(existing *ServiceBinding, updates interfac
 func (c *ServiceBindingClient) List(opts *ListOpts) (*ServiceBindingCollection, error) {
 	resp := &ServiceBindingCollection{}
 	err := c.rancherClient.doList(SERVICE_BINDING_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ServiceBindingCollection) Next() (*ServiceBindingCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ServiceBindingCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ServiceBindingClient) ById(id string) (*ServiceBinding, error) {

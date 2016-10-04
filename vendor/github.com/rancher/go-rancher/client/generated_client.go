@@ -147,11 +147,9 @@ type RancherClient struct {
 	VolumeSnapshotInput                      VolumeSnapshotInputOperations
 }
 
-func constructClient() *RancherClient {
+func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client := &RancherClient{
-		RancherBaseClient: RancherBaseClient{
-			Types: map[string]Schema{},
-		},
+		RancherBaseClient: rancherBaseClient,
 	}
 
 	client.Account = newAccountClient(client)
@@ -301,9 +299,12 @@ func constructClient() *RancherClient {
 }
 
 func NewRancherClient(opts *ClientOpts) (*RancherClient, error) {
-	client := constructClient()
+	rancherBaseClient := &RancherBaseClientImpl{
+		Types: map[string]Schema{},
+	}
+	client := constructClient(rancherBaseClient)
 
-	err := setupRancherBaseClient(&client.RancherBaseClient, opts)
+	err := setupRancherBaseClient(rancherBaseClient, opts)
 	if err != nil {
 		return nil, err
 	}

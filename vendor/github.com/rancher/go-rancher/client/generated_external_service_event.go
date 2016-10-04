@@ -38,7 +38,8 @@ type ExternalServiceEvent struct {
 
 type ExternalServiceEventCollection struct {
 	Collection
-	Data []ExternalServiceEvent `json:"data,omitempty"`
+	Data   []ExternalServiceEvent `json:"data,omitempty"`
+	client *ExternalServiceEventClient
 }
 
 type ExternalServiceEventClient struct {
@@ -78,7 +79,18 @@ func (c *ExternalServiceEventClient) Update(existing *ExternalServiceEvent, upda
 func (c *ExternalServiceEventClient) List(opts *ListOpts) (*ExternalServiceEventCollection, error) {
 	resp := &ExternalServiceEventCollection{}
 	err := c.rancherClient.doList(EXTERNAL_SERVICE_EVENT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ExternalServiceEventCollection) Next() (*ExternalServiceEventCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ExternalServiceEventCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ExternalServiceEventClient) ById(id string) (*ExternalServiceEvent, error) {

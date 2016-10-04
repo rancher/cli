@@ -11,6 +11,10 @@ type DnsService struct {
 
 	AssignServiceIpAddress bool `json:"assignServiceIpAddress,omitempty" yaml:"assign_service_ip_address,omitempty"`
 
+	ConsumedByServiceIds []string `json:"consumedByServiceIds,omitempty" yaml:"consumed_by_service_ids,omitempty"`
+
+	ConsumedServiceIds []string `json:"consumedServiceIds,omitempty" yaml:"consumed_service_ids,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
@@ -22,6 +26,8 @@ type DnsService struct {
 	Fqdn string `json:"fqdn,omitempty" yaml:"fqdn,omitempty"`
 
 	HealthState string `json:"healthState,omitempty" yaml:"health_state,omitempty"`
+
+	InstanceIds []string `json:"instanceIds,omitempty" yaml:"instance_ids,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
@@ -45,6 +51,8 @@ type DnsService struct {
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
+	System bool `json:"system,omitempty" yaml:"system,omitempty"`
+
 	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 
 	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
@@ -58,7 +66,8 @@ type DnsService struct {
 
 type DnsServiceCollection struct {
 	Collection
-	Data []DnsService `json:"data,omitempty"`
+	Data   []DnsService `json:"data,omitempty"`
+	client *DnsServiceClient
 }
 
 type DnsServiceClient struct {
@@ -122,7 +131,18 @@ func (c *DnsServiceClient) Update(existing *DnsService, updates interface{}) (*D
 func (c *DnsServiceClient) List(opts *ListOpts) (*DnsServiceCollection, error) {
 	resp := &DnsServiceCollection{}
 	err := c.rancherClient.doList(DNS_SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *DnsServiceCollection) Next() (*DnsServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &DnsServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *DnsServiceClient) ById(id string) (*DnsService, error) {

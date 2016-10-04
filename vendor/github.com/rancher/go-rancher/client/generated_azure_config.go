@@ -52,7 +52,8 @@ type AzureConfig struct {
 
 type AzureConfigCollection struct {
 	Collection
-	Data []AzureConfig `json:"data,omitempty"`
+	Data   []AzureConfig `json:"data,omitempty"`
+	client *AzureConfigClient
 }
 
 type AzureConfigClient struct {
@@ -88,7 +89,18 @@ func (c *AzureConfigClient) Update(existing *AzureConfig, updates interface{}) (
 func (c *AzureConfigClient) List(opts *ListOpts) (*AzureConfigCollection, error) {
 	resp := &AzureConfigCollection{}
 	err := c.rancherClient.doList(AZURE_CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *AzureConfigCollection) Next() (*AzureConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &AzureConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *AzureConfigClient) ById(id string) (*AzureConfig, error) {

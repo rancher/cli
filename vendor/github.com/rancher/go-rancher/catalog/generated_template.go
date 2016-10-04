@@ -9,6 +9,8 @@ type Template struct {
 
 	Actions map[string]interface{} `json:"actions,omitempty" yaml:"actions,omitempty"`
 
+	Bindings map[string]interface{} `json:"bindings,omitempty" yaml:"bindings,omitempty"`
+
 	CatalogId string `json:"catalogId,omitempty" yaml:"catalog_id,omitempty"`
 
 	Category string `json:"category,omitempty" yaml:"category,omitempty"`
@@ -50,7 +52,8 @@ type Template struct {
 
 type TemplateCollection struct {
 	Collection
-	Data []Template `json:"data,omitempty"`
+	Data   []Template `json:"data,omitempty"`
+	client *TemplateClient
 }
 
 type TemplateClient struct {
@@ -86,7 +89,18 @@ func (c *TemplateClient) Update(existing *Template, updates interface{}) (*Templ
 func (c *TemplateClient) List(opts *ListOpts) (*TemplateCollection, error) {
 	resp := &TemplateCollection{}
 	err := c.rancherClient.doList(TEMPLATE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *TemplateCollection) Next() (*TemplateCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &TemplateCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *TemplateClient) ById(id string) (*Template, error) {

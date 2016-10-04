@@ -34,7 +34,8 @@ type ProcessInstance struct {
 
 type ProcessInstanceCollection struct {
 	Collection
-	Data []ProcessInstance `json:"data,omitempty"`
+	Data   []ProcessInstance `json:"data,omitempty"`
+	client *ProcessInstanceClient
 }
 
 type ProcessInstanceClient struct {
@@ -70,7 +71,18 @@ func (c *ProcessInstanceClient) Update(existing *ProcessInstance, updates interf
 func (c *ProcessInstanceClient) List(opts *ListOpts) (*ProcessInstanceCollection, error) {
 	resp := &ProcessInstanceCollection{}
 	err := c.rancherClient.doList(PROCESS_INSTANCE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ProcessInstanceCollection) Next() (*ProcessInstanceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ProcessInstanceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ProcessInstanceClient) ById(id string) (*ProcessInstance, error) {

@@ -156,7 +156,8 @@ type Container struct {
 
 type ContainerCollection struct {
 	Collection
-	Data []Container `json:"data,omitempty"`
+	Data   []Container `json:"data,omitempty"`
+	client *ContainerClient
 }
 
 type ContainerClient struct {
@@ -232,7 +233,18 @@ func (c *ContainerClient) Update(existing *Container, updates interface{}) (*Con
 func (c *ContainerClient) List(opts *ListOpts) (*ContainerCollection, error) {
 	resp := &ContainerCollection{}
 	err := c.rancherClient.doList(CONTAINER_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ContainerCollection) Next() (*ContainerCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ContainerCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ContainerClient) ById(id string) (*Container, error) {

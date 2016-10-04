@@ -42,7 +42,8 @@ type Register struct {
 
 type RegisterCollection struct {
 	Collection
-	Data []Register `json:"data,omitempty"`
+	Data   []Register `json:"data,omitempty"`
+	client *RegisterClient
 }
 
 type RegisterClient struct {
@@ -80,7 +81,18 @@ func (c *RegisterClient) Update(existing *Register, updates interface{}) (*Regis
 func (c *RegisterClient) List(opts *ListOpts) (*RegisterCollection, error) {
 	resp := &RegisterCollection{}
 	err := c.rancherClient.doList(REGISTER_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *RegisterCollection) Next() (*RegisterCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &RegisterCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *RegisterClient) ById(id string) (*Register, error) {

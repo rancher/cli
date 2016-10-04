@@ -54,7 +54,8 @@ type Host struct {
 
 type HostCollection struct {
 	Collection
-	Data []Host `json:"data,omitempty"`
+	Data   []Host `json:"data,omitempty"`
+	client *HostClient
 }
 
 type HostClient struct {
@@ -106,7 +107,18 @@ func (c *HostClient) Update(existing *Host, updates interface{}) (*Host, error) 
 func (c *HostClient) List(opts *ListOpts) (*HostCollection, error) {
 	resp := &HostCollection{}
 	err := c.rancherClient.doList(HOST_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *HostCollection) Next() (*HostCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &HostCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *HostClient) ById(id string) (*Host, error) {

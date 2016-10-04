@@ -44,7 +44,8 @@ type PullTask struct {
 
 type PullTaskCollection struct {
 	Collection
-	Data []PullTask `json:"data,omitempty"`
+	Data   []PullTask `json:"data,omitempty"`
+	client *PullTaskClient
 }
 
 type PullTaskClient struct {
@@ -80,7 +81,18 @@ func (c *PullTaskClient) Update(existing *PullTask, updates interface{}) (*PullT
 func (c *PullTaskClient) List(opts *ListOpts) (*PullTaskCollection, error) {
 	resp := &PullTaskCollection{}
 	err := c.rancherClient.doList(PULL_TASK_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *PullTaskCollection) Next() (*PullTaskCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &PullTaskCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *PullTaskClient) ById(id string) (*PullTask, error) {

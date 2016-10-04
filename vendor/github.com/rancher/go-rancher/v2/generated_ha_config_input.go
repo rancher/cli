@@ -42,7 +42,8 @@ type HaConfigInput struct {
 
 type HaConfigInputCollection struct {
 	Collection
-	Data []HaConfigInput `json:"data,omitempty"`
+	Data   []HaConfigInput `json:"data,omitempty"`
+	client *HaConfigInputClient
 }
 
 type HaConfigInputClient struct {
@@ -78,7 +79,18 @@ func (c *HaConfigInputClient) Update(existing *HaConfigInput, updates interface{
 func (c *HaConfigInputClient) List(opts *ListOpts) (*HaConfigInputCollection, error) {
 	resp := &HaConfigInputCollection{}
 	err := c.rancherClient.doList(HA_CONFIG_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *HaConfigInputCollection) Next() (*HaConfigInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &HaConfigInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *HaConfigInputClient) ById(id string) (*HaConfigInput, error) {

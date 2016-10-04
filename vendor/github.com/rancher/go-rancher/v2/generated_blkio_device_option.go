@@ -20,7 +20,8 @@ type BlkioDeviceOption struct {
 
 type BlkioDeviceOptionCollection struct {
 	Collection
-	Data []BlkioDeviceOption `json:"data,omitempty"`
+	Data   []BlkioDeviceOption `json:"data,omitempty"`
+	client *BlkioDeviceOptionClient
 }
 
 type BlkioDeviceOptionClient struct {
@@ -56,7 +57,18 @@ func (c *BlkioDeviceOptionClient) Update(existing *BlkioDeviceOption, updates in
 func (c *BlkioDeviceOptionClient) List(opts *ListOpts) (*BlkioDeviceOptionCollection, error) {
 	resp := &BlkioDeviceOptionCollection{}
 	err := c.rancherClient.doList(BLKIO_DEVICE_OPTION_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *BlkioDeviceOptionCollection) Next() (*BlkioDeviceOptionCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &BlkioDeviceOptionCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *BlkioDeviceOptionClient) ById(id string) (*BlkioDeviceOption, error) {

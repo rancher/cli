@@ -3,7 +3,6 @@ package rancher
 import (
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -33,6 +32,9 @@ type Context struct {
 	RancherConfig       map[string]RancherConfig
 	RancherComposeFile  string
 	RancherComposeBytes []byte
+	BindingsFile        string
+	Binding             *client.Binding
+	BindingsBytes       []byte
 	Url                 string
 	AccessKey           string
 	SecretKey           string
@@ -73,6 +75,15 @@ type RancherConfig struct {
 	ScalePolicy        *client.ScalePolicy             `yaml:"scale_policy,omitempty"`
 	ServiceSchemas     map[string]client.Schema        `yaml:"service_schemas,omitempty"`
 	UpgradeStrategy    client.InServiceUpgradeStrategy `yaml:"upgrade_strategy,omitempty"`
+}
+
+type BindingProperty struct {
+	Services map[string]Service `json:"services"`
+}
+
+type Service struct {
+	Labels map[string]interface{} `json:"labels"`
+	Ports  []interface{}          `json:"ports"`
 }
 
 func ResolveRancherCompose(composeFile, rancherComposeFile string) (string, error) {
@@ -144,6 +155,7 @@ func (c *Context) fillInRancherConfig(rawServiceMap config.RawServiceMap) error 
 	if err := config.Interpolate(c.EnvironmentLookup, &rawServiceMap); err != nil {
 		return err
 	}
+
 	rawServiceMap, err := preprocess.TryConvertStringsToInts(rawServiceMap)
 	if err != nil {
 		return err
@@ -173,18 +185,8 @@ func (c *Context) loadClient() (*client.RancherClient, error) {
 			return nil, fmt.Errorf("RANCHER_URL is not set")
 		}
 
-		url, err := url.Parse(c.Url)
-		if err != nil {
-			return nil, err
-		}
-
-		base := path.Base(url.Path)
-		if base != "v2-beta" && base != "schemas" {
-			url.Path = path.Join(url.Path, "v2-beta")
-		}
-
 		if client, err := client.NewRancherClient(&client.ClientOpts{
-			Url:       url.String(),
+			Url:       c.Url,
 			AccessKey: c.AccessKey,
 			SecretKey: c.SecretKey,
 		}); err != nil {
@@ -212,7 +214,7 @@ func (c *Context) open() error {
 		return err
 	}
 
-	if stackSchema, ok := c.Client.Types["stack"]; !ok || !rUtils.Contains(stackSchema.CollectionMethods, "POST") {
+	if stackSchema, ok := c.Client.GetTypes()["stack"]; !ok || !rUtils.Contains(stackSchema.CollectionMethods, "POST") {
 		return fmt.Errorf("Can not create a stack, check API key [%s] for [%s]", c.AccessKey, c.Url)
 	}
 

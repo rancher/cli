@@ -23,6 +23,8 @@ type Stack struct {
 
 	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
 
+	Group string `json:"group,omitempty" yaml:"group,omitempty"`
+
 	HealthState string `json:"healthState,omitempty" yaml:"health_state,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
@@ -41,9 +43,13 @@ type Stack struct {
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
+	ServiceIds []string `json:"serviceIds,omitempty" yaml:"service_ids,omitempty"`
+
 	StartOnCreate bool `json:"startOnCreate,omitempty" yaml:"start_on_create,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	System bool `json:"system,omitempty" yaml:"system,omitempty"`
 
 	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 
@@ -56,7 +62,8 @@ type Stack struct {
 
 type StackCollection struct {
 	Collection
-	Data []Stack `json:"data,omitempty"`
+	Data   []Stack `json:"data,omitempty"`
+	client *StackClient
 }
 
 type StackClient struct {
@@ -116,7 +123,18 @@ func (c *StackClient) Update(existing *Stack, updates interface{}) (*Stack, erro
 func (c *StackClient) List(opts *ListOpts) (*StackCollection, error) {
 	resp := &StackCollection{}
 	err := c.rancherClient.doList(STACK_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *StackCollection) Next() (*StackCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &StackCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *StackClient) ById(id string) (*Stack, error) {

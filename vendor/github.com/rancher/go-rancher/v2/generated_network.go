@@ -36,7 +36,8 @@ type Network struct {
 
 type NetworkCollection struct {
 	Collection
-	Data []Network `json:"data,omitempty"`
+	Data   []Network `json:"data,omitempty"`
+	client *NetworkClient
 }
 
 type NetworkClient struct {
@@ -86,7 +87,18 @@ func (c *NetworkClient) Update(existing *Network, updates interface{}) (*Network
 func (c *NetworkClient) List(opts *ListOpts) (*NetworkCollection, error) {
 	resp := &NetworkCollection{}
 	err := c.rancherClient.doList(NETWORK_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *NetworkCollection) Next() (*NetworkCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &NetworkCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *NetworkClient) ById(id string) (*Network, error) {

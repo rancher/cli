@@ -38,7 +38,8 @@ type ExternalStoragePoolEvent struct {
 
 type ExternalStoragePoolEventCollection struct {
 	Collection
-	Data []ExternalStoragePoolEvent `json:"data,omitempty"`
+	Data   []ExternalStoragePoolEvent `json:"data,omitempty"`
+	client *ExternalStoragePoolEventClient
 }
 
 type ExternalStoragePoolEventClient struct {
@@ -78,7 +79,18 @@ func (c *ExternalStoragePoolEventClient) Update(existing *ExternalStoragePoolEve
 func (c *ExternalStoragePoolEventClient) List(opts *ListOpts) (*ExternalStoragePoolEventCollection, error) {
 	resp := &ExternalStoragePoolEventCollection{}
 	err := c.rancherClient.doList(EXTERNAL_STORAGE_POOL_EVENT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ExternalStoragePoolEventCollection) Next() (*ExternalStoragePoolEventCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ExternalStoragePoolEventCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ExternalStoragePoolEventClient) ById(id string) (*ExternalStoragePoolEvent, error) {

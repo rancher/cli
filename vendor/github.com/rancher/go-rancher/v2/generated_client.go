@@ -89,6 +89,7 @@ type RancherClient struct {
 	MachineDriver                            MachineDriverOperations
 	Mount                                    MountOperations
 	Network                                  NetworkOperations
+	NetworkDriver                            NetworkDriverOperations
 	NfsConfig                                NfsConfigOperations
 	Openldapconfig                           OpenldapconfigOperations
 	PacketConfig                             PacketConfigOperations
@@ -127,7 +128,6 @@ type RancherClient struct {
 	ServiceUpgrade                           ServiceUpgradeOperations
 	ServiceUpgradeStrategy                   ServiceUpgradeStrategyOperations
 	ServicesPortRange                        ServicesPortRangeOperations
-	SetLabelsInput                           SetLabelsInputOperations
 	SetLoadBalancerServiceLinksInput         SetLoadBalancerServiceLinksInputOperations
 	SetProjectMembersInput                   SetProjectMembersInputOperations
 	SetServiceLinksInput                     SetServiceLinksInputOperations
@@ -138,6 +138,7 @@ type RancherClient struct {
 	StackUpgrade                             StackUpgradeOperations
 	StateTransition                          StateTransitionOperations
 	StatsAccess                              StatsAccessOperations
+	StorageDriver                            StorageDriverOperations
 	StoragePool                              StoragePoolOperations
 	Subscribe                                SubscribeOperations
 	Task                                     TaskOperations
@@ -147,14 +148,14 @@ type RancherClient struct {
 	VirtualMachine                           VirtualMachineOperations
 	VirtualMachineDisk                       VirtualMachineDiskOperations
 	Volume                                   VolumeOperations
+	VolumeActivateInput                      VolumeActivateInputOperations
 	VolumeSnapshotInput                      VolumeSnapshotInputOperations
+	VolumeTemplate                           VolumeTemplateOperations
 }
 
-func constructClient() *RancherClient {
+func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client := &RancherClient{
-		RancherBaseClient: RancherBaseClient{
-			Types: map[string]Schema{},
-		},
+		RancherBaseClient: rancherBaseClient,
 	}
 
 	client.Account = newAccountClient(client)
@@ -243,6 +244,7 @@ func constructClient() *RancherClient {
 	client.MachineDriver = newMachineDriverClient(client)
 	client.Mount = newMountClient(client)
 	client.Network = newNetworkClient(client)
+	client.NetworkDriver = newNetworkDriverClient(client)
 	client.NfsConfig = newNfsConfigClient(client)
 	client.Openldapconfig = newOpenldapconfigClient(client)
 	client.PacketConfig = newPacketConfigClient(client)
@@ -281,7 +283,6 @@ func constructClient() *RancherClient {
 	client.ServiceUpgrade = newServiceUpgradeClient(client)
 	client.ServiceUpgradeStrategy = newServiceUpgradeStrategyClient(client)
 	client.ServicesPortRange = newServicesPortRangeClient(client)
-	client.SetLabelsInput = newSetLabelsInputClient(client)
 	client.SetLoadBalancerServiceLinksInput = newSetLoadBalancerServiceLinksInputClient(client)
 	client.SetProjectMembersInput = newSetProjectMembersInputClient(client)
 	client.SetServiceLinksInput = newSetServiceLinksInputClient(client)
@@ -292,6 +293,7 @@ func constructClient() *RancherClient {
 	client.StackUpgrade = newStackUpgradeClient(client)
 	client.StateTransition = newStateTransitionClient(client)
 	client.StatsAccess = newStatsAccessClient(client)
+	client.StorageDriver = newStorageDriverClient(client)
 	client.StoragePool = newStoragePoolClient(client)
 	client.Subscribe = newSubscribeClient(client)
 	client.Task = newTaskClient(client)
@@ -301,15 +303,20 @@ func constructClient() *RancherClient {
 	client.VirtualMachine = newVirtualMachineClient(client)
 	client.VirtualMachineDisk = newVirtualMachineDiskClient(client)
 	client.Volume = newVolumeClient(client)
+	client.VolumeActivateInput = newVolumeActivateInputClient(client)
 	client.VolumeSnapshotInput = newVolumeSnapshotInputClient(client)
+	client.VolumeTemplate = newVolumeTemplateClient(client)
 
 	return client
 }
 
 func NewRancherClient(opts *ClientOpts) (*RancherClient, error) {
-	client := constructClient()
+	rancherBaseClient := &RancherBaseClientImpl{
+		Types: map[string]Schema{},
+	}
+	client := constructClient(rancherBaseClient)
 
-	err := setupRancherBaseClient(&client.RancherBaseClient, opts)
+	err := setupRancherBaseClient(rancherBaseClient, opts)
 	if err != nil {
 		return nil, err
 	}

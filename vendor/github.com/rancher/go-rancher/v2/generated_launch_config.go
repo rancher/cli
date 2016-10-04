@@ -49,7 +49,7 @@ type LaunchConfig struct {
 
 	Devices []string `json:"devices,omitempty" yaml:"devices,omitempty"`
 
-	Disks []interface{} `json:"disks,omitempty" yaml:"disks,omitempty"`
+	Disks []VirtualMachineDisk `json:"disks,omitempty" yaml:"disks,omitempty"`
 
 	Dns []string `json:"dns,omitempty" yaml:"dns,omitempty"`
 
@@ -129,6 +129,8 @@ type LaunchConfig struct {
 
 	SecurityOpt []string `json:"securityOpt,omitempty" yaml:"security_opt,omitempty"`
 
+	ServiceIds []string `json:"serviceIds,omitempty" yaml:"service_ids,omitempty"`
+
 	StartCount int64 `json:"startCount,omitempty" yaml:"start_count,omitempty"`
 
 	StartOnCreate bool `json:"startOnCreate,omitempty" yaml:"start_on_create,omitempty"`
@@ -136,6 +138,8 @@ type LaunchConfig struct {
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
 	StdinOpen bool `json:"stdinOpen,omitempty" yaml:"stdin_open,omitempty"`
+
+	System bool `json:"system,omitempty" yaml:"system,omitempty"`
 
 	SystemContainer string `json:"systemContainer,omitempty" yaml:"system_container,omitempty"`
 
@@ -166,7 +170,8 @@ type LaunchConfig struct {
 
 type LaunchConfigCollection struct {
 	Collection
-	Data []LaunchConfig `json:"data,omitempty"`
+	Data   []LaunchConfig `json:"data,omitempty"`
+	client *LaunchConfigClient
 }
 
 type LaunchConfigClient struct {
@@ -204,8 +209,6 @@ type LaunchConfigOperations interface {
 
 	ActionRestore(*LaunchConfig) (*Instance, error)
 
-	ActionSetlabels(*LaunchConfig, *SetLabelsInput) (*Container, error)
-
 	ActionStart(*LaunchConfig) (*Instance, error)
 
 	ActionStop(*LaunchConfig, *InstanceStop) (*Instance, error)
@@ -240,7 +243,18 @@ func (c *LaunchConfigClient) Update(existing *LaunchConfig, updates interface{})
 func (c *LaunchConfigClient) List(opts *ListOpts) (*LaunchConfigCollection, error) {
 	resp := &LaunchConfigCollection{}
 	err := c.rancherClient.doList(LAUNCH_CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *LaunchConfigCollection) Next() (*LaunchConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &LaunchConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *LaunchConfigClient) ById(id string) (*LaunchConfig, error) {
@@ -362,15 +376,6 @@ func (c *LaunchConfigClient) ActionRestore(resource *LaunchConfig) (*Instance, e
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "restore", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *LaunchConfigClient) ActionSetlabels(resource *LaunchConfig, input *SetLabelsInput) (*Container, error) {
-
-	resp := &Container{}
-
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "setlabels", &resource.Resource, input, resp)
 
 	return resp, err
 }

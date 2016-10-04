@@ -48,7 +48,8 @@ type Registry struct {
 
 type RegistryCollection struct {
 	Collection
-	Data []Registry `json:"data,omitempty"`
+	Data   []Registry `json:"data,omitempty"`
+	client *RegistryClient
 }
 
 type RegistryClient struct {
@@ -98,7 +99,18 @@ func (c *RegistryClient) Update(existing *Registry, updates interface{}) (*Regis
 func (c *RegistryClient) List(opts *ListOpts) (*RegistryCollection, error) {
 	resp := &RegistryCollection{}
 	err := c.rancherClient.doList(REGISTRY_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *RegistryCollection) Next() (*RegistryCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &RegistryCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *RegistryClient) ById(id string) (*Registry, error) {

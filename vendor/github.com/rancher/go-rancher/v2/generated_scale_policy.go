@@ -16,7 +16,8 @@ type ScalePolicy struct {
 
 type ScalePolicyCollection struct {
 	Collection
-	Data []ScalePolicy `json:"data,omitempty"`
+	Data   []ScalePolicy `json:"data,omitempty"`
+	client *ScalePolicyClient
 }
 
 type ScalePolicyClient struct {
@@ -52,7 +53,18 @@ func (c *ScalePolicyClient) Update(existing *ScalePolicy, updates interface{}) (
 func (c *ScalePolicyClient) List(opts *ListOpts) (*ScalePolicyCollection, error) {
 	resp := &ScalePolicyCollection{}
 	err := c.rancherClient.doList(SCALE_POLICY_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ScalePolicyCollection) Next() (*ScalePolicyCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ScalePolicyCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ScalePolicyClient) ById(id string) (*ScalePolicy, error) {

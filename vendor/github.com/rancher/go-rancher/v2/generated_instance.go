@@ -40,7 +40,8 @@ type Instance struct {
 
 type InstanceCollection struct {
 	Collection
-	Data []Instance `json:"data,omitempty"`
+	Data   []Instance `json:"data,omitempty"`
+	client *InstanceClient
 }
 
 type InstanceClient struct {
@@ -108,7 +109,18 @@ func (c *InstanceClient) Update(existing *Instance, updates interface{}) (*Insta
 func (c *InstanceClient) List(opts *ListOpts) (*InstanceCollection, error) {
 	resp := &InstanceCollection{}
 	err := c.rancherClient.doList(INSTANCE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *InstanceCollection) Next() (*InstanceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &InstanceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *InstanceClient) ById(id string) (*Instance, error) {

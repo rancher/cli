@@ -40,7 +40,8 @@ type Agent struct {
 
 type AgentCollection struct {
 	Collection
-	Data []Agent `json:"data,omitempty"`
+	Data   []Agent `json:"data,omitempty"`
+	client *AgentClient
 }
 
 type AgentClient struct {
@@ -94,7 +95,18 @@ func (c *AgentClient) Update(existing *Agent, updates interface{}) (*Agent, erro
 func (c *AgentClient) List(opts *ListOpts) (*AgentCollection, error) {
 	resp := &AgentCollection{}
 	err := c.rancherClient.doList(AGENT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *AgentCollection) Next() (*AgentCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &AgentCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *AgentClient) ById(id string) (*Agent, error) {

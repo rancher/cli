@@ -38,7 +38,8 @@ type Snapshot struct {
 
 type SnapshotCollection struct {
 	Collection
-	Data []Snapshot `json:"data,omitempty"`
+	Data   []Snapshot `json:"data,omitempty"`
+	client *SnapshotClient
 }
 
 type SnapshotClient struct {
@@ -80,7 +81,18 @@ func (c *SnapshotClient) Update(existing *Snapshot, updates interface{}) (*Snaps
 func (c *SnapshotClient) List(opts *ListOpts) (*SnapshotCollection, error) {
 	resp := &SnapshotCollection{}
 	err := c.rancherClient.doList(SNAPSHOT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *SnapshotCollection) Next() (*SnapshotCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &SnapshotCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *SnapshotClient) ById(id string) (*Snapshot, error) {

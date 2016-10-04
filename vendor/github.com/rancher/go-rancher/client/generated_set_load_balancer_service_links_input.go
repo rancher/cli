@@ -12,7 +12,8 @@ type SetLoadBalancerServiceLinksInput struct {
 
 type SetLoadBalancerServiceLinksInputCollection struct {
 	Collection
-	Data []SetLoadBalancerServiceLinksInput `json:"data,omitempty"`
+	Data   []SetLoadBalancerServiceLinksInput `json:"data,omitempty"`
+	client *SetLoadBalancerServiceLinksInputClient
 }
 
 type SetLoadBalancerServiceLinksInputClient struct {
@@ -48,7 +49,18 @@ func (c *SetLoadBalancerServiceLinksInputClient) Update(existing *SetLoadBalance
 func (c *SetLoadBalancerServiceLinksInputClient) List(opts *ListOpts) (*SetLoadBalancerServiceLinksInputCollection, error) {
 	resp := &SetLoadBalancerServiceLinksInputCollection{}
 	err := c.rancherClient.doList(SET_LOAD_BALANCER_SERVICE_LINKS_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *SetLoadBalancerServiceLinksInputCollection) Next() (*SetLoadBalancerServiceLinksInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &SetLoadBalancerServiceLinksInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *SetLoadBalancerServiceLinksInputClient) ById(id string) (*SetLoadBalancerServiceLinksInput, error) {

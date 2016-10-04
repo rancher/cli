@@ -168,7 +168,8 @@ type SecondaryLaunchConfig struct {
 
 type SecondaryLaunchConfigCollection struct {
 	Collection
-	Data []SecondaryLaunchConfig `json:"data,omitempty"`
+	Data   []SecondaryLaunchConfig `json:"data,omitempty"`
+	client *SecondaryLaunchConfigClient
 }
 
 type SecondaryLaunchConfigClient struct {
@@ -242,7 +243,18 @@ func (c *SecondaryLaunchConfigClient) Update(existing *SecondaryLaunchConfig, up
 func (c *SecondaryLaunchConfigClient) List(opts *ListOpts) (*SecondaryLaunchConfigCollection, error) {
 	resp := &SecondaryLaunchConfigCollection{}
 	err := c.rancherClient.doList(SECONDARY_LAUNCH_CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *SecondaryLaunchConfigCollection) Next() (*SecondaryLaunchConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &SecondaryLaunchConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *SecondaryLaunchConfigClient) ById(id string) (*SecondaryLaunchConfig, error) {

@@ -58,7 +58,8 @@ type DnsService struct {
 
 type DnsServiceCollection struct {
 	Collection
-	Data []DnsService `json:"data,omitempty"`
+	Data   []DnsService `json:"data,omitempty"`
+	client *DnsServiceClient
 }
 
 type DnsServiceClient struct {
@@ -122,7 +123,18 @@ func (c *DnsServiceClient) Update(existing *DnsService, updates interface{}) (*D
 func (c *DnsServiceClient) List(opts *ListOpts) (*DnsServiceCollection, error) {
 	resp := &DnsServiceCollection{}
 	err := c.rancherClient.doList(DNS_SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *DnsServiceCollection) Next() (*DnsServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &DnsServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *DnsServiceClient) ById(id string) (*DnsService, error) {

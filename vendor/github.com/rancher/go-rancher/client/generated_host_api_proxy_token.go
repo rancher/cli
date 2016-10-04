@@ -16,7 +16,8 @@ type HostApiProxyToken struct {
 
 type HostApiProxyTokenCollection struct {
 	Collection
-	Data []HostApiProxyToken `json:"data,omitempty"`
+	Data   []HostApiProxyToken `json:"data,omitempty"`
+	client *HostApiProxyTokenClient
 }
 
 type HostApiProxyTokenClient struct {
@@ -52,7 +53,18 @@ func (c *HostApiProxyTokenClient) Update(existing *HostApiProxyToken, updates in
 func (c *HostApiProxyTokenClient) List(opts *ListOpts) (*HostApiProxyTokenCollection, error) {
 	resp := &HostApiProxyTokenCollection{}
 	err := c.rancherClient.doList(HOST_API_PROXY_TOKEN_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *HostApiProxyTokenCollection) Next() (*HostApiProxyTokenCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &HostApiProxyTokenCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *HostApiProxyTokenClient) ById(id string) (*HostApiProxyToken, error) {

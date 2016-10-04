@@ -9,6 +9,10 @@ type KubernetesService struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	ConsumedByServiceIds []string `json:"consumedByServiceIds,omitempty" yaml:"consumed_by_service_ids,omitempty"`
+
+	ConsumedServiceIds []string `json:"consumedServiceIds,omitempty" yaml:"consumed_service_ids,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
@@ -18,6 +22,8 @@ type KubernetesService struct {
 	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
 
 	HealthState string `json:"healthState,omitempty" yaml:"health_state,omitempty"`
+
+	InstanceIds []string `json:"instanceIds,omitempty" yaml:"instance_ids,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
@@ -32,6 +38,8 @@ type KubernetesService struct {
 	StackId string `json:"stackId,omitempty" yaml:"stack_id,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	System bool `json:"system,omitempty" yaml:"system,omitempty"`
 
 	Template interface{} `json:"template,omitempty" yaml:"template,omitempty"`
 
@@ -48,7 +56,8 @@ type KubernetesService struct {
 
 type KubernetesServiceCollection struct {
 	Collection
-	Data []KubernetesService `json:"data,omitempty"`
+	Data   []KubernetesService `json:"data,omitempty"`
+	client *KubernetesServiceClient
 }
 
 type KubernetesServiceClient struct {
@@ -112,7 +121,18 @@ func (c *KubernetesServiceClient) Update(existing *KubernetesService, updates in
 func (c *KubernetesServiceClient) List(opts *ListOpts) (*KubernetesServiceCollection, error) {
 	resp := &KubernetesServiceCollection{}
 	err := c.rancherClient.doList(KUBERNETES_SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *KubernetesServiceCollection) Next() (*KubernetesServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &KubernetesServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *KubernetesServiceClient) ById(id string) (*KubernetesService, error) {
