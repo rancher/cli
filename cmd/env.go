@@ -9,11 +9,24 @@ import (
 )
 
 func EnvCommand() cli.Command {
+	envLsFlags := []cli.Flag{
+		listAllFlag(),
+		cli.BoolFlag{
+			Name:  "quiet,q",
+			Usage: "Only display IDs",
+		},
+		cli.StringFlag{
+			Name:  "format",
+			Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+		},
+	}
+
 	return cli.Command{
 		Name:      "environment",
 		ShortName: "env",
 		Usage:     "Interact with environments",
 		Action:    defaultAction(envLs),
+		Flags:     envLsFlags,
 		Subcommands: []cli.Command{
 			cli.Command{
 				Name:        "ls",
@@ -21,17 +34,7 @@ func EnvCommand() cli.Command {
 				Description: "\nWith an account API key, all environments in Rancher will be listed. If you are using an environment API key, it will only list the environment of the API key. \n\nExample:\n\t$ rancher env ls\n",
 				ArgsUsage:   "None",
 				Action:      envLs,
-				Flags: []cli.Flag{
-					listAllFlag(),
-					cli.BoolFlag{
-						Name:  "quiet,q",
-						Usage: "Only display IDs",
-					},
-					cli.StringFlag{
-						Name:  "format",
-						Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
-					},
-				},
+				Flags:       envLsFlags,
 			},
 			cli.Command{
 				Name:        "create",
