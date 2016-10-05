@@ -50,7 +50,8 @@ type Project struct {
 
 type ProjectCollection struct {
 	Collection
-	Data []Project `json:"data,omitempty"`
+	Data   []Project `json:"data,omitempty"`
+	client *ProjectClient
 }
 
 type ProjectClient struct {
@@ -102,7 +103,18 @@ func (c *ProjectClient) Update(existing *Project, updates interface{}) (*Project
 func (c *ProjectClient) List(opts *ListOpts) (*ProjectCollection, error) {
 	resp := &ProjectCollection{}
 	err := c.rancherClient.doList(PROJECT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ProjectCollection) Next() (*ProjectCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ProjectCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ProjectClient) ById(id string) (*Project, error) {

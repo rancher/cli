@@ -12,7 +12,8 @@ type SetServiceLinksInput struct {
 
 type SetServiceLinksInputCollection struct {
 	Collection
-	Data []SetServiceLinksInput `json:"data,omitempty"`
+	Data   []SetServiceLinksInput `json:"data,omitempty"`
+	client *SetServiceLinksInputClient
 }
 
 type SetServiceLinksInputClient struct {
@@ -48,7 +49,18 @@ func (c *SetServiceLinksInputClient) Update(existing *SetServiceLinksInput, upda
 func (c *SetServiceLinksInputClient) List(opts *ListOpts) (*SetServiceLinksInputCollection, error) {
 	resp := &SetServiceLinksInputCollection{}
 	err := c.rancherClient.doList(SET_SERVICE_LINKS_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *SetServiceLinksInputCollection) Next() (*SetServiceLinksInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &SetServiceLinksInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *SetServiceLinksInputClient) ById(id string) (*SetServiceLinksInput, error) {

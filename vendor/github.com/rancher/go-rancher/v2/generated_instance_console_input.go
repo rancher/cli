@@ -10,7 +10,8 @@ type InstanceConsoleInput struct {
 
 type InstanceConsoleInputCollection struct {
 	Collection
-	Data []InstanceConsoleInput `json:"data,omitempty"`
+	Data   []InstanceConsoleInput `json:"data,omitempty"`
+	client *InstanceConsoleInputClient
 }
 
 type InstanceConsoleInputClient struct {
@@ -46,7 +47,18 @@ func (c *InstanceConsoleInputClient) Update(existing *InstanceConsoleInput, upda
 func (c *InstanceConsoleInputClient) List(opts *ListOpts) (*InstanceConsoleInputCollection, error) {
 	resp := &InstanceConsoleInputCollection{}
 	err := c.rancherClient.doList(INSTANCE_CONSOLE_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *InstanceConsoleInputCollection) Next() (*InstanceConsoleInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &InstanceConsoleInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *InstanceConsoleInputClient) ById(id string) (*InstanceConsoleInput, error) {

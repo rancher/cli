@@ -22,7 +22,8 @@ type DockerBuild struct {
 
 type DockerBuildCollection struct {
 	Collection
-	Data []DockerBuild `json:"data,omitempty"`
+	Data   []DockerBuild `json:"data,omitempty"`
+	client *DockerBuildClient
 }
 
 type DockerBuildClient struct {
@@ -58,7 +59,18 @@ func (c *DockerBuildClient) Update(existing *DockerBuild, updates interface{}) (
 func (c *DockerBuildClient) List(opts *ListOpts) (*DockerBuildCollection, error) {
 	resp := &DockerBuildCollection{}
 	err := c.rancherClient.doList(DOCKER_BUILD_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *DockerBuildCollection) Next() (*DockerBuildCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &DockerBuildCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *DockerBuildClient) ById(id string) (*DockerBuild, error) {

@@ -52,7 +52,8 @@ type Volume struct {
 
 type VolumeCollection struct {
 	Collection
-	Data []Volume `json:"data,omitempty"`
+	Data   []Volume `json:"data,omitempty"`
+	client *VolumeClient
 }
 
 type VolumeClient struct {
@@ -110,7 +111,18 @@ func (c *VolumeClient) Update(existing *Volume, updates interface{}) (*Volume, e
 func (c *VolumeClient) List(opts *ListOpts) (*VolumeCollection, error) {
 	resp := &VolumeCollection{}
 	err := c.rancherClient.doList(VOLUME_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *VolumeCollection) Next() (*VolumeCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &VolumeCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *VolumeClient) ById(id string) (*Volume, error) {

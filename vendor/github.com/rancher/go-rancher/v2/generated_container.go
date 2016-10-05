@@ -123,6 +123,8 @@ type Container struct {
 
 	SecurityOpt []string `json:"securityOpt,omitempty" yaml:"security_opt,omitempty"`
 
+	ServiceIds []string `json:"serviceIds,omitempty" yaml:"service_ids,omitempty"`
+
 	StartCount int64 `json:"startCount,omitempty" yaml:"start_count,omitempty"`
 
 	StartOnCreate bool `json:"startOnCreate,omitempty" yaml:"start_on_create,omitempty"`
@@ -130,6 +132,8 @@ type Container struct {
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
 	StdinOpen bool `json:"stdinOpen,omitempty" yaml:"stdin_open,omitempty"`
+
+	System bool `json:"system,omitempty" yaml:"system,omitempty"`
 
 	SystemContainer string `json:"systemContainer,omitempty" yaml:"system_container,omitempty"`
 
@@ -156,7 +160,8 @@ type Container struct {
 
 type ContainerCollection struct {
 	Collection
-	Data []Container `json:"data,omitempty"`
+	Data   []Container `json:"data,omitempty"`
+	client *ContainerClient
 }
 
 type ContainerClient struct {
@@ -196,8 +201,6 @@ type ContainerOperations interface {
 
 	ActionRestore(*Container) (*Instance, error)
 
-	ActionSetlabels(*Container, *SetLabelsInput) (*Container, error)
-
 	ActionStart(*Container) (*Instance, error)
 
 	ActionStop(*Container, *InstanceStop) (*Instance, error)
@@ -232,7 +235,18 @@ func (c *ContainerClient) Update(existing *Container, updates interface{}) (*Con
 func (c *ContainerClient) List(opts *ListOpts) (*ContainerCollection, error) {
 	resp := &ContainerCollection{}
 	err := c.rancherClient.doList(CONTAINER_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ContainerCollection) Next() (*ContainerCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ContainerCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ContainerClient) ById(id string) (*Container, error) {
@@ -363,15 +377,6 @@ func (c *ContainerClient) ActionRestore(resource *Container) (*Instance, error) 
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(CONTAINER_TYPE, "restore", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *ContainerClient) ActionSetlabels(resource *Container, input *SetLabelsInput) (*Container, error) {
-
-	resp := &Container{}
-
-	err := c.rancherClient.doAction(CONTAINER_TYPE, "setlabels", &resource.Resource, input, resp)
 
 	return resp, err
 }

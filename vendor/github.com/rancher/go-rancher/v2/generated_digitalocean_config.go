@@ -21,8 +21,6 @@ type DigitaloceanConfig struct {
 
 	Size string `json:"size,omitempty" yaml:"size,omitempty"`
 
-	SshKeyFingerprint string `json:"sshKeyFingerprint,omitempty" yaml:"ssh_key_fingerprint,omitempty"`
-
 	SshPort string `json:"sshPort,omitempty" yaml:"ssh_port,omitempty"`
 
 	SshUser string `json:"sshUser,omitempty" yaml:"ssh_user,omitempty"`
@@ -32,7 +30,8 @@ type DigitaloceanConfig struct {
 
 type DigitaloceanConfigCollection struct {
 	Collection
-	Data []DigitaloceanConfig `json:"data,omitempty"`
+	Data   []DigitaloceanConfig `json:"data,omitempty"`
+	client *DigitaloceanConfigClient
 }
 
 type DigitaloceanConfigClient struct {
@@ -68,7 +67,18 @@ func (c *DigitaloceanConfigClient) Update(existing *DigitaloceanConfig, updates 
 func (c *DigitaloceanConfigClient) List(opts *ListOpts) (*DigitaloceanConfigCollection, error) {
 	resp := &DigitaloceanConfigCollection{}
 	err := c.rancherClient.doList(DIGITALOCEAN_CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *DigitaloceanConfigCollection) Next() (*DigitaloceanConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &DigitaloceanConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *DigitaloceanConfigClient) ById(id string) (*DigitaloceanConfig, error) {

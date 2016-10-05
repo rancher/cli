@@ -42,7 +42,8 @@ type HealthcheckInstanceHostMap struct {
 
 type HealthcheckInstanceHostMapCollection struct {
 	Collection
-	Data []HealthcheckInstanceHostMap `json:"data,omitempty"`
+	Data   []HealthcheckInstanceHostMap `json:"data,omitempty"`
+	client *HealthcheckInstanceHostMapClient
 }
 
 type HealthcheckInstanceHostMapClient struct {
@@ -82,7 +83,18 @@ func (c *HealthcheckInstanceHostMapClient) Update(existing *HealthcheckInstanceH
 func (c *HealthcheckInstanceHostMapClient) List(opts *ListOpts) (*HealthcheckInstanceHostMapCollection, error) {
 	resp := &HealthcheckInstanceHostMapCollection{}
 	err := c.rancherClient.doList(HEALTHCHECK_INSTANCE_HOST_MAP_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *HealthcheckInstanceHostMapCollection) Next() (*HealthcheckInstanceHostMapCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &HealthcheckInstanceHostMapCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *HealthcheckInstanceHostMapClient) ById(id string) (*HealthcheckInstanceHostMap, error) {

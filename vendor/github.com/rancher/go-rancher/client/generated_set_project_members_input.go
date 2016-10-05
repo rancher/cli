@@ -12,7 +12,8 @@ type SetProjectMembersInput struct {
 
 type SetProjectMembersInputCollection struct {
 	Collection
-	Data []SetProjectMembersInput `json:"data,omitempty"`
+	Data   []SetProjectMembersInput `json:"data,omitempty"`
+	client *SetProjectMembersInputClient
 }
 
 type SetProjectMembersInputClient struct {
@@ -48,7 +49,18 @@ func (c *SetProjectMembersInputClient) Update(existing *SetProjectMembersInput, 
 func (c *SetProjectMembersInputClient) List(opts *ListOpts) (*SetProjectMembersInputCollection, error) {
 	resp := &SetProjectMembersInputCollection{}
 	err := c.rancherClient.doList(SET_PROJECT_MEMBERS_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *SetProjectMembersInputCollection) Next() (*SetProjectMembersInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &SetProjectMembersInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *SetProjectMembersInputClient) ById(id string) (*SetProjectMembersInput, error) {

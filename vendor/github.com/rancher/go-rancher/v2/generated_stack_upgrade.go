@@ -18,7 +18,8 @@ type StackUpgrade struct {
 
 type StackUpgradeCollection struct {
 	Collection
-	Data []StackUpgrade `json:"data,omitempty"`
+	Data   []StackUpgrade `json:"data,omitempty"`
+	client *StackUpgradeClient
 }
 
 type StackUpgradeClient struct {
@@ -54,7 +55,18 @@ func (c *StackUpgradeClient) Update(existing *StackUpgrade, updates interface{})
 func (c *StackUpgradeClient) List(opts *ListOpts) (*StackUpgradeCollection, error) {
 	resp := &StackUpgradeCollection{}
 	err := c.rancherClient.doList(STACK_UPGRADE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *StackUpgradeCollection) Next() (*StackUpgradeCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &StackUpgradeCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *StackUpgradeClient) ById(id string) (*StackUpgrade, error) {

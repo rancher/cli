@@ -18,7 +18,8 @@ type ContainerExec struct {
 
 type ContainerExecCollection struct {
 	Collection
-	Data []ContainerExec `json:"data,omitempty"`
+	Data   []ContainerExec `json:"data,omitempty"`
+	client *ContainerExecClient
 }
 
 type ContainerExecClient struct {
@@ -54,7 +55,18 @@ func (c *ContainerExecClient) Update(existing *ContainerExec, updates interface{
 func (c *ContainerExecClient) List(opts *ListOpts) (*ContainerExecCollection, error) {
 	resp := &ContainerExecCollection{}
 	err := c.rancherClient.doList(CONTAINER_EXEC_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ContainerExecCollection) Next() (*ContainerExecCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ContainerExecCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ContainerExecClient) ById(id string) (*ContainerExec, error) {

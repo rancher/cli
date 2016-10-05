@@ -36,7 +36,8 @@ type Image struct {
 
 type ImageCollection struct {
 	Collection
-	Data []Image `json:"data,omitempty"`
+	Data   []Image `json:"data,omitempty"`
+	client *ImageClient
 }
 
 type ImageClient struct {
@@ -86,7 +87,18 @@ func (c *ImageClient) Update(existing *Image, updates interface{}) (*Image, erro
 func (c *ImageClient) List(opts *ListOpts) (*ImageCollection, error) {
 	resp := &ImageCollection{}
 	err := c.rancherClient.doList(IMAGE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ImageCollection) Next() (*ImageCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ImageCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ImageClient) ById(id string) (*Image, error) {

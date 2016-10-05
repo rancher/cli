@@ -13,6 +13,10 @@ type LoadBalancerService struct {
 
 	CertificateIds []string `json:"certificateIds,omitempty" yaml:"certificate_ids,omitempty"`
 
+	ConsumedByServiceIds []string `json:"consumedByServiceIds,omitempty" yaml:"consumed_by_service_ids,omitempty"`
+
+	ConsumedServiceIds []string `json:"consumedServiceIds,omitempty" yaml:"consumed_service_ids,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	CurrentScale int64 `json:"currentScale,omitempty" yaml:"current_scale,omitempty"`
@@ -29,6 +33,8 @@ type LoadBalancerService struct {
 
 	HealthState string `json:"healthState,omitempty" yaml:"health_state,omitempty"`
 
+	InstanceIds []string `json:"instanceIds,omitempty" yaml:"instance_ids,omitempty"`
+
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	LaunchConfig *LaunchConfig `json:"launchConfig,omitempty" yaml:"launch_config,omitempty"`
@@ -39,7 +45,7 @@ type LoadBalancerService struct {
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
-	PublicEndpoints []interface{} `json:"publicEndpoints,omitempty" yaml:"public_endpoints,omitempty"`
+	PublicEndpoints []PublicEndpoint `json:"publicEndpoints,omitempty" yaml:"public_endpoints,omitempty"`
 
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
@@ -59,6 +65,8 @@ type LoadBalancerService struct {
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
+	System bool `json:"system,omitempty" yaml:"system,omitempty"`
+
 	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 
 	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
@@ -74,7 +82,8 @@ type LoadBalancerService struct {
 
 type LoadBalancerServiceCollection struct {
 	Collection
-	Data []LoadBalancerService `json:"data,omitempty"`
+	Data   []LoadBalancerService `json:"data,omitempty"`
+	client *LoadBalancerServiceClient
 }
 
 type LoadBalancerServiceClient struct {
@@ -138,7 +147,18 @@ func (c *LoadBalancerServiceClient) Update(existing *LoadBalancerService, update
 func (c *LoadBalancerServiceClient) List(opts *ListOpts) (*LoadBalancerServiceCollection, error) {
 	resp := &LoadBalancerServiceCollection{}
 	err := c.rancherClient.doList(LOAD_BALANCER_SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *LoadBalancerServiceCollection) Next() (*LoadBalancerServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &LoadBalancerServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *LoadBalancerServiceClient) ById(id string) (*LoadBalancerService, error) {

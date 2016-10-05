@@ -9,6 +9,10 @@ type ExternalService struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	ConsumedByServiceIds []string `json:"consumedByServiceIds,omitempty" yaml:"consumed_by_service_ids,omitempty"`
+
+	ConsumedServiceIds []string `json:"consumedServiceIds,omitempty" yaml:"consumed_service_ids,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
@@ -26,6 +30,8 @@ type ExternalService struct {
 	HealthState string `json:"healthState,omitempty" yaml:"health_state,omitempty"`
 
 	Hostname string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+
+	InstanceIds []string `json:"instanceIds,omitempty" yaml:"instance_ids,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
@@ -45,6 +51,8 @@ type ExternalService struct {
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
+	System bool `json:"system,omitempty" yaml:"system,omitempty"`
+
 	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 
 	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
@@ -58,7 +66,8 @@ type ExternalService struct {
 
 type ExternalServiceCollection struct {
 	Collection
-	Data []ExternalService `json:"data,omitempty"`
+	Data   []ExternalService `json:"data,omitempty"`
+	client *ExternalServiceClient
 }
 
 type ExternalServiceClient struct {
@@ -116,7 +125,18 @@ func (c *ExternalServiceClient) Update(existing *ExternalService, updates interf
 func (c *ExternalServiceClient) List(opts *ListOpts) (*ExternalServiceCollection, error) {
 	resp := &ExternalServiceCollection{}
 	err := c.rancherClient.doList(EXTERNAL_SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ExternalServiceCollection) Next() (*ExternalServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ExternalServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ExternalServiceClient) ById(id string) (*ExternalService, error) {

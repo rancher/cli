@@ -44,7 +44,8 @@ type RegistryCredential struct {
 
 type RegistryCredentialCollection struct {
 	Collection
-	Data []RegistryCredential `json:"data,omitempty"`
+	Data   []RegistryCredential `json:"data,omitempty"`
+	client *RegistryCredentialClient
 }
 
 type RegistryCredentialClient struct {
@@ -92,7 +93,18 @@ func (c *RegistryCredentialClient) Update(existing *RegistryCredential, updates 
 func (c *RegistryCredentialClient) List(opts *ListOpts) (*RegistryCredentialCollection, error) {
 	resp := &RegistryCredentialCollection{}
 	err := c.rancherClient.doList(REGISTRY_CREDENTIAL_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *RegistryCredentialCollection) Next() (*RegistryCredentialCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &RegistryCredentialCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *RegistryCredentialClient) ById(id string) (*RegistryCredential, error) {

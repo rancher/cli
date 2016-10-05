@@ -40,7 +40,8 @@ type Password struct {
 
 type PasswordCollection struct {
 	Collection
-	Data []Password `json:"data,omitempty"`
+	Data   []Password `json:"data,omitempty"`
+	client *PasswordClient
 }
 
 type PasswordClient struct {
@@ -90,7 +91,18 @@ func (c *PasswordClient) Update(existing *Password, updates interface{}) (*Passw
 func (c *PasswordClient) List(opts *ListOpts) (*PasswordCollection, error) {
 	resp := &PasswordCollection{}
 	err := c.rancherClient.doList(PASSWORD_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *PasswordCollection) Next() (*PasswordCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &PasswordCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *PasswordClient) ById(id string) (*Password, error) {

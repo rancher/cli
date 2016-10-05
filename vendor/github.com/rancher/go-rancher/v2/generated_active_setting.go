@@ -20,7 +20,8 @@ type ActiveSetting struct {
 
 type ActiveSettingCollection struct {
 	Collection
-	Data []ActiveSetting `json:"data,omitempty"`
+	Data   []ActiveSetting `json:"data,omitempty"`
+	client *ActiveSettingClient
 }
 
 type ActiveSettingClient struct {
@@ -56,7 +57,18 @@ func (c *ActiveSettingClient) Update(existing *ActiveSetting, updates interface{
 func (c *ActiveSettingClient) List(opts *ListOpts) (*ActiveSettingCollection, error) {
 	resp := &ActiveSettingCollection{}
 	err := c.rancherClient.doList(ACTIVE_SETTING_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ActiveSettingCollection) Next() (*ActiveSettingCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ActiveSettingCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ActiveSettingClient) ById(id string) (*ActiveSetting, error) {

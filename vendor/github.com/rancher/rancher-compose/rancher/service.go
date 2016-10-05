@@ -314,9 +314,6 @@ func (r *RancherService) setupLinks(service *client.Service, update bool) error 
 		return nil
 	}
 
-	var err error
-	var links []interface{}
-
 	existingLinks, err := r.context.Client.ServiceConsumeMap.List(&client.ListOpts{
 		Filters: map[string]interface{}{
 			"serviceId": service.Id,
@@ -331,26 +328,32 @@ func (r *RancherService) setupLinks(service *client.Service, update bool) error 
 	}
 
 	if service.Type == client.LOAD_BALANCER_SERVICE_TYPE {
-		links, err = r.getLbLinks()
-	} else {
-		links, err = r.getServiceLinks()
-	}
-
-	if err == nil {
-		_, err = r.context.Client.Service.ActionSetservicelinks(service, &client.SetServiceLinksInput{
+		links, err := r.getLbLinks()
+		if err != nil {
+			return err
+		}
+		_, err = r.context.Client.LoadBalancerService.ActionSetservicelinks(&client.LoadBalancerService{
+			Resource: service.Resource,
+		}, &client.SetLoadBalancerServiceLinksInput{
 			ServiceLinks: links,
 		})
+		return err
 	}
+
+	links, err := r.getServiceLinks()
+	_, err = r.context.Client.Service.ActionSetservicelinks(service, &client.SetServiceLinksInput{
+		ServiceLinks: links,
+	})
 	return err
 }
 
-func (r *RancherService) getLbLinks() ([]interface{}, error) {
+func (r *RancherService) getLbLinks() ([]client.LoadBalancerServiceLink, error) {
 	links, err := r.getLinks()
 	if err != nil {
 		return nil, err
 	}
 
-	result := []interface{}{}
+	result := []client.LoadBalancerServiceLink{}
 	for link, id := range links {
 		ports, err := r.getLbLinkPorts(link.ServiceName)
 		if err != nil {
@@ -384,13 +387,13 @@ func (r *RancherService) getLbLinkPorts(name string) ([]string, error) {
 	return rUtils.TrimSplit(v, ",", -1), nil
 }
 
-func (r *RancherService) getServiceLinks() ([]interface{}, error) {
+func (r *RancherService) getServiceLinks() ([]client.ServiceLink, error) {
 	links, err := r.getLinks()
 	if err != nil {
 		return nil, err
 	}
 
-	result := []interface{}{}
+	result := []client.ServiceLink{}
 	for link, id := range links {
 		result = append(result, client.ServiceLink{
 			Name:      link.Alias,

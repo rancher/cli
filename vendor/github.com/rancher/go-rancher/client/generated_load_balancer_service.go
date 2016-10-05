@@ -74,7 +74,8 @@ type LoadBalancerService struct {
 
 type LoadBalancerServiceCollection struct {
 	Collection
-	Data []LoadBalancerService `json:"data,omitempty"`
+	Data   []LoadBalancerService `json:"data,omitempty"`
+	client *LoadBalancerServiceClient
 }
 
 type LoadBalancerServiceClient struct {
@@ -138,7 +139,18 @@ func (c *LoadBalancerServiceClient) Update(existing *LoadBalancerService, update
 func (c *LoadBalancerServiceClient) List(opts *ListOpts) (*LoadBalancerServiceCollection, error) {
 	resp := &LoadBalancerServiceCollection{}
 	err := c.rancherClient.doList(LOAD_BALANCER_SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *LoadBalancerServiceCollection) Next() (*LoadBalancerServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &LoadBalancerServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *LoadBalancerServiceClient) ById(id string) (*LoadBalancerService, error) {

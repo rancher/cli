@@ -18,7 +18,8 @@ type EnvironmentUpgrade struct {
 
 type EnvironmentUpgradeCollection struct {
 	Collection
-	Data []EnvironmentUpgrade `json:"data,omitempty"`
+	Data   []EnvironmentUpgrade `json:"data,omitempty"`
+	client *EnvironmentUpgradeClient
 }
 
 type EnvironmentUpgradeClient struct {
@@ -54,7 +55,18 @@ func (c *EnvironmentUpgradeClient) Update(existing *EnvironmentUpgrade, updates 
 func (c *EnvironmentUpgradeClient) List(opts *ListOpts) (*EnvironmentUpgradeCollection, error) {
 	resp := &EnvironmentUpgradeCollection{}
 	err := c.rancherClient.doList(ENVIRONMENT_UPGRADE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *EnvironmentUpgradeCollection) Next() (*EnvironmentUpgradeCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &EnvironmentUpgradeCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *EnvironmentUpgradeClient) ById(id string) (*EnvironmentUpgrade, error) {

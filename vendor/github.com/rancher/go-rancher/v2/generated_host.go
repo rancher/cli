@@ -11,9 +11,19 @@ type Host struct {
 
 	AgentId string `json:"agentId,omitempty" yaml:"agent_id,omitempty"`
 
+	AgentIpAddress string `json:"agentIpAddress,omitempty" yaml:"agent_ip_address,omitempty"`
+
 	AgentState string `json:"agentState,omitempty" yaml:"agent_state,omitempty"`
 
+	Amazonec2Config *Amazonec2Config `json:"amazonec2Config,omitempty" yaml:"amazonec2config,omitempty"`
+
 	ApiProxy string `json:"apiProxy,omitempty" yaml:"api_proxy,omitempty"`
+
+	AuthCertificateAuthority string `json:"authCertificateAuthority,omitempty" yaml:"auth_certificate_authority,omitempty"`
+
+	AuthKey string `json:"authKey,omitempty" yaml:"auth_key,omitempty"`
+
+	AzureConfig *AzureConfig `json:"azureConfig,omitempty" yaml:"azure_config,omitempty"`
 
 	ComputeTotal int64 `json:"computeTotal,omitempty" yaml:"compute_total,omitempty"`
 
@@ -23,9 +33,33 @@ type Host struct {
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
+	DigitaloceanConfig *DigitaloceanConfig `json:"digitaloceanConfig,omitempty" yaml:"digitalocean_config,omitempty"`
+
+	DockerVersion string `json:"dockerVersion,omitempty" yaml:"docker_version,omitempty"`
+
+	Driver string `json:"driver,omitempty" yaml:"driver,omitempty"`
+
+	EngineEnv map[string]interface{} `json:"engineEnv,omitempty" yaml:"engine_env,omitempty"`
+
+	EngineInsecureRegistry []string `json:"engineInsecureRegistry,omitempty" yaml:"engine_insecure_registry,omitempty"`
+
+	EngineInstallUrl string `json:"engineInstallUrl,omitempty" yaml:"engine_install_url,omitempty"`
+
+	EngineLabel map[string]interface{} `json:"engineLabel,omitempty" yaml:"engine_label,omitempty"`
+
+	EngineOpt map[string]interface{} `json:"engineOpt,omitempty" yaml:"engine_opt,omitempty"`
+
+	EngineRegistryMirror []string `json:"engineRegistryMirror,omitempty" yaml:"engine_registry_mirror,omitempty"`
+
+	EngineStorageDriver string `json:"engineStorageDriver,omitempty" yaml:"engine_storage_driver,omitempty"`
+
+	ExtractedConfig string `json:"extractedConfig,omitempty" yaml:"extracted_config,omitempty"`
+
 	Hostname string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 
 	Info interface{} `json:"info,omitempty" yaml:"info,omitempty"`
+
+	InstanceIds []string `json:"instanceIds,omitempty" yaml:"instance_ids,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
@@ -33,9 +67,11 @@ type Host struct {
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
+	PacketConfig *PacketConfig `json:"packetConfig,omitempty" yaml:"packet_config,omitempty"`
+
 	PhysicalHostId string `json:"physicalHostId,omitempty" yaml:"physical_host_id,omitempty"`
 
-	PublicEndpoints []interface{} `json:"publicEndpoints,omitempty" yaml:"public_endpoints,omitempty"`
+	PublicEndpoints []PublicEndpoint `json:"publicEndpoints,omitempty" yaml:"public_endpoints,omitempty"`
 
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
@@ -54,7 +90,8 @@ type Host struct {
 
 type HostCollection struct {
 	Collection
-	Data []Host `json:"data,omitempty"`
+	Data   []Host `json:"data,omitempty"`
+	client *HostClient
 }
 
 type HostClient struct {
@@ -75,6 +112,10 @@ type HostOperations interface {
 	ActionDeactivate(*Host) (*Host, error)
 
 	ActionDockersocket(*Host) (*HostAccess, error)
+
+	ActionError(*Host) (*Host, error)
+
+	ActionProvision(*Host) (*Host, error)
 
 	ActionPurge(*Host) (*Host, error)
 
@@ -106,7 +147,18 @@ func (c *HostClient) Update(existing *Host, updates interface{}) (*Host, error) 
 func (c *HostClient) List(opts *ListOpts) (*HostCollection, error) {
 	resp := &HostCollection{}
 	err := c.rancherClient.doList(HOST_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *HostCollection) Next() (*HostCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &HostCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *HostClient) ById(id string) (*Host, error) {
@@ -156,6 +208,24 @@ func (c *HostClient) ActionDockersocket(resource *Host) (*HostAccess, error) {
 	resp := &HostAccess{}
 
 	err := c.rancherClient.doAction(HOST_TYPE, "dockersocket", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *HostClient) ActionError(resource *Host) (*Host, error) {
+
+	resp := &Host{}
+
+	err := c.rancherClient.doAction(HOST_TYPE, "error", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *HostClient) ActionProvision(resource *Host) (*Host, error) {
+
+	resp := &Host{}
+
+	err := c.rancherClient.doAction(HOST_TYPE, "provision", &resource.Resource, nil, resp)
 
 	return resp, err
 }

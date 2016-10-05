@@ -40,7 +40,8 @@ type Label struct {
 
 type LabelCollection struct {
 	Collection
-	Data []Label `json:"data,omitempty"`
+	Data   []Label `json:"data,omitempty"`
+	client *LabelClient
 }
 
 type LabelClient struct {
@@ -80,7 +81,18 @@ func (c *LabelClient) Update(existing *Label, updates interface{}) (*Label, erro
 func (c *LabelClient) List(opts *ListOpts) (*LabelCollection, error) {
 	resp := &LabelCollection{}
 	err := c.rancherClient.doList(LABEL_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *LabelCollection) Next() (*LabelCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &LabelCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *LabelClient) ById(id string) (*Label, error) {

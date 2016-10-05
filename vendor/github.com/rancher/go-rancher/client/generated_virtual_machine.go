@@ -126,7 +126,8 @@ type VirtualMachine struct {
 
 type VirtualMachineCollection struct {
 	Collection
-	Data []VirtualMachine `json:"data,omitempty"`
+	Data   []VirtualMachine `json:"data,omitempty"`
+	client *VirtualMachineClient
 }
 
 type VirtualMachineClient struct {
@@ -202,7 +203,18 @@ func (c *VirtualMachineClient) Update(existing *VirtualMachine, updates interfac
 func (c *VirtualMachineClient) List(opts *ListOpts) (*VirtualMachineCollection, error) {
 	resp := &VirtualMachineCollection{}
 	err := c.rancherClient.doList(VIRTUAL_MACHINE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *VirtualMachineCollection) Next() (*VirtualMachineCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &VirtualMachineCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *VirtualMachineClient) ById(id string) (*VirtualMachine, error) {

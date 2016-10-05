@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -128,7 +129,17 @@ func appendFilters(urlString string, filters map[string]interface{}) (string, er
 	return u.String(), nil
 }
 
-func setupRancherBaseClient(rancherClient *RancherBaseClient, opts *ClientOpts) error {
+func setupRancherBaseClient(rancherClient *RancherBaseClientImpl, opts *ClientOpts) error {
+	u, err := url.Parse(opts.Url)
+	if err != nil {
+		return err
+	}
+
+	if u.Path == "/v1" || strings.HasPrefix(u.Path, "/v1/") {
+		u.Path = strings.Replace(u.Path, "/v1", "/v2-beta", 1)
+	}
+	opts.Url = u.String()
+
 	if opts.Timeout == 0 {
 		opts.Timeout = time.Second * 10
 	}
@@ -202,18 +213,18 @@ func NewListOpts() *ListOpts {
 	}
 }
 
-func (rancherClient *RancherBaseClient) setupRequest(req *http.Request) {
+func (rancherClient *RancherBaseClientImpl) setupRequest(req *http.Request) {
 	req.SetBasicAuth(rancherClient.Opts.AccessKey, rancherClient.Opts.SecretKey)
 }
 
-func (rancherClient *RancherBaseClient) newHttpClient() *http.Client {
+func (rancherClient *RancherBaseClientImpl) newHttpClient() *http.Client {
 	if rancherClient.Opts.Timeout == 0 {
 		rancherClient.Opts.Timeout = time.Second * 10
 	}
 	return &http.Client{Timeout: rancherClient.Opts.Timeout}
 }
 
-func (rancherClient *RancherBaseClient) doDelete(url string) error {
+func (rancherClient *RancherBaseClientImpl) doDelete(url string) error {
 	client := rancherClient.newHttpClient()
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
@@ -237,11 +248,11 @@ func (rancherClient *RancherBaseClient) doDelete(url string) error {
 	return nil
 }
 
-func (rancherClient *RancherBaseClient) Websocket(url string, headers map[string][]string) (*websocket.Conn, *http.Response, error) {
+func (rancherClient *RancherBaseClientImpl) Websocket(url string, headers map[string][]string) (*websocket.Conn, *http.Response, error) {
 	return dialer.Dial(url, http.Header(headers))
 }
 
-func (rancherClient *RancherBaseClient) doGet(url string, opts *ListOpts, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) doGet(url string, opts *ListOpts, respObject interface{}) error {
 	if opts == nil {
 		opts = NewListOpts()
 	}
@@ -289,11 +300,11 @@ func (rancherClient *RancherBaseClient) doGet(url string, opts *ListOpts, respOb
 	return nil
 }
 
-func (rancherClient *RancherBaseClient) List(schemaType string, opts *ListOpts, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) List(schemaType string, opts *ListOpts, respObject interface{}) error {
 	return rancherClient.doList(schemaType, opts, respObject)
 }
 
-func (rancherClient *RancherBaseClient) doList(schemaType string, opts *ListOpts, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) doList(schemaType string, opts *ListOpts, respObject interface{}) error {
 	schema, ok := rancherClient.Types[schemaType]
 	if !ok {
 		return errors.New("Unknown schema type [" + schemaType + "]")
@@ -311,11 +322,15 @@ func (rancherClient *RancherBaseClient) doList(schemaType string, opts *ListOpts
 	return rancherClient.doGet(collectionUrl, opts, respObject)
 }
 
-func (rancherClient *RancherBaseClient) Post(url string, createObj interface{}, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) doNext(nextUrl string, respObject interface{}) error {
+	return rancherClient.doGet(nextUrl, nil, respObject)
+}
+
+func (rancherClient *RancherBaseClientImpl) Post(url string, createObj interface{}, respObject interface{}) error {
 	return rancherClient.doModify("POST", url, createObj, respObject)
 }
 
-func (rancherClient *RancherBaseClient) GetLink(resource Resource, link string, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) GetLink(resource Resource, link string, respObject interface{}) error {
 	url := resource.Links[link]
 	if url == "" {
 		return fmt.Errorf("Failed to find link: %s", link)
@@ -324,7 +339,7 @@ func (rancherClient *RancherBaseClient) GetLink(resource Resource, link string, 
 	return rancherClient.doGet(url, &ListOpts{}, respObject)
 }
 
-func (rancherClient *RancherBaseClient) doModify(method string, url string, createObj interface{}, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) doModify(method string, url string, createObj interface{}, respObject interface{}) error {
 	bodyContent, err := json.Marshal(createObj)
 	if err != nil {
 		return err
@@ -371,11 +386,11 @@ func (rancherClient *RancherBaseClient) doModify(method string, url string, crea
 	return nil
 }
 
-func (rancherClient *RancherBaseClient) Create(schemaType string, createObj interface{}, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) Create(schemaType string, createObj interface{}, respObject interface{}) error {
 	return rancherClient.doCreate(schemaType, createObj, respObject)
 }
 
-func (rancherClient *RancherBaseClient) doCreate(schemaType string, createObj interface{}, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) doCreate(schemaType string, createObj interface{}, respObject interface{}) error {
 	if createObj == nil {
 		createObj = map[string]string{}
 	}
@@ -403,11 +418,11 @@ func (rancherClient *RancherBaseClient) doCreate(schemaType string, createObj in
 	return rancherClient.doModify("POST", collectionUrl, createObj, respObject)
 }
 
-func (rancherClient *RancherBaseClient) Update(schemaType string, existing *Resource, updates interface{}, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) Update(schemaType string, existing *Resource, updates interface{}, respObject interface{}) error {
 	return rancherClient.doUpdate(schemaType, existing, updates, respObject)
 }
 
-func (rancherClient *RancherBaseClient) doUpdate(schemaType string, existing *Resource, updates interface{}, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) doUpdate(schemaType string, existing *Resource, updates interface{}, respObject interface{}) error {
 	if existing == nil {
 		return errors.New("Existing object is nil")
 	}
@@ -437,11 +452,11 @@ func (rancherClient *RancherBaseClient) doUpdate(schemaType string, existing *Re
 	return rancherClient.doModify("PUT", selfUrl, updates, respObject)
 }
 
-func (rancherClient *RancherBaseClient) ById(schemaType string, id string, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) ById(schemaType string, id string, respObject interface{}) error {
 	return rancherClient.doById(schemaType, id, respObject)
 }
 
-func (rancherClient *RancherBaseClient) doById(schemaType string, id string, respObject interface{}) error {
+func (rancherClient *RancherBaseClientImpl) doById(schemaType string, id string, respObject interface{}) error {
 	schema, ok := rancherClient.Types[schemaType]
 	if !ok {
 		return errors.New("Unknown schema type [" + schemaType + "]")
@@ -461,14 +476,14 @@ func (rancherClient *RancherBaseClient) doById(schemaType string, id string, res
 	return err
 }
 
-func (rancherClient *RancherBaseClient) Delete(existing *Resource) error {
+func (rancherClient *RancherBaseClientImpl) Delete(existing *Resource) error {
 	if existing == nil {
 		return nil
 	}
 	return rancherClient.doResourceDelete(existing.Type, existing)
 }
 
-func (rancherClient *RancherBaseClient) doResourceDelete(schemaType string, existing *Resource) error {
+func (rancherClient *RancherBaseClientImpl) doResourceDelete(schemaType string, existing *Resource) error {
 	schema, ok := rancherClient.Types[schemaType]
 	if !ok {
 		return errors.New("Unknown schema type [" + schemaType + "]")
@@ -486,7 +501,7 @@ func (rancherClient *RancherBaseClient) doResourceDelete(schemaType string, exis
 	return rancherClient.doDelete(selfUrl)
 }
 
-func (rancherClient *RancherBaseClient) Reload(existing *Resource, output interface{}) error {
+func (rancherClient *RancherBaseClientImpl) Reload(existing *Resource, output interface{}) error {
 	selfUrl, ok := existing.Links[SELF]
 	if !ok {
 		return errors.New(fmt.Sprintf("Failed to find self URL of [%v]", existing))
@@ -495,12 +510,12 @@ func (rancherClient *RancherBaseClient) Reload(existing *Resource, output interf
 	return rancherClient.doGet(selfUrl, NewListOpts(), output)
 }
 
-func (rancherClient *RancherBaseClient) Action(schemaType string, action string,
+func (rancherClient *RancherBaseClientImpl) Action(schemaType string, action string,
 	existing *Resource, inputObject, respObject interface{}) error {
 	return rancherClient.doAction(schemaType, action, existing, inputObject, respObject)
 }
 
-func (rancherClient *RancherBaseClient) doAction(schemaType string, action string,
+func (rancherClient *RancherBaseClientImpl) doAction(schemaType string, action string,
 	existing *Resource, inputObject, respObject interface{}) error {
 
 	if existing == nil {

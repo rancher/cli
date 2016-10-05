@@ -12,7 +12,8 @@ type SetLabelsInput struct {
 
 type SetLabelsInputCollection struct {
 	Collection
-	Data []SetLabelsInput `json:"data,omitempty"`
+	Data   []SetLabelsInput `json:"data,omitempty"`
+	client *SetLabelsInputClient
 }
 
 type SetLabelsInputClient struct {
@@ -48,7 +49,18 @@ func (c *SetLabelsInputClient) Update(existing *SetLabelsInput, updates interfac
 func (c *SetLabelsInputClient) List(opts *ListOpts) (*SetLabelsInputCollection, error) {
 	resp := &SetLabelsInputCollection{}
 	err := c.rancherClient.doList(SET_LABELS_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *SetLabelsInputCollection) Next() (*SetLabelsInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &SetLabelsInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *SetLabelsInputClient) ById(id string) (*SetLabelsInput, error) {

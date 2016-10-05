@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/rancher/go-rancher/v2"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
 	"text/template"
+
+	"github.com/rancher/go-rancher/v2"
 
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/urfave/cli"
@@ -31,7 +32,7 @@ func GetRawClient(ctx *cli.Context) (*client.RancherClient, error) {
 		return nil, err
 	}
 	return client.NewRancherClient(&client.ClientOpts{
-		Url:       url + "/v1",
+		Url:       url + "/v2-beta",
 		AccessKey: config.AccessKey,
 		SecretKey: config.SecretKey,
 	})

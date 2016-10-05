@@ -40,7 +40,8 @@ type ExternalHandlerExternalHandlerProcessMap struct {
 
 type ExternalHandlerExternalHandlerProcessMapCollection struct {
 	Collection
-	Data []ExternalHandlerExternalHandlerProcessMap `json:"data,omitempty"`
+	Data   []ExternalHandlerExternalHandlerProcessMap `json:"data,omitempty"`
+	client *ExternalHandlerExternalHandlerProcessMapClient
 }
 
 type ExternalHandlerExternalHandlerProcessMapClient struct {
@@ -90,7 +91,18 @@ func (c *ExternalHandlerExternalHandlerProcessMapClient) Update(existing *Extern
 func (c *ExternalHandlerExternalHandlerProcessMapClient) List(opts *ListOpts) (*ExternalHandlerExternalHandlerProcessMapCollection, error) {
 	resp := &ExternalHandlerExternalHandlerProcessMapCollection{}
 	err := c.rancherClient.doList(EXTERNAL_HANDLER_EXTERNAL_HANDLER_PROCESS_MAP_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ExternalHandlerExternalHandlerProcessMapCollection) Next() (*ExternalHandlerExternalHandlerProcessMapCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ExternalHandlerExternalHandlerProcessMapCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ExternalHandlerExternalHandlerProcessMapClient) ById(id string) (*ExternalHandlerExternalHandlerProcessMap, error) {

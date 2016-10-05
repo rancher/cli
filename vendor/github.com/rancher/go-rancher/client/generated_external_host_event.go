@@ -40,7 +40,8 @@ type ExternalHostEvent struct {
 
 type ExternalHostEventCollection struct {
 	Collection
-	Data []ExternalHostEvent `json:"data,omitempty"`
+	Data   []ExternalHostEvent `json:"data,omitempty"`
+	client *ExternalHostEventClient
 }
 
 type ExternalHostEventClient struct {
@@ -80,7 +81,18 @@ func (c *ExternalHostEventClient) Update(existing *ExternalHostEvent, updates in
 func (c *ExternalHostEventClient) List(opts *ListOpts) (*ExternalHostEventCollection, error) {
 	resp := &ExternalHostEventCollection{}
 	err := c.rancherClient.doList(EXTERNAL_HOST_EVENT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ExternalHostEventCollection) Next() (*ExternalHostEventCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ExternalHostEventCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ExternalHostEventClient) ById(id string) (*ExternalHostEvent, error) {

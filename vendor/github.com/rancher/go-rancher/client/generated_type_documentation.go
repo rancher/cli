@@ -14,7 +14,8 @@ type TypeDocumentation struct {
 
 type TypeDocumentationCollection struct {
 	Collection
-	Data []TypeDocumentation `json:"data,omitempty"`
+	Data   []TypeDocumentation `json:"data,omitempty"`
+	client *TypeDocumentationClient
 }
 
 type TypeDocumentationClient struct {
@@ -50,7 +51,18 @@ func (c *TypeDocumentationClient) Update(existing *TypeDocumentation, updates in
 func (c *TypeDocumentationClient) List(opts *ListOpts) (*TypeDocumentationCollection, error) {
 	resp := &TypeDocumentationCollection{}
 	err := c.rancherClient.doList(TYPE_DOCUMENTATION_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *TypeDocumentationCollection) Next() (*TypeDocumentationCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &TypeDocumentationCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *TypeDocumentationClient) ById(id string) (*TypeDocumentation, error) {

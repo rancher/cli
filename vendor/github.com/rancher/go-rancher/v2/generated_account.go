@@ -40,7 +40,8 @@ type Account struct {
 
 type AccountCollection struct {
 	Collection
-	Data []Account `json:"data,omitempty"`
+	Data   []Account `json:"data,omitempty"`
+	client *AccountClient
 }
 
 type AccountClient struct {
@@ -90,7 +91,18 @@ func (c *AccountClient) Update(existing *Account, updates interface{}) (*Account
 func (c *AccountClient) List(opts *ListOpts) (*AccountCollection, error) {
 	resp := &AccountCollection{}
 	err := c.rancherClient.doList(ACCOUNT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *AccountCollection) Next() (*AccountCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &AccountCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *AccountClient) ById(id string) (*Account, error) {

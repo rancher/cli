@@ -50,7 +50,8 @@ type KubernetesStack struct {
 
 type KubernetesStackCollection struct {
 	Collection
-	Data []KubernetesStack `json:"data,omitempty"`
+	Data   []KubernetesStack `json:"data,omitempty"`
+	client *KubernetesStackClient
 }
 
 type KubernetesStackClient struct {
@@ -102,7 +103,18 @@ func (c *KubernetesStackClient) Update(existing *KubernetesStack, updates interf
 func (c *KubernetesStackClient) List(opts *ListOpts) (*KubernetesStackCollection, error) {
 	resp := &KubernetesStackCollection{}
 	err := c.rancherClient.doList(KUBERNETES_STACK_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *KubernetesStackCollection) Next() (*KubernetesStackCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &KubernetesStackCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *KubernetesStackClient) ById(id string) (*KubernetesStack, error) {

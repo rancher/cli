@@ -44,7 +44,8 @@ type ServiceExposeMap struct {
 
 type ServiceExposeMapCollection struct {
 	Collection
-	Data []ServiceExposeMap `json:"data,omitempty"`
+	Data   []ServiceExposeMap `json:"data,omitempty"`
+	client *ServiceExposeMapClient
 }
 
 type ServiceExposeMapClient struct {
@@ -84,7 +85,18 @@ func (c *ServiceExposeMapClient) Update(existing *ServiceExposeMap, updates inte
 func (c *ServiceExposeMapClient) List(opts *ListOpts) (*ServiceExposeMapCollection, error) {
 	resp := &ServiceExposeMapCollection{}
 	err := c.rancherClient.doList(SERVICE_EXPOSE_MAP_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ServiceExposeMapCollection) Next() (*ServiceExposeMapCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ServiceExposeMapCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ServiceExposeMapClient) ById(id string) (*ServiceExposeMap, error) {

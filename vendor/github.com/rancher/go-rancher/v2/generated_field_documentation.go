@@ -12,7 +12,8 @@ type FieldDocumentation struct {
 
 type FieldDocumentationCollection struct {
 	Collection
-	Data []FieldDocumentation `json:"data,omitempty"`
+	Data   []FieldDocumentation `json:"data,omitempty"`
+	client *FieldDocumentationClient
 }
 
 type FieldDocumentationClient struct {
@@ -48,7 +49,18 @@ func (c *FieldDocumentationClient) Update(existing *FieldDocumentation, updates 
 func (c *FieldDocumentationClient) List(opts *ListOpts) (*FieldDocumentationCollection, error) {
 	resp := &FieldDocumentationCollection{}
 	err := c.rancherClient.doList(FIELD_DOCUMENTATION_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *FieldDocumentationCollection) Next() (*FieldDocumentationCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &FieldDocumentationCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *FieldDocumentationClient) ById(id string) (*FieldDocumentation, error) {

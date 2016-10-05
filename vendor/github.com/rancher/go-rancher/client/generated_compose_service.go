@@ -62,7 +62,8 @@ type ComposeService struct {
 
 type ComposeServiceCollection struct {
 	Collection
-	Data []ComposeService `json:"data,omitempty"`
+	Data   []ComposeService `json:"data,omitempty"`
+	client *ComposeServiceClient
 }
 
 type ComposeServiceClient struct {
@@ -112,7 +113,18 @@ func (c *ComposeServiceClient) Update(existing *ComposeService, updates interfac
 func (c *ComposeServiceClient) List(opts *ListOpts) (*ComposeServiceCollection, error) {
 	resp := &ComposeServiceCollection{}
 	err := c.rancherClient.doList(COMPOSE_SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ComposeServiceCollection) Next() (*ComposeServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ComposeServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ComposeServiceClient) ById(id string) (*ComposeService, error) {

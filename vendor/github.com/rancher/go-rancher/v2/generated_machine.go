@@ -72,7 +72,8 @@ type Machine struct {
 
 type MachineCollection struct {
 	Collection
-	Data []Machine `json:"data,omitempty"`
+	Data   []Machine `json:"data,omitempty"`
+	client *MachineClient
 }
 
 type MachineClient struct {
@@ -118,7 +119,18 @@ func (c *MachineClient) Update(existing *Machine, updates interface{}) (*Machine
 func (c *MachineClient) List(opts *ListOpts) (*MachineCollection, error) {
 	resp := &MachineCollection{}
 	err := c.rancherClient.doList(MACHINE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *MachineCollection) Next() (*MachineCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &MachineCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *MachineClient) ById(id string) (*Machine, error) {

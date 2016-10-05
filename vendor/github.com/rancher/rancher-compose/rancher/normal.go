@@ -30,7 +30,6 @@ func (f *NormalFactory) configAndHash(r *RancherService) (digest.ServiceHash, *C
 
 	rancherService.LaunchConfig = launchConfig
 	rancherService.LaunchConfig.Labels[digest.ServiceHashKey] = hash.LaunchConfig
-	rancherService.SecondaryLaunchConfigs = []interface{}{}
 	rancherService.Metadata[digest.ServiceHashKey] = hash.Service
 
 	for _, secondaryLaunchConfig := range secondaryLaunchConfigs {
@@ -171,24 +170,20 @@ func (f *NormalFactory) upgrade(r *RancherService, existingService *client.Servi
 		},
 	}
 
-	serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs = []interface{}{}
-
 	if launchConfig {
 		serviceUpgrade.InServiceStrategy.LaunchConfig = config.LaunchConfig
 	}
 
 	for _, name := range secondaryNames {
-		for _, v := range config.SecondaryLaunchConfigs {
-			if secondaryLaunchConfig, ok := v.(client.SecondaryLaunchConfig); ok {
-				if secondaryLaunchConfig.Name == name {
-					serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs = append(serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs, secondaryLaunchConfig)
-				}
+		for _, secondaryLaunchConfig := range config.SecondaryLaunchConfigs {
+			if secondaryLaunchConfig.Name == name {
+				serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs = append(serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs, secondaryLaunchConfig)
 			}
 		}
 	}
 
 	for _, removedSecondaryName := range removedSecondaryNames {
-		serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs = append(serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs, &client.SecondaryLaunchConfig{
+		serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs = append(serviceUpgrade.InServiceStrategy.SecondaryLaunchConfigs, client.SecondaryLaunchConfig{
 			Name:      removedSecondaryName,
 			ImageUuid: "rancher/none",
 		})

@@ -58,7 +58,8 @@ type ExternalService struct {
 
 type ExternalServiceCollection struct {
 	Collection
-	Data []ExternalService `json:"data,omitempty"`
+	Data   []ExternalService `json:"data,omitempty"`
+	client *ExternalServiceClient
 }
 
 type ExternalServiceClient struct {
@@ -116,7 +117,18 @@ func (c *ExternalServiceClient) Update(existing *ExternalService, updates interf
 func (c *ExternalServiceClient) List(opts *ListOpts) (*ExternalServiceCollection, error) {
 	resp := &ExternalServiceCollection{}
 	err := c.rancherClient.doList(EXTERNAL_SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ExternalServiceCollection) Next() (*ExternalServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ExternalServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ExternalServiceClient) ById(id string) (*ExternalService, error) {

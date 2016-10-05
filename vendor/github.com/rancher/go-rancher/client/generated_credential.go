@@ -40,7 +40,8 @@ type Credential struct {
 
 type CredentialCollection struct {
 	Collection
-	Data []Credential `json:"data,omitempty"`
+	Data   []Credential `json:"data,omitempty"`
+	client *CredentialClient
 }
 
 type CredentialClient struct {
@@ -88,7 +89,18 @@ func (c *CredentialClient) Update(existing *Credential, updates interface{}) (*C
 func (c *CredentialClient) List(opts *ListOpts) (*CredentialCollection, error) {
 	resp := &CredentialCollection{}
 	err := c.rancherClient.doList(CREDENTIAL_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *CredentialCollection) Next() (*CredentialCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &CredentialCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *CredentialClient) ById(id string) (*Credential, error) {

@@ -14,7 +14,8 @@ type HaproxyConfig struct {
 
 type HaproxyConfigCollection struct {
 	Collection
-	Data []HaproxyConfig `json:"data,omitempty"`
+	Data   []HaproxyConfig `json:"data,omitempty"`
+	client *HaproxyConfigClient
 }
 
 type HaproxyConfigClient struct {
@@ -50,7 +51,18 @@ func (c *HaproxyConfigClient) Update(existing *HaproxyConfig, updates interface{
 func (c *HaproxyConfigClient) List(opts *ListOpts) (*HaproxyConfigCollection, error) {
 	resp := &HaproxyConfigCollection{}
 	err := c.rancherClient.doList(HAPROXY_CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *HaproxyConfigCollection) Next() (*HaproxyConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &HaproxyConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *HaproxyConfigClient) ById(id string) (*HaproxyConfig, error) {

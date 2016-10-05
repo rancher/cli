@@ -26,7 +26,8 @@ type ConfigItemStatus struct {
 
 type ConfigItemStatusCollection struct {
 	Collection
-	Data []ConfigItemStatus `json:"data,omitempty"`
+	Data   []ConfigItemStatus `json:"data,omitempty"`
+	client *ConfigItemStatusClient
 }
 
 type ConfigItemStatusClient struct {
@@ -62,7 +63,18 @@ func (c *ConfigItemStatusClient) Update(existing *ConfigItemStatus, updates inte
 func (c *ConfigItemStatusClient) List(opts *ListOpts) (*ConfigItemStatusCollection, error) {
 	resp := &ConfigItemStatusCollection{}
 	err := c.rancherClient.doList(CONFIG_ITEM_STATUS_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ConfigItemStatusCollection) Next() (*ConfigItemStatusCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ConfigItemStatusCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ConfigItemStatusClient) ById(id string) (*ConfigItemStatus, error) {

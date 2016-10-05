@@ -40,7 +40,8 @@ type DynamicSchema struct {
 
 type DynamicSchemaCollection struct {
 	Collection
-	Data []DynamicSchema `json:"data,omitempty"`
+	Data   []DynamicSchema `json:"data,omitempty"`
+	client *DynamicSchemaClient
 }
 
 type DynamicSchemaClient struct {
@@ -80,7 +81,18 @@ func (c *DynamicSchemaClient) Update(existing *DynamicSchema, updates interface{
 func (c *DynamicSchemaClient) List(opts *ListOpts) (*DynamicSchemaCollection, error) {
 	resp := &DynamicSchemaCollection{}
 	err := c.rancherClient.doList(DYNAMIC_SCHEMA_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *DynamicSchemaCollection) Next() (*DynamicSchemaCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &DynamicSchemaCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *DynamicSchemaClient) ById(id string) (*DynamicSchema, error) {

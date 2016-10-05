@@ -16,7 +16,8 @@ type NfsConfig struct {
 
 type NfsConfigCollection struct {
 	Collection
-	Data []NfsConfig `json:"data,omitempty"`
+	Data   []NfsConfig `json:"data,omitempty"`
+	client *NfsConfigClient
 }
 
 type NfsConfigClient struct {
@@ -52,7 +53,18 @@ func (c *NfsConfigClient) Update(existing *NfsConfig, updates interface{}) (*Nfs
 func (c *NfsConfigClient) List(opts *ListOpts) (*NfsConfigCollection, error) {
 	resp := &NfsConfigCollection{}
 	err := c.rancherClient.doList(NFS_CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *NfsConfigCollection) Next() (*NfsConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &NfsConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *NfsConfigClient) ById(id string) (*NfsConfig, error) {

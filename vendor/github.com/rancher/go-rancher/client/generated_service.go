@@ -74,7 +74,8 @@ type Service struct {
 
 type ServiceCollection struct {
 	Collection
-	Data []Service `json:"data,omitempty"`
+	Data   []Service `json:"data,omitempty"`
+	client *ServiceClient
 }
 
 type ServiceClient struct {
@@ -138,7 +139,18 @@ func (c *ServiceClient) Update(existing *Service, updates interface{}) (*Service
 func (c *ServiceClient) List(opts *ListOpts) (*ServiceCollection, error) {
 	resp := &ServiceCollection{}
 	err := c.rancherClient.doList(SERVICE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *ServiceCollection) Next() (*ServiceCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &ServiceCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *ServiceClient) ById(id string) (*Service, error) {

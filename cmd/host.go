@@ -48,11 +48,11 @@ func HostCommand() cli.Command {
 }
 
 type HostsData struct {
-	ID          string
-	Host        client.Host
-	State       string
-	IPAddresses []client.IpAddress
-	Labels      string
+	ID             string
+	Host           client.Host
+	State          string
+	ContainerCount int
+	Labels         string
 }
 
 func getHostState(host *client.Host) string {
@@ -87,7 +87,9 @@ func hostLs(ctx *cli.Context) error {
 		return err
 	}
 
-	collection, err := c.Host.List(nil)
+	opts := defaultListOpts(ctx)
+	delete(opts.Filters, "state_ne")
+	collection, err := c.Host.List(opts)
 	if err != nil {
 		return err
 	}
@@ -125,7 +127,8 @@ func hostLs(ctx *cli.Context) error {
 		{"ID", "Host.Id"},
 		{"HOSTNAME", "Host.Hostname"},
 		{"STATE", "State"},
-		{"IP", "{{ips .IPAddresses}}"},
+		{"CONTAINERS", "ContainerCount"},
+		{"IP", "Host.AgentIpAddress"},
 		{"LABELS", "Labels"},
 		{"DETAIL", "Host.TransitioningMessage"},
 	}, ctx)
@@ -133,16 +136,12 @@ func hostLs(ctx *cli.Context) error {
 	defer writer.Close()
 
 	for _, item := range collection.Data {
-		ips := client.IpAddressCollection{}
-		// ignore errors getting IPs, machines don't have them
-		c.GetLink(item.Resource, "ipAddresses", &ips)
-
 		writer.Write(&HostsData{
-			ID:          item.Id,
-			Host:        item,
-			State:       getHostState(&item),
-			Labels:      getLabels(&item),
-			IPAddresses: ips.Data,
+			ID:             item.Id,
+			Host:           item,
+			State:          getHostState(&item),
+			ContainerCount: len(item.InstanceIds),
+			Labels:         getLabels(&item),
 		})
 	}
 

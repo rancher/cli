@@ -16,7 +16,8 @@ type InstanceConsole struct {
 
 type InstanceConsoleCollection struct {
 	Collection
-	Data []InstanceConsole `json:"data,omitempty"`
+	Data   []InstanceConsole `json:"data,omitempty"`
+	client *InstanceConsoleClient
 }
 
 type InstanceConsoleClient struct {
@@ -52,7 +53,18 @@ func (c *InstanceConsoleClient) Update(existing *InstanceConsole, updates interf
 func (c *InstanceConsoleClient) List(opts *ListOpts) (*InstanceConsoleCollection, error) {
 	resp := &InstanceConsoleCollection{}
 	err := c.rancherClient.doList(INSTANCE_CONSOLE_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *InstanceConsoleCollection) Next() (*InstanceConsoleCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &InstanceConsoleCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *InstanceConsoleClient) ById(id string) (*InstanceConsole, error) {

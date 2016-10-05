@@ -172,7 +172,7 @@ func configSetup(ctx *cli.Context) error {
 		return err
 	}
 
-	if schema, ok := c.Schemas.CheckSchema("schema"); ok {
+	if schema, ok := c.GetSchemas().CheckSchema("schema"); ok {
 		// Normalize URL
 		config.URL = schema.Links["collection"]
 	} else {

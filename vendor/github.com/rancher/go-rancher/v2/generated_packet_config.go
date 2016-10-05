@@ -22,7 +22,8 @@ type PacketConfig struct {
 
 type PacketConfigCollection struct {
 	Collection
-	Data []PacketConfig `json:"data,omitempty"`
+	Data   []PacketConfig `json:"data,omitempty"`
+	client *PacketConfigClient
 }
 
 type PacketConfigClient struct {
@@ -58,7 +59,18 @@ func (c *PacketConfigClient) Update(existing *PacketConfig, updates interface{})
 func (c *PacketConfigClient) List(opts *ListOpts) (*PacketConfigCollection, error) {
 	resp := &PacketConfigCollection{}
 	err := c.rancherClient.doList(PACKET_CONFIG_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *PacketConfigCollection) Next() (*PacketConfigCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &PacketConfigCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *PacketConfigClient) ById(id string) (*PacketConfig, error) {

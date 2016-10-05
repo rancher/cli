@@ -12,7 +12,8 @@ type AddRemoveServiceLinkInput struct {
 
 type AddRemoveServiceLinkInputCollection struct {
 	Collection
-	Data []AddRemoveServiceLinkInput `json:"data,omitempty"`
+	Data   []AddRemoveServiceLinkInput `json:"data,omitempty"`
+	client *AddRemoveServiceLinkInputClient
 }
 
 type AddRemoveServiceLinkInputClient struct {
@@ -48,7 +49,18 @@ func (c *AddRemoveServiceLinkInputClient) Update(existing *AddRemoveServiceLinkI
 func (c *AddRemoveServiceLinkInputClient) List(opts *ListOpts) (*AddRemoveServiceLinkInputCollection, error) {
 	resp := &AddRemoveServiceLinkInputCollection{}
 	err := c.rancherClient.doList(ADD_REMOVE_SERVICE_LINK_INPUT_TYPE, opts, resp)
+	resp.client = c
 	return resp, err
+}
+
+func (cc *AddRemoveServiceLinkInputCollection) Next() (*AddRemoveServiceLinkInputCollection, error) {
+	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
+		resp := &AddRemoveServiceLinkInputCollection{}
+		err := cc.client.rancherClient.doNext(cc.Pagination.Next, resp)
+		resp.client = cc.client
+		return resp, err
+	}
+	return nil, nil
 }
 
 func (c *AddRemoveServiceLinkInputClient) ById(id string) (*AddRemoveServiceLinkInput, error) {
