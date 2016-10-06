@@ -87,40 +87,9 @@ func hostLs(ctx *cli.Context) error {
 		return err
 	}
 
-	opts := defaultListOpts(ctx)
-	delete(opts.Filters, "state_ne")
-	collection, err := c.Host.List(opts)
+	collection, err := c.Host.List(defaultListOpts(ctx))
 	if err != nil {
 		return err
-	}
-
-	knownMachines := map[string]bool{}
-	for _, host := range collection.Data {
-		knownMachines[host.PhysicalHostId] = true
-	}
-
-	machineCollection, err := c.Machine.List(nil)
-	if err != nil {
-		return err
-	}
-
-	for _, machine := range machineCollection.Data {
-		if knownMachines[machine.Id] {
-			continue
-		}
-		host := client.Host{
-			Resource: client.Resource{
-				Id: machine.Id,
-			},
-			Hostname:             machine.Name,
-			State:                machine.State,
-			TransitioningMessage: machine.TransitioningMessage,
-		}
-		if machine.State == "active" {
-			host.State = "waiting"
-			host.TransitioningMessage = "Almost there... Waiting for agent connection"
-		}
-		collection.Data = append(collection.Data, host)
 	}
 
 	writer := NewTableWriter([][]string{

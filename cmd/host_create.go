@@ -117,11 +117,11 @@ func hostCreate(ctx *cli.Context) error {
 		return err
 	}
 
-	machineSchema := c.GetSchemas().Schema("machine")
-	flags := buildFlags("", machineSchema, c.GetSchemas())
+	hostSchema := c.GetSchemas().Schema("host")
+	flags := buildFlags("", hostSchema, c.GetSchemas())
 	drivers := []string{}
 
-	for name := range machineSchema.ResourceFields {
+	for name := range hostSchema.ResourceFields {
 		if strings.HasSuffix(name, "Config") {
 			drivers = append(drivers, strings.TrimSuffix(name, "Config"))
 		}
@@ -137,7 +137,7 @@ func hostCreate(ctx *cli.Context) error {
 				EnvVar: "MACHINE_DRIVER",
 			})
 			hostCommand.Subcommands[i].Action = func(ctx *cli.Context) error {
-				return hostCreateRun(ctx, c, machineSchema, c.GetSchemas())
+				return hostCreateRun(ctx, c, hostSchema, c.GetSchemas())
 			}
 			hostCommand.Subcommands[i].SkipFlagParsing = false
 		}
