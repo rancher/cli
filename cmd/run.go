@@ -176,6 +176,18 @@ func RunCommand() cli.Command {
 				Usage: "Number of containers to run",
 				Value: 1,
 			},
+			cli.BoolFlag{
+				Name:  "schedule-global",
+				Usage: "Run 1 container per host",
+			},
+			cli.StringSliceFlag{
+				Name:  "label,l",
+				Usage: "Add label in the form of key=value",
+			},
+			cli.BoolFlag{
+				Name:  "pull",
+				Usage: "Always pull image on container start",
+			},
 		},
 	}
 }
@@ -225,9 +237,8 @@ func serviceRun(ctx *cli.Context) error {
 		Expose:     ctx.StringSlice("expose"),
 		Hostname:   ctx.String("hostname"),
 		ImageUuid:  "docker:" + ctx.Args()[0],
-		//Labels:
+		Labels:     map[string]interface{}{},
 		//LogConfig:
-		//Lxc:
 		Memory:     ctx.Int64("memory"),
 		MemorySwap: ctx.Int64("memory-swap"),
 		//NetworkIds: ctx.StringSlice("networkids"),
@@ -258,6 +269,23 @@ func serviceRun(ctx *cli.Context) error {
 				launchConfig.LogConfig.Config[parts[0]] = ""
 			}
 		}
+	}
+
+	for _, label := range ctx.StringSlice("label") {
+		parts := strings.SplitN(label, "=", 1)
+		value := ""
+		if len(parts) > 1 {
+			value = parts[1]
+		}
+		launchConfig.Labels[parts[0]] = value
+	}
+
+	if ctx.Bool("schedule-global") {
+		launchConfig.Labels["io.rancher.scheduler.global"] = "true"
+	}
+
+	if ctx.Bool("pull") {
+		launchConfig.Labels["io.rancher.container.pull_image"] = "always"
 	}
 
 	args := ctx.Args()[1:]
