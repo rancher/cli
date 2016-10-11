@@ -11,7 +11,6 @@ import (
 	"github.com/docker/libcompose/utils"
 	"github.com/rancher/rancher-catalog-service/model"
 	"github.com/rancher/rancher-compose/rancher"
-	"gopkg.in/yaml.v2"
 )
 
 type questionWrapper struct {
@@ -47,10 +46,11 @@ func (q *QuestionLookup) parse(file string) error {
 		return err
 	}
 
-	data := map[string]map[string]interface{}{}
-	if err := yaml.Unmarshal(contents, &data); err != nil {
+	config, err := config.CreateConfig(contents)
+	if err != nil {
 		return err
 	}
+	data := config.Services
 
 	rawQuestions := data[".catalog"]
 	if rawQuestions != nil {

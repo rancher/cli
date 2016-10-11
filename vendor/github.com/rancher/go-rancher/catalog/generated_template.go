@@ -31,6 +31,8 @@ type Template struct {
 
 	Maintainer string `json:"maintainer,omitempty" yaml:"maintainer,omitempty"`
 
+	MaximumRancherVersion string `json:"maximumRancherVersion,omitempty" yaml:"maximum_rancher_version,omitempty"`
+
 	MinimumRancherVersion string `json:"minimumRancherVersion,omitempty" yaml:"minimum_rancher_version,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
@@ -40,6 +42,8 @@ type Template struct {
 	TemplateBase string `json:"templateBase,omitempty" yaml:"template_base,omitempty"`
 
 	TemplateVersionRancherVersion map[string]interface{} `json:"templateVersionRancherVersion,omitempty" yaml:"template_version_rancher_version,omitempty"`
+
+	TemplateVersionRancherVersionGte map[string]interface{} `json:"templateVersionRancherVersionGte,omitempty" yaml:"template_version_rancher_version_gte,omitempty"`
 
 	Type string `json:"type,omitempty" yaml:"type,omitempty"`
 

@@ -93,7 +93,11 @@ type SecondaryLaunchConfig struct {
 
 	MemoryMb int64 `json:"memoryMb,omitempty" yaml:"memory_mb,omitempty"`
 
+	MemoryReservation int64 `json:"memoryReservation,omitempty" yaml:"memory_reservation,omitempty"`
+
 	MemorySwap int64 `json:"memorySwap,omitempty" yaml:"memory_swap,omitempty"`
+
+	MilliCpuReservation int64 `json:"milliCpuReservation,omitempty" yaml:"milli_cpu_reservation,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
