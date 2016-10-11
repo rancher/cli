@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	stopTypes = []string{"service", "container", "host"}
+	stopTypes = []string{"service", "container", "host", "stack"}
 )
 
 func StopCommand() cli.Command {
@@ -27,7 +27,7 @@ func StopCommand() cli.Command {
 
 func stopResources(ctx *cli.Context) error {
 	return forEachResource(ctx, stopTypes, func(c *client.RancherClient, resource *client.Resource) (string, error) {
-		action, err := pickAction(resource, "stop", "deactivate")
+		action, err := pickAction(resource, "stop", "deactivate", "deactivateservices")
 		if err != nil {
 			return "", err
 		}
