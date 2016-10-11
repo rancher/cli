@@ -18,6 +18,7 @@ import (
 	"github.com/docker/libcompose/project/events"
 	"github.com/docker/libcompose/project/options"
 	"github.com/gorilla/websocket"
+	"github.com/rancher/go-rancher/hostaccess"
 	"github.com/rancher/go-rancher/v2"
 	rUtils "github.com/rancher/rancher-compose/utils"
 )
@@ -534,16 +535,16 @@ func (r *RancherService) Log(ctx context.Context, follow bool) error {
 		return err
 	}
 
-	_ = containers
-	/*for _, container := range containers {
-		conn, err := (*hostaccess.RancherWebsocketClient)(r.context.Client).GetHostAccess(container.Resource, "logs", nil)
+	for _, container := range containers {
+		websocketClient := (*hostaccess.RancherWebsocketClient)(r.context.Client)
+		conn, err := websocketClient.GetHostAccess(container.Resource, "logs", nil)
 		if err != nil {
 			logrus.Errorf("Failed to get logs for %s: %v", container.Name, err)
 			continue
 		}
 
 		go r.pipeLogs(&container, conn)
-	}*/
+	}
 
 	return nil
 }

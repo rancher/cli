@@ -65,6 +65,12 @@ type Host struct {
 
 	Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
 
+	LocalStorageMb int64 `json:"localStorageMb,omitempty" yaml:"local_storage_mb,omitempty"`
+
+	Memory int64 `json:"memory,omitempty" yaml:"memory,omitempty"`
+
+	MilliCpu int64 `json:"milliCpu,omitempty" yaml:"milli_cpu,omitempty"`
+
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
 	PacketConfig *PacketConfig `json:"packetConfig,omitempty" yaml:"packet_config,omitempty"`

@@ -14,6 +14,7 @@ import (
 
 func StackCommand() cli.Command {
 	stackLsFlags := []cli.Flag{
+		listSystemFlag(),
 		cli.BoolFlag{
 			Name:  "quiet,q",
 			Usage: "Only display IDs",
@@ -55,6 +56,10 @@ func StackCommand() cli.Command {
 						Usage: "Create a system stack",
 					},
 					cli.BoolFlag{
+						Name:  "empty,e",
+						Usage: "Create an empty stack",
+					},
+					cli.BoolFlag{
 						Name:  "quiet,q",
 						Usage: "Only display IDs",
 					},
@@ -68,11 +73,11 @@ func StackCommand() cli.Command {
 						Usage: "Rancher Compose file",
 						Value: "rancher-compose.yml",
 					},
-					cli.StringFlag{
-						Name:  "answers,a",
-						Usage: "Answers files",
-						Value: "answers",
-					},
+					//cli.StringFlag{
+					//	Name:  "answers,a",
+					//	Usage: "Answers files",
+					//	Value: "answers",
+					//},
 				},
 			},
 		},
@@ -80,11 +85,11 @@ func StackCommand() cli.Command {
 }
 
 type StackData struct {
-	ID      string
-	Catalog string
-	Stack   client.Stack
-	State   string
-	System  bool
+	ID           string
+	Catalog      string
+	Stack        client.Stack
+	State        string
+	ServiceCount int
 }
 
 func stackLs(ctx *cli.Context) error {
@@ -93,7 +98,7 @@ func stackLs(ctx *cli.Context) error {
 		return err
 	}
 
-	collection, err := c.Stack.List(defaultListOpts(nil))
+	collection, err := c.Stack.List(defaultListOpts(ctx))
 	if err != nil {
 		return err
 	}
@@ -103,30 +108,24 @@ func stackLs(ctx *cli.Context) error {
 		{"NAME", "Stack.Name"},
 		{"STATE", "State"},
 		{"CATALOG", "Catalog"},
-		{"SYSTEM", "System"},
+		{"SERVICES", "ServiceCount"},
+		{"SYSTEM", "Stack.System"},
 		{"DETAIL", "Stack.TransitioningMessage"},
 	}, ctx)
 
 	defer writer.Close()
 
 	for _, item := range collection.Data {
-		system := strings.HasPrefix(item.ExternalId, "system://")
-		if !system {
-			system = strings.HasPrefix(item.ExternalId, "system-catalog://")
-		}
-		if !system {
-			system = strings.HasPrefix(item.ExternalId, "kubernetes")
-		}
 		combined := item.HealthState
 		if item.State != "active" || combined == "" {
 			combined = item.State
 		}
 		writer.Write(&StackData{
-			ID:      item.Id,
-			Stack:   item,
-			State:   combined,
-			System:  system,
-			Catalog: item.ExternalId,
+			ID:           item.Id,
+			Stack:        item,
+			State:        combined,
+			Catalog:      item.ExternalId,
+			ServiceCount: len(item.ServiceIds),
 		})
 	}
 
@@ -138,7 +137,7 @@ func getFile(name string) (string, error) {
 		return "", nil
 	}
 	bytes, err := ioutil.ReadFile(name)
-	if err == os.ErrNotExist {
+	if os.IsNotExist(err) {
 		return "", nil
 
 	}
@@ -172,40 +171,56 @@ func parseAnswers(ctx *cli.Context) (map[string]interface{}, error) {
 func stackCreate(ctx *cli.Context) error {
 	c, err := GetClient(ctx)
 
-	dockerCompose, err := getFile(ctx.String("docker-compose"))
-	if err != nil {
-		return err
-	}
-	if dockerCompose == "" {
-		return errors.New("docker-compose.yml files is required")
-	}
-
-	rancherCompose, err := getFile(ctx.String("rancher-compose"))
-	if err != nil {
-		return err
-	}
-
-	answers, err := parseAnswers(ctx)
-	if err != nil {
-		return errors.Wrap(err, "reading answers")
-	}
-
-	name := RandomName()
+	names := []string{RandomName()}
 	if len(ctx.Args()) > 0 {
-		name = ctx.Args()[0]
+		names = ctx.Args()
 	}
 
-	stack, err := c.Stack.Create(&client.Stack{
-		Name:           name,
-		DockerCompose:  dockerCompose,
-		RancherCompose: rancherCompose,
-		Environment:    answers,
-		System:         ctx.Bool("system"),
-		StartOnCreate:  ctx.Bool("startOnCreate"),
-	})
+	w, err := NewWaiter(ctx)
 	if err != nil {
 		return err
 	}
 
-	return WaitFor(ctx, stack.Id)
+	var lastErr error
+	for _, name := range names {
+		stack := &client.Stack{
+			Name:          name,
+			System:        ctx.Bool("system"),
+			StartOnCreate: ctx.Bool("start"),
+		}
+
+		if !ctx.Bool("empty") {
+			var err error
+			stack.DockerCompose, err = getFile(ctx.String("docker-compose"))
+			if err != nil {
+				return err
+			}
+			if stack.DockerCompose == "" {
+				return errors.New("docker-compose.yml files is required")
+			}
+
+			stack.RancherCompose, err = getFile(ctx.String("rancher-compose"))
+			if err != nil {
+				return errors.Wrap(err, "reading "+ctx.String("rancher-compose"))
+			}
+
+			//stack.Answers, err = parseAnswers(ctx)
+			//if err != nil {
+			//return errors.Wrap(err, "reading answers")
+			//}
+		}
+
+		stack, err = c.Stack.Create(stack)
+		if err != nil {
+			lastErr = err
+		}
+
+		w.Add(stack.Id)
+	}
+
+	if lastErr != nil {
+		return lastErr
+	}
+
+	return w.Wait()
 }

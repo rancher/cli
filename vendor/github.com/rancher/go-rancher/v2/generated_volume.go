@@ -39,6 +39,8 @@ type Volume struct {
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
+	SizeMb int64 `json:"sizeMb,omitempty" yaml:"size_mb,omitempty"`
+
 	StackId string `json:"stackId,omitempty" yaml:"stack_id,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`

@@ -92,7 +92,7 @@ func buildFlag(name string, field client.Field) cli.Flag {
 func buildFlags(prefix string, schema client.Schema, schemas *client.Schemas) []cli.Flag {
 	flags := []cli.Flag{}
 	for name, field := range schema.ResourceFields {
-		if !field.Create || name == "name" {
+		if !field.Create || name == "hostname" {
 			continue
 		}
 
@@ -280,9 +280,9 @@ func hostCreateRun(ctx *cli.Context, c *client.RancherClient, machineSchema clie
 
 	var lastErr error
 	for _, name := range names {
-		args["name"] = name
+		args["hostname"] = name
 		var machine client.Machine
-		if err := c.Create("machine", args, &machine); err != nil {
+		if err := c.Create("host", args, &machine); err != nil {
 			lastErr = err
 			logrus.Error(err)
 		} else {

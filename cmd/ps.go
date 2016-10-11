@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
@@ -19,6 +18,7 @@ func PsCommand() cli.Command {
 		Action:      servicePs,
 		Flags: []cli.Flag{
 			listAllFlag(),
+			listSystemFlag(),
 			cli.BoolFlag{
 				Name:  "containers,c",
 				Usage: "Display containers",
@@ -37,7 +37,7 @@ func PsCommand() cli.Command {
 
 func GetStackMap(c *client.RancherClient) map[string]client.Stack {
 	result := map[string]client.Stack{}
-	stacks, err := c.Stack.List(defaultListOpts(nil))
+	stacks, err := c.Stack.List(baseListOpts())
 	if err != nil {
 		return result
 	}
@@ -52,7 +52,7 @@ func GetStackMap(c *client.RancherClient) map[string]client.Stack {
 type PsData struct {
 	Service       client.Service
 	Name          string
-	LaunchConfig  client.LaunchConfig
+	LaunchConfig  interface{}
 	Stack         client.Stack
 	CombinedState string
 	ID            string
@@ -93,6 +93,7 @@ func servicePs(ctx *cli.Context) error {
 		{"IMAGE", "LaunchConfig.ImageUuid"},
 		{"STATE", "CombinedState"},
 		{"SCALE", "{{len .Service.InstanceIds}}/{{.Service.Scale}}"},
+		{"SYSTEM", "Service.System"},
 		{"ENDPOINTS", "{{endpoint .Service.PublicEndpoints}}"},
 		{"DETAIL", "Service.TransitioningMessage"},
 	}, ctx)
@@ -120,22 +121,14 @@ func servicePs(ctx *cli.Context) error {
 			CombinedState: combined,
 		})
 		for _, sidekick := range item.SecondaryLaunchConfigs {
-			var sidekickLaunchConfig client.LaunchConfig
-			var sidekickSecondaryLaunchConfig client.SecondaryLaunchConfig
-			if err := mapstructure.Decode(sidekick, &sidekickLaunchConfig); err != nil {
-				return err
-			}
-			if err := mapstructure.Decode(sidekick, &sidekickSecondaryLaunchConfig); err != nil {
-				return err
-			}
-			sidekickLaunchConfig.ImageUuid = strings.TrimPrefix(sidekickLaunchConfig.ImageUuid, "docker:")
+			sidekick.ImageUuid = strings.TrimPrefix(sidekick.ImageUuid, "docker:")
 			item.Type = "sidekick"
 			writer.Write(PsData{
 				ID:      item.Id,
 				Service: item,
 				Name: fmt.Sprintf("%s/%s/%s", stackMap[item.StackId].Name, item.Name,
-					sidekickSecondaryLaunchConfig.Name),
-				LaunchConfig:  sidekickLaunchConfig,
+					sidekick.Name),
+				LaunchConfig:  sidekick,
 				Stack:         stackMap[item.StackId],
 				CombinedState: combined,
 			})

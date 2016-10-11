@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	startTypes = []string{"service", "container", "host"}
+	startTypes = []string{"service", "container", "host", "stack"}
 )
 
 func StartCommand() cli.Command {
@@ -27,7 +27,7 @@ func StartCommand() cli.Command {
 
 func startResources(ctx *cli.Context) error {
 	return forEachResource(ctx, startTypes, func(c *client.RancherClient, resource *client.Resource) (string, error) {
-		action, err := pickAction(resource, "start", "activate")
+		action, err := pickAction(resource, "start", "activate", "activateservices")
 		if err != nil {
 			return "", err
 		}

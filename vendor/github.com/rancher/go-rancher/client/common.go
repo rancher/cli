@@ -347,7 +347,6 @@ func (rancherClient *RancherBaseClientImpl) doModify(method string, url string, 
 
 	rancherClient.setupRequest(req)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Length", string(len(bodyContent)))
 
 	resp, err := client.Do(req)
 	if err != nil {
