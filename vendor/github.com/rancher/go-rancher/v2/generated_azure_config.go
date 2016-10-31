@@ -15,6 +15,8 @@ type AzureConfig struct {
 
 	CustomData string `json:"customData,omitempty" yaml:"custom_data,omitempty"`
 
+	Dns string `json:"dns,omitempty" yaml:"dns,omitempty"`
+
 	DockerPort string `json:"dockerPort,omitempty" yaml:"docker_port,omitempty"`
 
 	Environment string `json:"environment,omitempty" yaml:"environment,omitempty"`

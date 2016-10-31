@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/project"
 	"github.com/rancher/go-rancher/v2"
@@ -69,11 +70,14 @@ type Volume struct {
 }
 
 func (v *Volume) Inspect(ctx context.Context) (*client.VolumeTemplate, error) {
+	filters := map[string]interface{}{
+		"name": v.name,
+	}
+	if !v.external {
+		filters["stackId"] = v.context.Stack.Id
+	}
 	volumes, err := v.context.Client.VolumeTemplate.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"name":    v.name,
-			"stackId": v.context.Stack.Id,
-		},
+		Filters: filters,
 	})
 	if err != nil {
 		return nil, err
@@ -100,12 +104,18 @@ func (v *Volume) EnsureItExists(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	if v.external && volumeResource == nil {
 		return fmt.Errorf("Volume %s declared as external, but could not be found. Please create the volume manually and try again.", v.name)
 	}
+
 	if volumeResource == nil {
+		logrus.Infof("Creating volume template %s", v.name)
 		return v.create(ctx)
+	} else {
+		logrus.Infof("Existing volume template found for %s", v.name)
 	}
+
 	if v.driver != "" && volumeResource.Driver != v.driver {
 		return fmt.Errorf("Volume %q needs to be recreated - driver has changed", v.name)
 	}

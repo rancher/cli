@@ -15,15 +15,27 @@ type Network struct {
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
+	Dns []string `json:"dns,omitempty" yaml:"dns,omitempty"`
+
+	DnsSearch []string `json:"dnsSearch,omitempty" yaml:"dns_search,omitempty"`
+
+	HostPorts bool `json:"hostPorts,omitempty" yaml:"host_ports,omitempty"`
+
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
+	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	NetworkDriverId string `json:"networkDriverId,omitempty" yaml:"network_driver_id,omitempty"`
 
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	Subnets []Subnet `json:"subnets,omitempty" yaml:"subnets,omitempty"`
 
 	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 

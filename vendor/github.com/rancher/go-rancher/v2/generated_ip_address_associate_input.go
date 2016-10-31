@@ -6,8 +6,6 @@ const (
 
 type IpAddressAssociateInput struct {
 	Resource
-
-	IpAddressId string `json:"ipAddressId,omitempty" yaml:"ip_address_id,omitempty"`
 }
 
 type IpAddressAssociateInputCollection struct {

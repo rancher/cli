@@ -12,9 +12,9 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/docker/api/types"
+	dclient "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	dclient "github.com/docker/engine-api/client"
-	"github.com/docker/engine-api/types"
 	"github.com/docker/libcompose/cli/logger"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rancher/cli/monitor"

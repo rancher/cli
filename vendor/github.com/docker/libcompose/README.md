@@ -11,8 +11,8 @@ Here is a list of known project that uses `libcompose`:
 
 - [rancher-compose](https://github.com/rancher/rancher-compose) and [rancher os](https://github.com/rancher/os) (by [Rancher](https://github.com/rancher))
 - [openshift](https://github.com/openshift/origin) (by [Red Hat](https://github.com/openshift))
-- [henge](https://github.com/redhat-developer/henge) (by [Red Hat](https://github.com/redhat-developer))
-- [kompose](https://github.com/skippbox/kompose2) (by [skippbox](https://github.com/skippbox))
+- [henge](https://github.com/redhat-developer/henge) (by [Red Hat](https://github.com/redhat-developer)) [Deprecated in favour of kompose]
+- [kompose](https://github.com/skippbox/kompose) (by [skippbox](https://github.com/skippbox))
 - [compose2kube](https://github.com/kelseyhightower/compose2kube) (by [kelseyhightower](https://github.com/kelseyhightower))
 - [amazon-ecs-cli](https://github.com/aws/amazon-ecs-cli) (by [Amazon AWS](https://github.com/aws))
 - [libkermit](https://github.com/libkermit/docker) (by [vdemeester](https://github.com/vdemeester))
@@ -28,12 +28,13 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/docker/libcompose/docker"
+	"github.com/docker/libcompose/docker/ctx"
 	"github.com/docker/libcompose/project"
 	"github.com/docker/libcompose/project/options"
 )
 
 func main() {
-	project, err := docker.NewProject(&docker.Context{
+	project, err := docker.NewProject(&ctx.Context{
 		Context: project.Context{
 			ComposeFiles: []string{"docker-compose.yml"},
 			ProjectName:  "my-compose",
@@ -61,7 +62,7 @@ or `go` in order to build libcompose.
 ### Building with `docker`
 
 You need Docker and ``make`` and then run the ``binary`` target. This
-will create binary for all platform in the `bundles` folder. 
+will create binary for all platform in the `bundles` folder.
 
 ```bash
 $ make binary
@@ -121,7 +122,7 @@ libcompose-cli_windows-386.exe
 You can run unit tests using the `test-unit` target and the
 integration test using the `test-integration` target. If you don't use
 Docker and `make` to build `libcompose`, you can use `go test` and the
-following scripts : `script/test-unit` and `script/test-integration`.
+following scripts : `hack/test-unit` and `hack/test-integration`.
 
 ```bash
 $ make test-unit

@@ -9,15 +9,21 @@ type NetworkDriver struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	CniConfig map[string]interface{} `json:"cniConfig,omitempty" yaml:"cni_config,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
+
+	DefaultNetwork DefaultNetwork `json:"defaultNetwork,omitempty" yaml:"default_network,omitempty"`
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	NetworkMetadata map[string]interface{} `json:"networkMetadata,omitempty" yaml:"network_metadata,omitempty"`
 
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
