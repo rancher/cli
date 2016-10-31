@@ -165,13 +165,6 @@ func forEachTemplate(ctx *cli.Context, f func(item catalog.Template) error) erro
 		return err
 	}
 
-	writer := NewTableWriter([][]string{
-		{"NAME", "Template.Name"},
-		{"CATEGORY", "Template.Category"},
-		{"ID", "ID"},
-	}, ctx)
-	defer writer.Close()
-
 	for _, item := range collection.Data {
 		if !isSupported(ctx, proj, item) {
 			continue
