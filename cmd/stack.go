@@ -52,7 +52,7 @@ func StackCommand() cli.Command {
 						Usage: "Start stack on create",
 					},
 					cli.BoolFlag{
-						Name:  "system",
+						Name:  "system,s",
 						Usage: "Create a system stack",
 					},
 					cli.BoolFlag{
