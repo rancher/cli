@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	inspectTypes = []string{"service", "container", "host", "project", "stack"}
+	inspectTypes = []string{"service", "container", "host", "project", "stack", "volume"}
 )
 
 func InspectCommand() cli.Command {
