@@ -11,6 +11,7 @@ import (
 
 func VolumeCommand() cli.Command {
 	volumeLsFlags := []cli.Flag{
+		listAllFlag(),
 		cli.BoolFlag{
 			Name:  "quiet,q",
 			Usage: "Only display IDs",
@@ -69,11 +70,7 @@ func volumeLs(ctx *cli.Context) error {
 		return err
 	}
 
-	collection, err := c.Volume.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"limit": -1,
-		},
-	})
+	collection, err := c.Volume.List(defaultListOpts(ctx))
 	if err != nil {
 		return err
 	}

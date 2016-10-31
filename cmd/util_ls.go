@@ -14,7 +14,7 @@ func listAllFlag() cli.BoolFlag {
 
 func listSystemFlag() cli.BoolFlag {
 	return cli.BoolFlag{
-		Name:  "system",
+		Name:  "system,s",
 		Usage: "Show system resources",
 	}
 }

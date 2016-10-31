@@ -222,7 +222,7 @@ func logsCommand(ctx *cli.Context) error {
 		}
 
 		state := getHostState(host)
-		if state != "active" {
+		if state != "active" && state != "inactive" {
 			logrus.Errorf("Can not contact host %s in state %s", i.HostId, state)
 			continue
 		}

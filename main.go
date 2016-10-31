@@ -141,7 +141,7 @@ func mainErr() error {
 		cmd.StartCommand(),
 		cmd.StopCommand(),
 		cmd.UpCommand(),
-		//cmd.VolumeCommand(),
+		cmd.VolumeCommand(),
 		cmd.InspectCommand(),
 		cmd.WaitCommand(),
 	}
