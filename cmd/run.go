@@ -151,7 +151,7 @@ func RunCommand() cli.Command {
 				Usage: "Username or UID (format: <name|uid>[:<group|gid>])",
 			},
 			cli.StringFlag{
-				Name:  "volume-driver, v",
+				Name:  "volume-driver",
 				Usage: "Optional volume driver for the container",
 			},
 			cli.StringFlag{
@@ -165,6 +165,10 @@ func RunCommand() cli.Command {
 			cli.StringSliceFlag{
 				Name:  "log-opt",
 				Usage: "Log driver options",
+			},
+			cli.StringSliceFlag{
+				Name:  "volume, v",
+				Usage: "Bind mount a volume",
 			},
 			cli.StringFlag{
 				Name:  "net",
@@ -254,6 +258,7 @@ func serviceRun(ctx *cli.Context) error {
 		User:            ctx.String("user"),
 		VolumeDriver:    ctx.String("volume-driver"),
 		WorkingDir:      ctx.String("workdir"),
+		DataVolumes:     ctx.StringSlice("volume"),
 	}
 
 	if ctx.String("log-driver") != "" || len(ctx.StringSlice("log-opt")) > 0 {
