@@ -15,7 +15,11 @@ type Openldapconfig struct {
 
 	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 
+	GroupDNField string `json:"groupDNField,omitempty" yaml:"group_dnfield,omitempty"`
+
 	GroupMemberMappingAttribute string `json:"groupMemberMappingAttribute,omitempty" yaml:"group_member_mapping_attribute,omitempty"`
+
+	GroupMemberUserAttribute string `json:"groupMemberUserAttribute,omitempty" yaml:"group_member_user_attribute,omitempty"`
 
 	GroupNameField string `json:"groupNameField,omitempty" yaml:"group_name_field,omitempty"`
 

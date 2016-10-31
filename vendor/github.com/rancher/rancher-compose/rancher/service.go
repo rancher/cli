@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/engine-api/types/container"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/docker/service"
 	"github.com/docker/libcompose/labels"
@@ -328,46 +328,11 @@ func (r *RancherService) setupLinks(service *client.Service, update bool) error 
 		return nil
 	}
 
-	if service.Type == client.LOAD_BALANCER_SERVICE_TYPE {
-		links, err := r.getLbLinks()
-		if err != nil {
-			return err
-		}
-		_, err = r.context.Client.LoadBalancerService.ActionSetservicelinks(&client.LoadBalancerService{
-			Resource: service.Resource,
-		}, &client.SetLoadBalancerServiceLinksInput{
-			ServiceLinks: links,
-		})
-		return err
-	}
-
 	links, err := r.getServiceLinks()
 	_, err = r.context.Client.Service.ActionSetservicelinks(service, &client.SetServiceLinksInput{
 		ServiceLinks: links,
 	})
 	return err
-}
-
-func (r *RancherService) getLbLinks() ([]client.LoadBalancerServiceLink, error) {
-	links, err := r.getLinks()
-	if err != nil {
-		return nil, err
-	}
-
-	result := []client.LoadBalancerServiceLink{}
-	for link, id := range links {
-		ports, err := r.getLbLinkPorts(link.ServiceName)
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, client.LoadBalancerServiceLink{
-			Ports:     ports,
-			ServiceId: id,
-		})
-	}
-
-	return result, nil
 }
 
 func (r *RancherService) SelectorContainer() string {
@@ -376,16 +341,6 @@ func (r *RancherService) SelectorContainer() string {
 
 func (r *RancherService) SelectorLink() string {
 	return r.serviceConfig.Labels["io.rancher.service.selector.link"]
-}
-
-func (r *RancherService) getLbLinkPorts(name string) ([]string, error) {
-	labelName := "io.rancher.loadbalancer.target." + name
-	v := r.serviceConfig.Labels[labelName]
-	if v == "" {
-		return []string{}, nil
-	}
-
-	return rUtils.TrimSplit(v, ",", -1), nil
 }
 
 func (r *RancherService) getServiceLinks() ([]client.ServiceLink, error) {
@@ -589,6 +544,16 @@ func (r *RancherService) DependentServices() []project.ServiceRelationship {
 		if rel.Type == project.RelTypeLink {
 			rel.Optional = true
 			result = append(result, rel)
+		}
+	}
+
+	// Load balancers should depend on non-external target services
+	lbConfig := r.RancherConfig().LbConfig
+	if lbConfig != nil {
+		for _, portRule := range lbConfig.PortRules {
+			if !strings.Contains(portRule.Service, "/") {
+				result = append(result, project.NewServiceRelationship(portRule.Service, project.RelTypeLink))
+			}
 		}
 	}
 

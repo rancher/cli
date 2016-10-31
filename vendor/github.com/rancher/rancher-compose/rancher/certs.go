@@ -6,24 +6,24 @@ import (
 	"github.com/rancher/go-rancher/v2"
 )
 
-func populateCerts(apiClient *client.RancherClient, lbService *CompositeService, rancherConfig *RancherConfig) error {
-	if rancherConfig.DefaultCert != "" {
-		if certId, err := findCertByName(apiClient, rancherConfig.DefaultCert); err != nil {
+func populateCerts(apiClient *client.RancherClient, lbService *CompositeService, defaultCert string, certs []string) error {
+	if defaultCert != "" {
+		certId, err := findCertByName(apiClient, defaultCert)
+		if err != nil {
 			return err
-		} else {
-			lbService.DefaultCertificateId = certId
 		}
+		lbService.LbConfig.DefaultCertificateId = certId
 	}
 
-	lbService.CertificateIds = []string{}
-	for _, certName := range rancherConfig.Certs {
-		if certId, err := findCertByName(apiClient, certName); err != nil {
+	certIds := []string{}
+	for _, certName := range certs {
+		certId, err := findCertByName(apiClient, certName)
+		if err != nil {
 			return err
-
-		} else {
-			lbService.CertificateIds = append(lbService.CertificateIds, certId)
 		}
+		certIds = append(certIds, certId)
 	}
+	lbService.LbConfig.CertificateIds = certIds
 
 	return nil
 }

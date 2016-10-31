@@ -62,6 +62,12 @@ func (f *NormalFactory) config(r *RancherService) (*CompositeService, *client.La
 		ExternalIpAddresses: rancherConfig.ExternalIps,
 		Hostname:            rancherConfig.Hostname,
 		HealthCheck:         r.HealthCheck(""),
+		StorageDriver:       rancherConfig.StorageDriver,
+		NetworkDriver:       rancherConfig.NetworkDriver,
+	}
+
+	if service.NetworkDriver != nil {
+		service.NetworkDriver.CniConfig = convertNestedMapKeysToStrings(service.NetworkDriver.CniConfig)
 	}
 
 	if err := populateLbFields(r, &launchConfig, service); err != nil {
@@ -83,8 +89,13 @@ func (f *NormalFactory) Create(r *RancherService) error {
 		return r.context.Client.Create(client.EXTERNAL_SERVICE_TYPE, &service, nil)
 	case DnsServiceType:
 		return r.context.Client.Create(client.DNS_SERVICE_TYPE, &service, nil)
+	case LegacyLbServiceType:
 	case LbServiceType:
 		return r.context.Client.Create(client.LOAD_BALANCER_SERVICE_TYPE, &service, nil)
+	case StorageDriverType:
+		return r.context.Client.Create(client.STORAGE_DRIVER_SERVICE_TYPE, &service, nil)
+	case NetworkDriverType:
+		return r.context.Client.Create(client.NETWORK_DRIVER_SERVICE_TYPE, &service, nil)
 	default:
 		_, err = r.context.Client.Service.Create(&service.Service)
 	}
@@ -202,6 +213,10 @@ func (f *NormalFactory) upgrade(r *RancherService, existingService *client.Servi
 			schemaType = client.DNS_SERVICE_TYPE
 		case LbServiceType:
 			schemaType = client.LOAD_BALANCER_SERVICE_TYPE
+		case NetworkDriverType:
+			schemaType = client.NETWORK_DRIVER_SERVICE_TYPE
+		case StorageDriverType:
+			schemaType = client.STORAGE_DRIVER_SERVICE_TYPE
 		}
 
 		if err := r.context.Client.Update(schemaType, &existingService.Resource, config, existingService); err != nil {
@@ -222,4 +237,41 @@ func (f *NormalFactory) upgrade(r *RancherService, existingService *client.Servi
 	}
 
 	return r.Wait(existingService)
+}
+
+func convertNestedMapKeysToStrings(service map[string]interface{}) map[string]interface{} {
+	newService := map[string]interface{}{}
+
+	for k, v := range service {
+		newService[k] = convertKeysToStrings(v)
+	}
+
+	return newService
+}
+
+func convertKeysToStrings(item interface{}) interface{} {
+	switch typedDatas := item.(type) {
+
+	case map[interface{}]interface{}:
+		newMap := make(map[string]interface{})
+
+		for key, value := range typedDatas {
+			stringKey := key.(string)
+			newMap[stringKey] = convertKeysToStrings(value)
+		}
+		return newMap
+
+	case []interface{}:
+		// newArray := make([]interface{}, 0) will cause golint to complain
+		var newArray []interface{}
+		newArray = make([]interface{}, 0)
+
+		for _, value := range typedDatas {
+			newArray = append(newArray, convertKeysToStrings(value))
+		}
+		return newArray
+
+	default:
+		return item
+	}
 }

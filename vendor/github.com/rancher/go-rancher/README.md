@@ -1,5 +1,23 @@
 # Go Bindings for Rancher API
 
+# Generating Code
+First, you must have a master version of Rancher running. The best way to do this is:
+```sh
+docker run -p 8080:8080 -d rancher/server:master
+```
+
+Once Rancher is running, you can run the gen-schema.sh script:
+```sh
+./scripts/gen-schema.sh http://<docker host ip>:8080
+
+# The default url is http://localhost:8080, so if rancher/server is listening on localhost, you can omit the url:
+./scripts/gen-schema.sh
+```
+
+This will add, remove, and modify go files appropriately. Submit a PR that includes *all* these changes.
+
+Note that if you are running on macOS, you must have gnu-sed installed as sed for this to work properly.
+
 # Building
 
 ```sh

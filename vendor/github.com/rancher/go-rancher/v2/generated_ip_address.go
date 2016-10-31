@@ -57,6 +57,8 @@ type IpAddressOperations interface {
 
 	ActionActivate(*IpAddress) (*IpAddress, error)
 
+	ActionAssociate(*IpAddress) (*IpAddress, error)
+
 	ActionCreate(*IpAddress) (*IpAddress, error)
 
 	ActionDeactivate(*IpAddress) (*IpAddress, error)
@@ -127,6 +129,15 @@ func (c *IpAddressClient) ActionActivate(resource *IpAddress) (*IpAddress, error
 	resp := &IpAddress{}
 
 	err := c.rancherClient.doAction(IP_ADDRESS_TYPE, "activate", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *IpAddressClient) ActionAssociate(resource *IpAddress) (*IpAddress, error) {
+
+	resp := &IpAddress{}
+
+	err := c.rancherClient.doAction(IP_ADDRESS_TYPE, "associate", &resource.Resource, nil, resp)
 
 	return resp, err
 }

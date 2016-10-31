@@ -33,6 +33,8 @@ type Service struct {
 
 	LaunchConfig *LaunchConfig `json:"launchConfig,omitempty" yaml:"launch_config,omitempty"`
 
+	LbConfig *LbTargetConfig `json:"lbConfig,omitempty" yaml:"lb_config,omitempty"`
+
 	LinkedServices map[string]interface{} `json:"linkedServices,omitempty" yaml:"linked_services,omitempty"`
 
 	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`

@@ -3,6 +3,8 @@ package project
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -10,6 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/logger"
+	"github.com/docker/libcompose/lookup"
 	"github.com/docker/libcompose/project/events"
 	"github.com/docker/libcompose/utils"
 	"github.com/docker/libcompose/yaml"
@@ -57,6 +60,26 @@ func NewProject(context *Context, runtime RuntimeProject, parseOptions *config.P
 		context.LoggerFactory = &logger.NullLogger{}
 	}
 
+	if context.ResourceLookup == nil {
+		context.ResourceLookup = &lookup.FileResourceLookup{}
+	}
+
+	if context.EnvironmentLookup == nil {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Errorf("Could not get the rooted path name to the current directory: %v", err)
+			return nil
+		}
+		context.EnvironmentLookup = &lookup.ComposableEnvLookup{
+			Lookups: []config.EnvironmentLookup{
+				&lookup.EnvfileLookup{
+					Path: filepath.Join(cwd, ".env"),
+				},
+				&lookup.OsEnvLookup{},
+			},
+		}
+	}
+
 	context.Project = p
 
 	p.listeners = []chan<- events.Event{NewDefaultListener(p)}
@@ -98,7 +121,7 @@ func (p *Project) Parse() error {
 // CreateService creates a service with the specified name based. If there
 // is no config in the project for this service, it will return an error.
 func (p *Project) CreateService(name string) (Service, error) {
-	existing, ok := p.ServiceConfigs.Get(name)
+	existing, ok := p.GetServiceConfig(name)
 	if !ok {
 		return nil, fmt.Errorf("Failed to find service: %s", name)
 	}
@@ -111,7 +134,7 @@ func (p *Project) CreateService(name string) (Service, error) {
 
 		for _, env := range config.Environment {
 			parts := strings.SplitN(env, "=", 2)
-			if len(parts) > 1 && parts[1] != "" {
+			if len(parts) > 1 {
 				parsedEnv = append(parsedEnv, env)
 				continue
 			} else {
@@ -502,6 +525,12 @@ func (p *Project) Notify(eventType events.EventType, serviceName string, data ma
 	for _, l := range p.listeners {
 		l <- event
 	}
+}
+
+// GetServiceConfig looks up a service config for a given service name, returning the ServiceConfig
+// object and a bool flag indicating whether it was found
+func (p *Project) GetServiceConfig(name string) (*config.ServiceConfig, bool) {
+	return p.ServiceConfigs.Get(name)
 }
 
 // IsNamedVolume returns whether the specified volume (string) is a named volume or not.
