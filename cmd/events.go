@@ -72,14 +72,21 @@ func events(ctx *cli.Context) error {
 			if format == "" {
 				resource, _ := event.Data["resource"].(map[string]interface{})
 				name, _ := resource["name"].(string)
-				state, _ := resource["state"].(string)
 
 				if name == "ping" {
 					continue
 				}
 
+				healthState, _ := resource["healthState"].(string)
+				state, _ := resource["state"].(string)
+
+				combined := healthState
+				if state != "active" || combined == "" {
+					combined = state
+				}
+
 				message, _ := resource["transitioningMessage"].(string)
-				fmt.Printf("%s %s %s [%s] %v\n", event.ResourceType, event.ResourceID, state, name, message)
+				fmt.Printf("%s %s %s [%s] %v\n", event.ResourceType, event.ResourceID, combined, name, message)
 			} else {
 				writer := NewTableWriter(nil, ctx)
 				writer.Write(event)
