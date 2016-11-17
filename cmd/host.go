@@ -10,6 +10,7 @@ import (
 
 func HostCommand() cli.Command {
 	hostLsFlags := []cli.Flag{
+		listAllFlag(),
 		cli.BoolFlag{
 			Name:  "quiet,q",
 			Usage: "Only display IDs",

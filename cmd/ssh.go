@@ -18,12 +18,13 @@ import (
 
 func SSHCommand() cli.Command {
 	return cli.Command{
-		Name:        "ssh",
-		Usage:       "SSH into host",
-		Description: "\nFor any hosts created through Rancher using docker-machine, you can SSH into the host. This is not supported for any custom hosts. If the host is not in the current $RANCHER_ENVIRONMENT, use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher ssh 1h1\n\t$ rancher --env 1a5 ssh 1h5\n",
-		ArgsUsage:   "[HOSTID HOSTNAME...]",
-		Action:      hostSSH,
-		Flags:       []cli.Flag{},
+		Name:            "ssh",
+		Usage:           "SSH into host",
+		Description:     "\nFor any hosts created through Rancher using docker-machine, you can SSH into the host. This is not supported for any custom hosts. If the host is not in the current $RANCHER_ENVIRONMENT, use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher ssh 1h1\n\t$ rancher --env 1a5 ssh 1h5\n",
+		ArgsUsage:       "[HOSTID HOSTNAME...]",
+		Action:          hostSSH,
+		Flags:           []cli.Flag{},
+		SkipFlagParsing: true,
 	}
 }
 
@@ -35,6 +36,10 @@ func hostSSH(ctx *cli.Context) error {
 
 	hostname := ""
 	args := ctx.Args()
+
+	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
+		return cli.ShowCommandHelp(ctx, "ssh")
+	}
 
 	for _, arg := range args {
 		if len(arg) > 0 && arg[0] != '-' {
@@ -86,6 +91,7 @@ func callSSH(content []byte, ip string, args []string) error {
 			parts := strings.SplitN(val, "@", 2)
 			parts[len(parts)-1] = ip
 			args[i] = strings.Join(parts, "@")
+			break
 		}
 	}
 
