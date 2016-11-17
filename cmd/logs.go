@@ -321,7 +321,7 @@ func resolveContainers(c *client.RancherClient, names []string) ([]client.Instan
 	result := []client.Instance{}
 
 	for _, name := range names {
-		resource, err := Lookup(c, name, "container", "service", "stack")
+		resource, err := Lookup(c, name, "container", "service")
 		if err != nil {
 			return nil, err
 		}

@@ -94,7 +94,7 @@ func runDockerWithOutput(hostname string, c *client.RancherClient, args []string
 	}
 
 	state := getHostState(host)
-	if state != "active" && state != "inactive" {
+	if state != "active" && state != "inactive" && state != "disconnected" {
 		return fmt.Errorf("Can not contact host %s in state %s", hostname, state)
 	}
 
