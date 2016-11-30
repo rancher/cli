@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	waitTypes = []string{"service", "container", "host", "stack", "machine"}
+	waitTypes = []string{"service", "container", "host", "stack", "machine", "projectTemplate"}
 )
 
 func WaitCommand() cli.Command {
