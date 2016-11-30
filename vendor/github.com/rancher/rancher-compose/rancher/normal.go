@@ -90,6 +90,7 @@ func (f *NormalFactory) Create(r *RancherService) error {
 	case DnsServiceType:
 		return r.context.Client.Create(client.DNS_SERVICE_TYPE, &service, nil)
 	case LegacyLbServiceType:
+		fallthrough
 	case LbServiceType:
 		return r.context.Client.Create(client.LOAD_BALANCER_SERVICE_TYPE, &service, nil)
 	case StorageDriverType:

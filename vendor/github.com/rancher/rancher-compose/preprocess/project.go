@@ -95,14 +95,14 @@ func Preprocess(item interface{}, replaceTypes bool) interface{} {
 	}
 }
 
-func TryConvertStringsToInts(serviceMap config.RawServiceMap) (config.RawServiceMap, error) {
+func TryConvertStringsToInts(serviceMap config.RawServiceMap, fields map[string]bool) (config.RawServiceMap, error) {
 	newServiceMap := make(config.RawServiceMap)
 
 	for k, v := range serviceMap {
 		newServiceMap[k] = make(config.RawService)
 
 		for k2, v2 := range v {
-			if k2 == "disks" || k2 == "load_balancer_config" || k2 == "health_check" || k2 == "scale_policy" || k2 == "upgrade_strategy" || k2 == "service_schemas" {
+			if _, ok := fields[k2]; ok {
 				newServiceMap[k][k2] = tryConvertStringsToInts(v2, true)
 			} else {
 				newServiceMap[k][k2] = tryConvertStringsToInts(v2, false)

@@ -23,10 +23,10 @@ func FindServiceType(r *RancherService) ServiceType {
 
 	if len(rancherConfig.ExternalIps) > 0 || rancherConfig.Hostname != "" {
 		return ExternalServiceType
-	} else if r.RancherConfig().LbConfig != nil {
-		return LbServiceType
 	} else if r.serviceConfig.Image == LB_IMAGE {
 		return LegacyLbServiceType
+	} else if r.RancherConfig().LbConfig != nil {
+		return LbServiceType
 	} else if r.serviceConfig.Image == DNS_IMAGE {
 		return DnsServiceType
 	} else if rancherConfig.NetworkDriver != nil {
