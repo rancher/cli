@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
+	"io/ioutil"
+	"os"
 
 	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
+	"gopkg.in/yaml.v2"
 )
 
 func EnvCommand() cli.Command {
@@ -40,19 +42,54 @@ func EnvCommand() cli.Command {
 				Name:  "create",
 				Usage: "Create an environment",
 				Description: `
-By default, an environment with cattle orchestration framework will be created. This command only works for Account API keys.
+By default, an environment with cattle orchestration framework will be created. This command only works with Account API keys.
 
 Example:
 
 	$ rancher env create newEnv
 
 To add an orchestration framework do TODO
-	$ rancher env create -o kubernetes newK8sEnv
-	$ rancher env create -o mesos newMesosEnv
-	$ rancher env create -o swarm newSwarmEnv
+	$ rancher env create -t kubernetes newK8sEnv
+	$ rancher env create -t mesos newMesosEnv
+	$ rancher env create -t swarm newSwarmEnv
 `,
 				ArgsUsage: "[NEWENVNAME...]",
 				Action:    envCreate,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "template,t",
+						Usage: "Environment template to create from",
+						Value: "Cattle",
+					},
+				},
+			},
+			cli.Command{
+				Name:      "templates",
+				ShortName: "template",
+				Usage:     "Interact with environment templates",
+				Action:    defaultAction(envTemplateLs),
+				Flags:     envLsFlags,
+				Subcommands: []cli.Command{
+					cli.Command{
+						Name:      "export",
+						Usage:     "Export an environment template to STDOUT",
+						ArgsUsage: "[TEMPLATEID TEMPLATENAME...]",
+						Action:    envTemplateExport,
+						Flags:     []cli.Flag{},
+					},
+					cli.Command{
+						Name:      "import",
+						Usage:     "Import an environment template to from file",
+						ArgsUsage: "[FILE FILE...]",
+						Action:    envTemplateImport,
+						Flags: []cli.Flag{
+							cli.BoolFlag{
+								Name:  "public",
+								Usage: "Make template public",
+							},
+						},
+					},
+				},
 			},
 			cli.Command{
 				Name:        "rm",
@@ -99,6 +136,11 @@ type EnvData struct {
 	Environment *client.Project
 }
 
+type TemplateData struct {
+	ID              string
+	ProjectTemplate *client.ProjectTemplate
+}
+
 func NewEnvData(project client.Project) *EnvData {
 	return &EnvData{
 		ID:          project.Id,
@@ -132,7 +174,14 @@ func envCreate(ctx *cli.Context) error {
 		"name": name,
 	}
 
-	setFields(ctx, data)
+	template := ctx.String("template")
+	if template != "" {
+		template, err := Lookup(c, template, "projectTemplate")
+		if err != nil {
+			return err
+		}
+		data["projectTemplateId"] = template.Id
+	}
 
 	var newEnv client.Project
 	if err := c.Create("project", data, &newEnv); err != nil {
@@ -141,20 +190,6 @@ func envCreate(ctx *cli.Context) error {
 
 	fmt.Println(newEnv.Id)
 	return nil
-}
-
-func setFields(ctx *cli.Context, data map[string]interface{}) {
-	orch := strings.ToLower(ctx.String("orchestration"))
-
-	data["swarm"] = false
-	data["kubernetes"] = false
-	data["mesos"] = false
-
-	if orch == "k8s" {
-		orch = "kubernetes"
-	}
-
-	data[orch] = true
 }
 
 func envLs(ctx *cli.Context) error {
@@ -212,4 +247,121 @@ func envActivate(ctx *cli.Context) error {
 		}
 		return resource.Id, c.Action(resource.Type, action, resource, nil, resource)
 	})
+}
+
+func envTemplateLs(ctx *cli.Context) error {
+	c, err := GetRawClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	writer := NewTableWriter([][]string{
+		{"ID", "ID"},
+		{"NAME", "ProjectTemplate.Name"},
+		{"DESC", "ProjectTemplate.Description"},
+	}, ctx)
+	defer writer.Close()
+
+	collection, err := c.ProjectTemplate.List(defaultListOpts(ctx))
+	if err != nil {
+		return err
+	}
+
+	for _, item := range collection.Data {
+		writer.Write(TemplateData{
+			ID:              item.Id,
+			ProjectTemplate: &item,
+		})
+	}
+
+	return writer.Err()
+}
+
+func envTemplateImport(ctx *cli.Context) error {
+	c, err := GetRawClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	w, err := NewWaiter(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range ctx.Args() {
+		template := client.ProjectTemplate{
+			IsPublic: ctx.Bool("public"),
+		}
+		content, err := ioutil.ReadFile(file)
+		if err != nil {
+			return err
+		}
+
+		if err := yaml.Unmarshal(content, &template); err != nil {
+			return err
+		}
+
+		created, err := c.ProjectTemplate.Create(&template)
+		if err != nil {
+			return err
+		}
+
+		w.Add(created.Id)
+	}
+
+	return w.Wait()
+}
+
+func envTemplateExport(ctx *cli.Context) error {
+	c, err := GetRawClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range ctx.Args() {
+		r, err := Lookup(c, name, "projectTemplate")
+		if err != nil {
+			return err
+		}
+
+		template, err := c.ProjectTemplate.ById(r.Id)
+		if err != nil {
+			return err
+		}
+
+		stacks := []map[string]interface{}{}
+		for _, s := range template.Stacks {
+			data := map[string]interface{}{
+				"name": s.Name,
+			}
+			if s.TemplateId != "" {
+				data["template_id"] = s.TemplateId
+			}
+			if s.TemplateVersionId != "" {
+				data["template_version_id"] = s.TemplateVersionId
+			}
+			if len(s.Answers) > 0 {
+				data["answers"] = s.Answers
+			}
+			stacks = append(stacks, data)
+		}
+
+		data := map[string]interface{}{
+			"name":        template.Name,
+			"description": template.Description,
+			"stacks":      stacks,
+		}
+
+		content, err := yaml.Marshal(&data)
+		if err != nil {
+			return err
+		}
+
+		_, err = os.Stdout.Write(content)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
