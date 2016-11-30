@@ -20,7 +20,7 @@ type ResourceLookup interface {
 // ServiceConfigV1 holds version 1 of libcompose service configuration
 type ServiceConfigV1 struct {
 	BlkioWeight       yaml.StringorInt     `yaml:"blkio_weight,omitempty"`
-	BlkioWeightDevice string               `yaml:"blkio_weight_device,omitempty"`
+	BlkioWeightDevice []string             `yaml:"blkio_weight_device,omitempty"`
 	Build             string               `yaml:"build,omitempty"`
 	CapAdd            []string             `yaml:"cap_add,omitempty"`
 	CapDrop           []string             `yaml:"cap_drop,omitempty"`

@@ -69,15 +69,31 @@ type Volume struct {
 	perContainer  bool
 }
 
-func (v *Volume) Inspect(ctx context.Context) (*client.VolumeTemplate, error) {
-	filters := map[string]interface{}{
-		"name": v.name,
-	}
-	if !v.external {
-		filters["stackId"] = v.context.Stack.Id
-	}
+// InspectTemplate looks up a volume template
+func (v *Volume) InspectTemplate(ctx context.Context) (*client.VolumeTemplate, error) {
 	volumes, err := v.context.Client.VolumeTemplate.List(&client.ListOpts{
-		Filters: filters,
+		Filters: map[string]interface{}{
+			"name":    v.name,
+			"stackId": v.context.Stack.Id,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(volumes.Data) > 0 {
+		return &volumes.Data[0], nil
+	}
+
+	return nil, nil
+}
+
+// InspectExternal looks up a volume
+func (v *Volume) InspectExternal(ctx context.Context) (*client.Volume, error) {
+	volumes, err := v.context.Client.Volume.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"name": v.name,
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -91,22 +107,34 @@ func (v *Volume) Inspect(ctx context.Context) (*client.VolumeTemplate, error) {
 }
 
 func (v *Volume) Remove(ctx context.Context) error {
-	volumeResource, err := v.Inspect(ctx)
+	if v.external {
+		return nil
+	}
+
+	volumeResource, err := v.InspectTemplate(ctx)
 	if err != nil {
 		return err
 	}
-	err = v.context.Client.VolumeTemplate.Delete(volumeResource)
-	return err
+	return v.context.Client.VolumeTemplate.Delete(volumeResource)
 }
 
 func (v *Volume) EnsureItExists(ctx context.Context) error {
-	volumeResource, err := v.Inspect(ctx)
-	if err != nil {
-		return err
+	if v.external {
+		volumeResource, err := v.InspectExternal(ctx)
+		if err != nil {
+			return err
+		}
+
+		if volumeResource == nil {
+			return fmt.Errorf("Volume %s declared as external, but could not be found. Please create the volume manually and try again.", v.name)
+		}
+
+		return nil
 	}
 
-	if v.external && volumeResource == nil {
-		return fmt.Errorf("Volume %s declared as external, but could not be found. Please create the volume manually and try again.", v.name)
+	volumeResource, err := v.InspectTemplate(ctx)
+	if err != nil {
+		return err
 	}
 
 	if volumeResource == nil {

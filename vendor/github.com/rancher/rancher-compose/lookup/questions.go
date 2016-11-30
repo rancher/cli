@@ -11,6 +11,7 @@ import (
 	"github.com/docker/libcompose/utils"
 	"github.com/rancher/rancher-catalog-service/model"
 	"github.com/rancher/rancher-compose/rancher"
+	"gopkg.in/yaml.v2"
 )
 
 type questionWrapper struct {
@@ -46,25 +47,60 @@ func (q *QuestionLookup) parse(file string) error {
 		return err
 	}
 
-	config, err := config.CreateConfig(contents)
+	q.questions, err = ParseQuestions(contents)
 	if err != nil {
 		return err
 	}
-	data := config.Services
-
-	rawQuestions := data[".catalog"]
-	if rawQuestions != nil {
-		var wrapper questionWrapper
-		if err := utils.Convert(rawQuestions, &wrapper); err != nil {
-			return err
-		}
-
-		for _, question := range wrapper.Questions {
-			q.questions[question.Variable] = question
-		}
-	}
 
 	return nil
+}
+
+func ParseQuestions(contents []byte) (map[string]model.Question, error) {
+	catalogConfig, err := ParseCatalogConfig(contents)
+	if err != nil {
+		return nil, err
+	}
+
+	questions := map[string]model.Question{}
+	for _, question := range catalogConfig.Questions {
+		questions[question.Variable] = question
+	}
+
+	return questions, nil
+}
+
+func ParseCatalogConfig(contents []byte) (*model.RancherCompose, error) {
+	cfg, err := config.CreateConfig(contents)
+	if err != nil {
+		return nil, err
+	}
+	var rawCatalogConfig interface{}
+
+	if cfg.Version == "2" && cfg.Services[".catalog"] != nil {
+		rawCatalogConfig = cfg.Services[".catalog"]
+	}
+
+	var data map[string]interface{}
+	if err := yaml.Unmarshal(contents, &data); err != nil {
+		return nil, err
+	}
+
+	if data["catalog"] != nil {
+		rawCatalogConfig = data["catalog"]
+	} else if data[".catalog"] != nil {
+		rawCatalogConfig = data[".catalog"]
+	}
+
+	if rawCatalogConfig != nil {
+		var catalogConfig model.RancherCompose
+		if err := utils.Convert(rawCatalogConfig, &catalogConfig); err != nil {
+			return nil, err
+		}
+
+		return &catalogConfig, nil
+	}
+
+	return &model.RancherCompose{}, nil
 }
 
 func join(key, v string) []string {
