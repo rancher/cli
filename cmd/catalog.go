@@ -382,13 +382,15 @@ func GetCatalogClient(ctx *cli.Context) (*catalog.RancherClient, error) {
 		return nil, err
 	}
 
-	idx := strings.LastIndex(config.URL, "/v1")
+	idx := strings.LastIndex(config.URL, "/v2-beta")
 	if idx == -1 {
-		return nil, fmt.Errorf("Invalid URL %s, must contain /v1", config.URL)
+		return nil, fmt.Errorf("Invalid URL %s, must contain /v2-beta", config.URL)
 	}
 
 	url := config.URL[:idx] + "/v1-catalog/schemas"
 	return catalog.NewRancherClient(&catalog.ClientOpts{
-		Url: url,
+		AccessKey: config.AccessKey,
+		SecretKey: config.SecretKey,
+		Url:       url,
 	})
 }

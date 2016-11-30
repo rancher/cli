@@ -34,7 +34,7 @@ Example:
 				Usage: "Write to a file, instead of local files, use - to write to STDOUT",
 			},
 			cli.BoolFlag{
-				Name:  "system",
+				Name:  "system,s",
 				Usage: "If exporting the entire environment, include system",
 			},
 		},

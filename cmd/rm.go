@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/rancher/go-rancher/v2"
@@ -49,6 +50,13 @@ func deleteResources(ctx *cli.Context) error {
 				}
 			}
 		}
-		return resource.Id, c.Delete(resource)
+		err := c.Delete(resource)
+		if v, ok := err.(*client.ApiError); ok && v.StatusCode == 405 {
+			action, err := pickAction(resource, "stop", "deactivate")
+			if err == nil {
+				fmt.Printf("error: Must call %s on %s %s before removing\n", action, resource.Type, resource.Id)
+			}
+		}
+		return resource.Id, err
 	})
 }

@@ -34,6 +34,11 @@ func hostSSH(ctx *cli.Context) error {
 		return err
 	}
 
+	config, err := lookupConfig(ctx)
+	if err != nil {
+		return err
+	}
+
 	hostname := ""
 	args := ctx.Args()
 
@@ -53,36 +58,26 @@ func hostSSH(ctx *cli.Context) error {
 		return fmt.Errorf("Failed to find hostname in %v", args)
 	}
 
-	host, err := Lookup(c, hostname, "host")
+	hostResource, err := Lookup(c, hostname, "host")
 	if err != nil {
 		return err
 	}
 
-	var physicalHost client.PhysicalHost
-	err = c.GetLink(*host, "physicalHost", &physicalHost)
+	host, err := c.Host.ById(hostResource.Id)
 	if err != nil {
 		return err
 	}
 
-	if physicalHost.Type != "machine" {
-		return fmt.Errorf("Can only SSH to docker-machine created hosts.  No custom hosts")
-	}
-
-	key, err := getSSHKey(hostname, physicalHost)
+	key, err := getSSHKey(hostname, *host, config.AccessKey, config.SecretKey)
 	if err != nil {
 		return err
 	}
 
-	ips := client.IpAddressCollection{}
-	if err := c.GetLink(*host, "ipAddresses", &ips); err != nil {
-		return err
-	}
-
-	if len(ips.Data) == 0 {
+	if host.AgentIpAddress == "" {
 		return fmt.Errorf("Failed to find IP for %s", hostname)
 	}
 
-	return processExitCode(callSSH(key, ips.Data[0].Address, ctx.Args()))
+	return processExitCode(callSSH(key, host.AgentIpAddress, ctx.Args()))
 }
 
 func callSSH(content []byte, ip string, args []string) error {
@@ -121,13 +116,19 @@ func callSSH(content []byte, ip string, args []string) error {
 	return cmd.Run()
 }
 
-func getSSHKey(hostname string, physicalHost client.PhysicalHost) ([]byte, error) {
-	link, ok := physicalHost.Links["config"]
+func getSSHKey(hostname string, host client.Host, accessKey, secretKey string) ([]byte, error) {
+	link, ok := host.Links["config"]
 	if !ok {
 		return nil, fmt.Errorf("Failed to find SSH key for %s", hostname)
 	}
 
-	resp, err := http.Get(link)
+	req, err := http.NewRequest("GET", link, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.SetBasicAuth(accessKey, secretKey)
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

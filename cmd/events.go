@@ -13,6 +13,7 @@ import (
 func EventsCommand() cli.Command {
 	return cli.Command{
 		Name:        "events",
+		ShortName:   "event",
 		Usage:       "Displays resource change events",
 		Description: "\nOnly events that are actively occuring in Rancher are listed.\n",
 		ArgsUsage:   "None",

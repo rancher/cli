@@ -243,8 +243,9 @@ func hostCreateRun(ctx *cli.Context, c *client.RancherClient, machineSchema clie
 			continue
 		}
 
+		key = toAPI(strings.TrimPrefix(name, driver+"-"))
+
 		if strings.HasPrefix(name, driver+"-") {
-			key = toAPI(strings.TrimPrefix(name, driver+"-"))
 			schema = driverSchema
 			destArgs = driverArgs
 		}
