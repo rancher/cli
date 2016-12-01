@@ -146,24 +146,29 @@ frontend %s
 			}
 		}
 		for _, portRule := range config.LbConfig.PortRules {
-			targetService, err := r.FindExisting(portRule.Service)
-			if err != nil {
-				return err
-			}
-			if targetService == nil {
-				return fmt.Errorf("Failed to find existing service: %s", portRule.Service)
-			}
-			service.LbConfig.PortRules = append(service.LbConfig.PortRules, client.PortRule{
+			finalPortRule := client.PortRule{
 				SourcePort:  int64(portRule.SourcePort),
 				Protocol:    portRule.Protocol,
 				Path:        portRule.Path,
 				Hostname:    portRule.Hostname,
-				ServiceId:   targetService.Id,
 				TargetPort:  int64(portRule.TargetPort),
 				Priority:    int64(portRule.Priority),
 				BackendName: portRule.BackendName,
 				Selector:    portRule.Selector,
-			})
+			}
+
+			if portRule.Service != "" {
+				targetService, err := r.FindExisting(portRule.Service)
+				if err != nil {
+					return err
+				}
+				if targetService == nil {
+					return fmt.Errorf("Failed to find existing service: %s", portRule.Service)
+				}
+				finalPortRule.ServiceId = targetService.Id
+			}
+
+			service.LbConfig.PortRules = append(service.LbConfig.PortRules, finalPortRule)
 		}
 
 		launchConfig.Ports = r.serviceConfig.Ports
