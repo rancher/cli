@@ -19,5 +19,5 @@ func pickAction(resource *client.Resource, actions ...string) (string, error) {
 }
 
 func replaceTypeNames(msg string) string {
-	return strings.Replace(msg, "project", "enviroment", -1)
+	return strings.Replace(msg, "project", "environment", -1)
 }
