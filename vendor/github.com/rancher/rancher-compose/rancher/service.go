@@ -551,7 +551,7 @@ func (r *RancherService) DependentServices() []project.ServiceRelationship {
 	lbConfig := r.RancherConfig().LbConfig
 	if lbConfig != nil {
 		for _, portRule := range lbConfig.PortRules {
-			if !strings.Contains(portRule.Service, "/") {
+			if portRule.Service != "" && !strings.Contains(portRule.Service, "/") {
 				result = append(result, project.NewServiceRelationship(portRule.Service, project.RelTypeLink))
 			}
 		}
