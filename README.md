@@ -3,6 +3,9 @@ Rancher CLI
 
 The Rancher Command Line Interface (CLI)is a unified tool to manage your Rancher server. With this tool, you can control your services, containers and hosts within a Rancher environment and automate them through scripts. 
 
+## Version Compatibility
+Rancher CLI v0.2.0+ is only compatible with Rancher Server v1.2.0+. 
+
 ## Running
 
 You can check the [releases page](https://github.com/rancher/cli/releases) for direct downloads of the binary or [build your own](#building). 
