@@ -12,7 +12,7 @@ func populateCerts(apiClient *client.RancherClient, lbService *CompositeService,
 		if err != nil {
 			return err
 		}
-		lbService.LbConfig.DefaultCertificateId = certId
+		lbService.RealLbConfig.DefaultCertificateId = certId
 	}
 
 	certIds := []string{}
@@ -23,7 +23,7 @@ func populateCerts(apiClient *client.RancherClient, lbService *CompositeService,
 		}
 		certIds = append(certIds, certId)
 	}
-	lbService.LbConfig.CertificateIds = certIds
+	lbService.RealLbConfig.CertificateIds = certIds
 
 	return nil
 }
