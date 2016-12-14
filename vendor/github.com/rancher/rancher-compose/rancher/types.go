@@ -25,7 +25,7 @@ func FindServiceType(r *RancherService) ServiceType {
 		return ExternalServiceType
 	} else if r.serviceConfig.Image == LB_IMAGE {
 		return LegacyLbServiceType
-	} else if r.RancherConfig().LbConfig != nil {
+	} else if isLbServiceType(r.RancherConfig().LbConfig) {
 		return LbServiceType
 	} else if r.serviceConfig.Image == DNS_IMAGE {
 		return DnsServiceType
@@ -38,12 +38,26 @@ func FindServiceType(r *RancherService) ServiceType {
 	return RancherType
 }
 
+func isLbServiceType(lbConfig *LBConfig) bool {
+	if lbConfig == nil {
+		return false
+	}
+
+	for _, portRule := range lbConfig.PortRules {
+		if portRule.SourcePort != 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
 type CompositeService struct {
 	client.Service
 
 	StorageDriver *client.StorageDriver `json:"storageDriver,omitempty" yaml:"storageDriver,omitempty"`
 	NetworkDriver *client.NetworkDriver `json:"networkDriver,omitempty" yaml:"networkDriver,omitempty"`
-	LbConfig      *client.LbConfig      `json:"lbConfig,omitempty" yaml:"lb_config,omitempty"`
+	RealLbConfig  *client.LbConfig      `json:"lbConfig,omitempty" yaml:"lb_config,omitempty"`
 
 	// External Service Fields
 	ExternalIpAddresses []string                    `json:"externalIpAddresses,omitempty" yaml:"external_ip_addresses,omitempty"`

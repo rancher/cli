@@ -107,7 +107,7 @@ func join(key, v string) []string {
 	return []string{fmt.Sprintf("%s=%s", key, v)}
 }
 
-func (f *QuestionLookup) Lookup(key, serviceName string, config *config.ServiceConfig) []string {
+func (f *QuestionLookup) Lookup(key string, config *config.ServiceConfig) []string {
 	if v, ok := f.variables[key]; ok {
 		return join(key, v)
 	}
@@ -122,7 +122,7 @@ func (f *QuestionLookup) Lookup(key, serviceName string, config *config.ServiceC
 	}
 
 	if f.parent != nil {
-		parentResult := f.parent.Lookup(key, serviceName, config)
+		parentResult := f.parent.Lookup(key, config)
 		if len(parentResult) > 0 {
 			return parentResult
 		}

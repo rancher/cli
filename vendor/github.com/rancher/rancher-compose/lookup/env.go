@@ -46,7 +46,7 @@ func NewFileEnvLookup(file string, parent config.EnvironmentLookup) (*FileEnvLoo
 	}, nil
 }
 
-func (f *FileEnvLookup) Lookup(key, serviceName string, config *config.ServiceConfig) []string {
+func (f *FileEnvLookup) Lookup(key string, config *config.ServiceConfig) []string {
 	if v, ok := f.variables[key]; ok {
 		return []string{fmt.Sprintf("%s=%s", key, v)}
 	}
@@ -55,5 +55,5 @@ func (f *FileEnvLookup) Lookup(key, serviceName string, config *config.ServiceCo
 		return nil
 	}
 
-	return f.parent.Lookup(key, serviceName, config)
+	return f.parent.Lookup(key, config)
 }

@@ -196,7 +196,7 @@ func (c *Context) unmarshalBytes(composeBytes, bytes []byte) error {
 }
 
 func (c *Context) fillInRancherConfig(rawServiceMap config.RawServiceMap) error {
-	if err := config.Interpolate(c.EnvironmentLookup, &rawServiceMap); err != nil {
+	if err := config.InterpolateRawServiceMap(&rawServiceMap, c.EnvironmentLookup); err != nil {
 		return err
 	}
 

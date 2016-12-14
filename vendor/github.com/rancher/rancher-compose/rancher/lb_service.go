@@ -14,7 +14,20 @@ func populateLbFields(r *RancherService, launchConfig *client.LaunchConfig, serv
 	serviceType := FindServiceType(r)
 
 	config, ok := r.context.RancherConfig[r.name]
-	if !ok {
+	if ok {
+		if serviceType == RancherType && config.LbConfig != nil {
+			service.LbConfig = &client.LbTargetConfig{}
+			service.LbConfig.PortRules = []client.TargetPortRule{}
+			for _, portRule := range config.LbConfig.PortRules {
+				service.LbConfig.PortRules = append(service.LbConfig.PortRules, client.TargetPortRule{
+					BackendName: portRule.BackendName,
+					Hostname:    portRule.Hostname,
+					Path:        portRule.Path,
+					TargetPort:  int64(portRule.TargetPort),
+				})
+			}
+		}
+	} else {
 		if serviceType == LegacyLbServiceType {
 			r.context.RancherConfig[r.name] = RancherConfig{}
 			config = r.context.RancherConfig[r.name]
@@ -36,13 +49,13 @@ func populateLbFields(r *RancherService, launchConfig *client.LaunchConfig, serv
 				existingHAProxyConfig = generateHAProxyConf(config.LegacyLoadBalancerConfig.HaproxyConfig.Global, config.LegacyLoadBalancerConfig.HaproxyConfig.Defaults)
 			}
 		}
-		service.LbConfig = &client.LbConfig{
+		service.RealLbConfig = &client.LbConfig{
 			CertificateIds:       config.Certs,
 			Config:               string(existingHAProxyConfig),
 			DefaultCertificateId: config.DefaultCert,
 		}
 		if legacyStickinessPolicy != nil {
-			service.LbConfig.StickinessPolicy = &client.LoadBalancerCookieStickinessPolicy{
+			service.RealLbConfig.StickinessPolicy = &client.LoadBalancerCookieStickinessPolicy{
 				Cookie:   legacyStickinessPolicy.Cookie,
 				Domain:   legacyStickinessPolicy.Domain,
 				Indirect: legacyStickinessPolicy.Indirect,
@@ -94,7 +107,7 @@ func populateLbFields(r *RancherService, launchConfig *client.LaunchConfig, serv
 		if label, ok := r.serviceConfig.Labels[labelName]; ok {
 			split := strings.Split(label, ",")
 			for _, portString := range split {
-				service.LbConfig.Config += fmt.Sprintf(`
+				service.RealLbConfig.Config += fmt.Sprintf(`
 frontend %s
     accept-proxy`, portString)
 			}
@@ -107,7 +120,7 @@ frontend %s
 			if targetService == nil {
 				return fmt.Errorf("Failed to find existing service: %s", portRule.Service)
 			}
-			service.LbConfig.PortRules = append(service.LbConfig.PortRules, client.PortRule{
+			service.RealLbConfig.PortRules = append(service.RealLbConfig.PortRules, client.PortRule{
 				SourcePort:  int64(portRule.SourcePort),
 				Protocol:    portRule.Protocol,
 				Path:        portRule.Path,
@@ -130,12 +143,12 @@ frontend %s
 
 		return populateCerts(r.context.Client, service, config.DefaultCert, config.Certs)
 	} else if serviceType == LbServiceType {
-		service.LbConfig = &client.LbConfig{
+		service.RealLbConfig = &client.LbConfig{
 			Config: config.LbConfig.Config,
 		}
 		stickinessPolicy := config.LbConfig.StickinessPolicy
 		if stickinessPolicy != nil {
-			service.LbConfig.StickinessPolicy = &client.LoadBalancerCookieStickinessPolicy{
+			service.RealLbConfig.StickinessPolicy = &client.LoadBalancerCookieStickinessPolicy{
 				Name:     stickinessPolicy.Name,
 				Cookie:   stickinessPolicy.Cookie,
 				Domain:   stickinessPolicy.Domain,
@@ -168,7 +181,7 @@ frontend %s
 				finalPortRule.ServiceId = targetService.Id
 			}
 
-			service.LbConfig.PortRules = append(service.LbConfig.PortRules, finalPortRule)
+			service.RealLbConfig.PortRules = append(service.RealLbConfig.PortRules, finalPortRule)
 		}
 
 		launchConfig.Ports = r.serviceConfig.Ports
