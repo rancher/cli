@@ -277,7 +277,7 @@ func serviceRun(ctx *cli.Context) error {
 	}
 
 	for _, label := range ctx.StringSlice("label") {
-		parts := strings.SplitN(label, "=", 1)
+		parts := strings.SplitN(label, "=", 2)
 		value := ""
 		if len(parts) > 1 {
 			value = parts[1]
