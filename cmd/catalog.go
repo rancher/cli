@@ -307,7 +307,11 @@ func toString(s interface{}) string {
 
 func getTemplateVersion(ctx *cli.Context, cc *catalog.RancherClient, template catalog.Template, name, version string) (catalog.TemplateVersion, error) {
 	templateVersion := catalog.TemplateVersion{}
-
+	config, err := lookupConfig(ctx)
+	if err != nil {
+		return templateVersion, err
+	}	
+	
 	if version == "" {
 		version = template.DefaultVersion
 	}
@@ -318,7 +322,10 @@ func getTemplateVersion(ctx *cli.Context, cc *catalog.RancherClient, template ca
 		return templateVersion, fmt.Errorf("Failed to find the version %s for template %s", version, name)
 	}
 
-	resp, err := http.Get(fmt.Sprint(link))
+	client := &http.Client{}
+    req, err := http.NewRequest("GET", fmt.Sprint(link), nil)
+    req.SetBasicAuth(config.AccessKey, config.SecretKey)
+    resp, err := client.Do(req)
 	if err != nil {
 		return templateVersion, err
 	}
