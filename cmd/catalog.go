@@ -323,9 +323,9 @@ func getTemplateVersion(ctx *cli.Context, cc *catalog.RancherClient, template ca
 	}
 
 	client := &http.Client{}
-    req, err := http.NewRequest("GET", fmt.Sprint(link), nil)
-    req.SetBasicAuth(config.AccessKey, config.SecretKey)
-    resp, err := client.Do(req)
+	req, err := http.NewRequest("GET", fmt.Sprint(link), nil)
+	req.SetBasicAuth(config.AccessKey, config.SecretKey)
+	resp, err := client.Do(req)
 	if err != nil {
 		return templateVersion, err
 	}
