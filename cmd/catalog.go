@@ -310,8 +310,8 @@ func getTemplateVersion(ctx *cli.Context, cc *catalog.RancherClient, template ca
 	config, err := lookupConfig(ctx)
 	if err != nil {
 		return templateVersion, err
-	}	
-	
+	}
+
 	if version == "" {
 		version = template.DefaultVersion
 	}
