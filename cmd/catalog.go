@@ -47,10 +47,11 @@ func CatalogCommand() cli.Command {
 				Flags:       catalogLsFlags,
 			},
 			cli.Command{
-				Name:      "install",
-				Usage:     "Install catalog template",
-				Action:    catalogInstall,
-				ArgsUsage: "[ID or NAME]...",
+				Name:        "install",
+				Usage:       "Install catalog template",
+				Description: "\nInstall a catalog template in the current $RANCHER_ENVIRONMENT. \nUse `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher --env k8slab catalog install <CATALOG_ID>\n",
+				Action:      catalogInstall,
+				ArgsUsage:   "[ID]...",
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "answers,a",
