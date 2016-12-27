@@ -1,3 +1,3 @@
 FROM alpine
-COPY rancher /usr/bin/
+COPY bin/rancher /usr/bin/
 ENTRYPOINT ["rancher"]
