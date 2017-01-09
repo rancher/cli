@@ -1,0 +1,6 @@
+#!/bin/bash
+
+[[ -d ~/.rancher ]] || mkdir -p  ~/.rancher
+[[ -e ~/.rancher/cli.json ]] || echo "{"accessKey":"","secretKey":"","url":"","environment":""}" >  ~/.rancher/cli.json
+
+docker run --rm -it -v ~/.rancher/cli.json:/root/.rancher/cli.json  -v ~/.ssh/known_hosts:/root/.ssh/known_hosts -v `pwd`:/mnt rancher-cli "$@"
