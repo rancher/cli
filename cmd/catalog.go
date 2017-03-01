@@ -188,7 +188,7 @@ func getListTemplatesOpts(ctx *cli.Context, c *client.RancherClient) (*catalog.L
 	}
 
 	if setting != nil && setting.Value != "" {
-		opts.Filters["minimumRancherVersion_lte"] = setting.Value
+		opts.Filters["rancherVersion"] = setting.Value
 	}
 
 	opts.Filters["category_ne"] = "system"
