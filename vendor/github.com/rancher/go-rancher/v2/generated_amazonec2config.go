@@ -11,6 +11,8 @@ type Amazonec2Config struct {
 
 	Ami string `json:"ami,omitempty" yaml:"ami,omitempty"`
 
+	BlockDurationMinutes string `json:"blockDurationMinutes,omitempty" yaml:"block_duration_minutes,omitempty"`
+
 	DeviceName string `json:"deviceName,omitempty" yaml:"device_name,omitempty"`
 
 	Endpoint string `json:"endpoint,omitempty" yaml:"endpoint,omitempty"`
@@ -56,6 +58,8 @@ type Amazonec2Config struct {
 	UseEbsOptimizedInstance bool `json:"useEbsOptimizedInstance,omitempty" yaml:"use_ebs_optimized_instance,omitempty"`
 
 	UsePrivateAddress bool `json:"usePrivateAddress,omitempty" yaml:"use_private_address,omitempty"`
+
+	Userdata string `json:"userdata,omitempty" yaml:"userdata,omitempty"`
 
 	VolumeType string `json:"volumeType,omitempty" yaml:"volume_type,omitempty"`
 

@@ -36,6 +36,8 @@ type Account struct {
 	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
 
 	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+
+	Version string `json:"version,omitempty" yaml:"version,omitempty"`
 }
 
 type AccountCollection struct {

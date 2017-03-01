@@ -16,7 +16,9 @@ Once Rancher is running, you can run the gen-schema.sh script:
 
 This will add, remove, and modify go files appropriately. Submit a PR that includes *all* these changes.
 
-Note that if you are running on macOS, you must have gnu-sed installed as sed for this to work properly.
+## Important caveats
+1. If you are running on macOS, you must have gnu-sed installed as sed for this to work properly.
+2. If you are running against cattle that is running out of an IDE and you don't have go-machine-service running (you probably don't), you'll see a number of unexpected removed or modified files like `generated_host.go` `generated_machine.go` and `generated_*config.go`.
 
 # Building
 
