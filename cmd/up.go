@@ -1,14 +1,14 @@
 package cmd
 
 import (
-	"github.com/docker/libcompose/project"
-	rancherApp "github.com/rancher/rancher-compose/app"
+	"github.com/rancher/rancher-compose-executor/app"
+	"github.com/rancher/rancher-compose-executor/project"
 	"github.com/urfave/cli"
 )
 
 func UpCommand() cli.Command {
 	factory := &projectFactory{}
-	cmd := rancherApp.UpCommand(factory)
+	cmd := app.UpCommand(factory)
 	cmd.Flags = append(cmd.Flags, []cli.Flag{
 		cli.StringFlag{
 			Name:  "rancher-file",
@@ -35,7 +35,7 @@ func UpCommand() cli.Command {
 type projectFactory struct {
 }
 
-func (p *projectFactory) Create(c *cli.Context) (project.APIProject, error) {
+func (p *projectFactory) Create(c *cli.Context) (*project.Project, error) {
 	config, err := lookupConfig(c)
 	if err != nil {
 		return nil, err
@@ -59,6 +59,6 @@ func (p *projectFactory) Create(c *cli.Context) (project.APIProject, error) {
 		c.GlobalSet("file", f)
 	}
 
-	factory := &rancherApp.ProjectFactory{}
+	factory := &app.RancherProjectFactory{}
 	return factory.Create(c)
 }
