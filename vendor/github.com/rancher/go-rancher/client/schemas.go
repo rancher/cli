@@ -28,7 +28,7 @@ func (s *Schema) Field(name string) Field {
 
 func (s *Schemas) CheckSchema(name string) (Schema, bool) {
 	for i := range s.Data {
-		if s.Data[i].Id == name {
+		if strings.ToLower(s.Data[i].Id) == strings.ToLower(name) {
 			return s.Data[i], true
 		}
 	}

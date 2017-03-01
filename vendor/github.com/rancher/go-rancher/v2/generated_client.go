@@ -21,6 +21,7 @@ type RancherClient struct {
 	CatalogTemplate                          CatalogTemplateOperations
 	Certificate                              CertificateOperations
 	ChangeSecretInput                        ChangeSecretInputOperations
+	ClusterMembership                        ClusterMembershipOperations
 	ComposeConfig                            ComposeConfigOperations
 	ComposeConfigInput                       ComposeConfigInputOperations
 	ComposeProject                           ComposeProjectOperations
@@ -54,6 +55,7 @@ type RancherClient struct {
 	ExternalStoragePoolEvent                 ExternalStoragePoolEventOperations
 	ExternalVolumeEvent                      ExternalVolumeEventOperations
 	FieldDocumentation                       FieldDocumentationOperations
+	GenericObject                            GenericObjectOperations
 	HaConfig                                 HaConfigOperations
 	HaConfigInput                            HaConfigInputOperations
 	HealthcheckInstanceHostMap               HealthcheckInstanceHostMapOperations
@@ -70,7 +72,6 @@ type RancherClient struct {
 	InstanceLink                             InstanceLinkOperations
 	InstanceStop                             InstanceStopOperations
 	IpAddress                                IpAddressOperations
-	IpAddressAssociateInput                  IpAddressAssociateInputOperations
 	KubernetesService                        KubernetesServiceOperations
 	KubernetesStack                          KubernetesStackOperations
 	KubernetesStackUpgrade                   KubernetesStackUpgradeOperations
@@ -86,9 +87,14 @@ type RancherClient struct {
 	Machine                                  MachineOperations
 	MachineDriver                            MachineDriverOperations
 	Mount                                    MountOperations
+	MountEntry                               MountEntryOperations
 	Network                                  NetworkOperations
 	NetworkDriver                            NetworkDriverOperations
 	NetworkDriverService                     NetworkDriverServiceOperations
+	NetworkPolicyRule                        NetworkPolicyRuleOperations
+	NetworkPolicyRuleBetween                 NetworkPolicyRuleBetweenOperations
+	NetworkPolicyRuleMember                  NetworkPolicyRuleMemberOperations
+	NetworkPolicyRuleWithin                  NetworkPolicyRuleWithinOperations
 	NfsConfig                                NfsConfigOperations
 	Openldapconfig                           OpenldapconfigOperations
 	PacketConfig                             PacketConfigOperations
@@ -99,6 +105,8 @@ type RancherClient struct {
 	ProcessDefinition                        ProcessDefinitionOperations
 	ProcessExecution                         ProcessExecutionOperations
 	ProcessInstance                          ProcessInstanceOperations
+	ProcessPool                              ProcessPoolOperations
+	ProcessSummary                           ProcessSummaryOperations
 	Project                                  ProjectOperations
 	ProjectMember                            ProjectMemberOperations
 	ProjectTemplate                          ProjectTemplateOperations
@@ -116,7 +124,10 @@ type RancherClient struct {
 	RevertToSnapshotInput                    RevertToSnapshotInputOperations
 	RollingRestartStrategy                   RollingRestartStrategyOperations
 	ScalePolicy                              ScalePolicyOperations
+	ScheduledUpgrade                         ScheduledUpgradeOperations
 	SecondaryLaunchConfig                    SecondaryLaunchConfigOperations
+	Secret                                   SecretOperations
+	SecretReference                          SecretReferenceOperations
 	Service                                  ServiceOperations
 	ServiceBinding                           ServiceBindingOperations
 	ServiceConsumeMap                        ServiceConsumeMapOperations
@@ -180,6 +191,7 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.CatalogTemplate = newCatalogTemplateClient(client)
 	client.Certificate = newCertificateClient(client)
 	client.ChangeSecretInput = newChangeSecretInputClient(client)
+	client.ClusterMembership = newClusterMembershipClient(client)
 	client.ComposeConfig = newComposeConfigClient(client)
 	client.ComposeConfigInput = newComposeConfigInputClient(client)
 	client.ComposeProject = newComposeProjectClient(client)
@@ -213,6 +225,7 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.ExternalStoragePoolEvent = newExternalStoragePoolEventClient(client)
 	client.ExternalVolumeEvent = newExternalVolumeEventClient(client)
 	client.FieldDocumentation = newFieldDocumentationClient(client)
+	client.GenericObject = newGenericObjectClient(client)
 	client.HaConfig = newHaConfigClient(client)
 	client.HaConfigInput = newHaConfigInputClient(client)
 	client.HealthcheckInstanceHostMap = newHealthcheckInstanceHostMapClient(client)
@@ -229,7 +242,6 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.InstanceLink = newInstanceLinkClient(client)
 	client.InstanceStop = newInstanceStopClient(client)
 	client.IpAddress = newIpAddressClient(client)
-	client.IpAddressAssociateInput = newIpAddressAssociateInputClient(client)
 	client.KubernetesService = newKubernetesServiceClient(client)
 	client.KubernetesStack = newKubernetesStackClient(client)
 	client.KubernetesStackUpgrade = newKubernetesStackUpgradeClient(client)
@@ -245,9 +257,14 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.Machine = newMachineClient(client)
 	client.MachineDriver = newMachineDriverClient(client)
 	client.Mount = newMountClient(client)
+	client.MountEntry = newMountEntryClient(client)
 	client.Network = newNetworkClient(client)
 	client.NetworkDriver = newNetworkDriverClient(client)
 	client.NetworkDriverService = newNetworkDriverServiceClient(client)
+	client.NetworkPolicyRule = newNetworkPolicyRuleClient(client)
+	client.NetworkPolicyRuleBetween = newNetworkPolicyRuleBetweenClient(client)
+	client.NetworkPolicyRuleMember = newNetworkPolicyRuleMemberClient(client)
+	client.NetworkPolicyRuleWithin = newNetworkPolicyRuleWithinClient(client)
 	client.NfsConfig = newNfsConfigClient(client)
 	client.Openldapconfig = newOpenldapconfigClient(client)
 	client.PacketConfig = newPacketConfigClient(client)
@@ -258,6 +275,8 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.ProcessDefinition = newProcessDefinitionClient(client)
 	client.ProcessExecution = newProcessExecutionClient(client)
 	client.ProcessInstance = newProcessInstanceClient(client)
+	client.ProcessPool = newProcessPoolClient(client)
+	client.ProcessSummary = newProcessSummaryClient(client)
 	client.Project = newProjectClient(client)
 	client.ProjectMember = newProjectMemberClient(client)
 	client.ProjectTemplate = newProjectTemplateClient(client)
@@ -275,7 +294,10 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.RevertToSnapshotInput = newRevertToSnapshotInputClient(client)
 	client.RollingRestartStrategy = newRollingRestartStrategyClient(client)
 	client.ScalePolicy = newScalePolicyClient(client)
+	client.ScheduledUpgrade = newScheduledUpgradeClient(client)
 	client.SecondaryLaunchConfig = newSecondaryLaunchConfigClient(client)
+	client.Secret = newSecretClient(client)
+	client.SecretReference = newSecretReferenceClient(client)
 	client.Service = newServiceClient(client)
 	client.ServiceBinding = newServiceBindingClient(client)
 	client.ServiceConsumeMap = newServiceConsumeMapClient(client)

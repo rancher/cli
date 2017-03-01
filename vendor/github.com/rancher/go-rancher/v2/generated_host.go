@@ -83,6 +83,8 @@ type Host struct {
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
+	StackId string `json:"stackId,omitempty" yaml:"stack_id,omitempty"`
+
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
 	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
@@ -120,6 +122,8 @@ type HostOperations interface {
 	ActionDockersocket(*Host) (*HostAccess, error)
 
 	ActionError(*Host) (*Host, error)
+
+	ActionEvacuate(*Host) (*Host, error)
 
 	ActionProvision(*Host) (*Host, error)
 
@@ -223,6 +227,15 @@ func (c *HostClient) ActionError(resource *Host) (*Host, error) {
 	resp := &Host{}
 
 	err := c.rancherClient.doAction(HOST_TYPE, "error", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *HostClient) ActionEvacuate(resource *Host) (*Host, error) {
+
+	resp := &Host{}
+
+	err := c.rancherClient.doAction(HOST_TYPE, "evacuate", &resource.Resource, nil, resp)
 
 	return resp, err
 }

@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -251,7 +252,17 @@ func (rancherClient *RancherBaseClientImpl) doDelete(url string) error {
 }
 
 func (rancherClient *RancherBaseClientImpl) Websocket(url string, headers map[string][]string) (*websocket.Conn, *http.Response, error) {
-	return dialer.Dial(url, http.Header(headers))
+	httpHeaders := http.Header{}
+	for k, v := range httpHeaders {
+		httpHeaders[k] = v
+	}
+
+	if rancherClient.Opts != nil {
+		s := rancherClient.Opts.AccessKey + ":" + rancherClient.Opts.SecretKey
+		httpHeaders.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(s)))
+	}
+
+	return dialer.Dial(url, http.Header(httpHeaders))
 }
 
 func (rancherClient *RancherBaseClientImpl) doGet(url string, opts *ListOpts, respObject interface{}) error {

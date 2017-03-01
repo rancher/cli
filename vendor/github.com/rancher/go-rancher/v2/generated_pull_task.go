@@ -58,6 +58,10 @@ type PullTaskOperations interface {
 	Update(existing *PullTask, updates interface{}) (*PullTask, error)
 	ById(id string) (*PullTask, error)
 	Delete(container *PullTask) error
+
+	ActionCreate(*PullTask) (*GenericObject, error)
+
+	ActionRemove(*PullTask) (*GenericObject, error)
 }
 
 func newPullTaskClient(rancherClient *RancherClient) *PullTaskClient {
@@ -108,4 +112,22 @@ func (c *PullTaskClient) ById(id string) (*PullTask, error) {
 
 func (c *PullTaskClient) Delete(container *PullTask) error {
 	return c.rancherClient.doResourceDelete(PULL_TASK_TYPE, &container.Resource)
+}
+
+func (c *PullTaskClient) ActionCreate(resource *PullTask) (*GenericObject, error) {
+
+	resp := &GenericObject{}
+
+	err := c.rancherClient.doAction(PULL_TASK_TYPE, "create", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *PullTaskClient) ActionRemove(resource *PullTask) (*GenericObject, error) {
+
+	resp := &GenericObject{}
+
+	err := c.rancherClient.doAction(PULL_TASK_TYPE, "remove", &resource.Resource, nil, resp)
+
+	return resp, err
 }

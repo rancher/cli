@@ -33,6 +33,8 @@ type Volume struct {
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
+	Mounts []MountEntry `json:"mounts,omitempty" yaml:"mounts,omitempty"`
+
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`

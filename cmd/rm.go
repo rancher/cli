@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	rmTypes = []string{"service", "container", "stack", "host", "volume"}
+	rmTypes = []string{"service", "container", "stack", "host", "volume", "secret"}
 )
 
 func RmCommand() cli.Command {

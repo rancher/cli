@@ -46,6 +46,8 @@ type StoragePool struct {
 	VolumeAccessMode string `json:"volumeAccessMode,omitempty" yaml:"volume_access_mode,omitempty"`
 
 	VolumeCapabilities []string `json:"volumeCapabilities,omitempty" yaml:"volume_capabilities,omitempty"`
+
+	VolumeIds []string `json:"volumeIds,omitempty" yaml:"volume_ids,omitempty"`
 }
 
 type StoragePoolCollection struct {
