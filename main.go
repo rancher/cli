@@ -136,6 +136,7 @@ func mainErr() error {
 		cmd.RmCommand(),
 		cmd.RunCommand(),
 		cmd.ScaleCommand(),
+		cmd.SecretCommand(),
 		cmd.SSHCommand(),
 		cmd.StackCommand(),
 		cmd.StartCommand(),
