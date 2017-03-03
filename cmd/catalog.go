@@ -83,6 +83,7 @@ func CatalogCommand() cli.Command {
 type CatalogData struct {
 	ID       string
 	Template catalog.Template
+	Category string
 }
 
 func getEnvFilter(proj *client.Project, ctx *cli.Context) string {
@@ -91,7 +92,7 @@ func getEnvFilter(proj *client.Project, ctx *cli.Context) string {
 		envFilter = ""
 	}
 	if ctx.Bool("system") {
-		envFilter = "system"
+		envFilter = "infra"
 	}
 	return envFilter
 }
@@ -132,7 +133,7 @@ func isSupported(ctx *cli.Context, proj *client.Project, item catalog.Template) 
 func catalogLs(ctx *cli.Context) error {
 	writer := NewTableWriter([][]string{
 		{"NAME", "Template.Name"},
-		{"CATEGORY", "Template.Category"},
+		{"CATEGORY", "Category"},
 		{"ID", "ID"},
 	}, ctx)
 	defer writer.Close()
@@ -141,6 +142,7 @@ func catalogLs(ctx *cli.Context) error {
 		writer.Write(CatalogData{
 			ID:       templateID(item),
 			Template: item,
+			Category: strings.Join(item.Categories, ","),
 		})
 		return nil
 	})
@@ -191,7 +193,7 @@ func getListTemplatesOpts(ctx *cli.Context, c *client.RancherClient) (*catalog.L
 		opts.Filters["rancherVersion"] = setting.Value
 	}
 
-	opts.Filters["category_ne"] = "system"
+	opts.Filters["category_ne"] = "infra"
 	return opts, nil
 }
 
@@ -364,7 +366,7 @@ func getTemplate(ctx *cli.Context, name string) (catalog.Template, error) {
 }
 
 func templateID(template catalog.Template) string {
-	parts := strings.SplitN(template.Path, "/", 2)
+	parts := strings.SplitN(template.Id, ":", 2)
 	if len(parts) != 2 {
 		return template.Name
 	}
@@ -392,7 +394,10 @@ func GetCatalogClient(ctx *cli.Context) (*catalog.RancherClient, error) {
 
 	idx := strings.LastIndex(config.URL, "/v2-beta")
 	if idx == -1 {
-		return nil, fmt.Errorf("Invalid URL %s, must contain /v2-beta", config.URL)
+		idx = strings.LastIndex(config.URL, "/v1")
+		if idx == -1 {
+			return nil, fmt.Errorf("Invalid URL %s, must contain /v2-beta", config.URL)
+		}
 	}
 
 	url := config.URL[:idx] + "/v1-catalog/schemas"
