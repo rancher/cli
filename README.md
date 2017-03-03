@@ -30,7 +30,7 @@ INFO[0102] Saving config to /Users/<username>/.rancher/cli.json
 
 ## Building
 
-The binaries will be located in `/build/bin`.
+The binaries will be located in `/bin`.
 
 ### Linux binary
 
