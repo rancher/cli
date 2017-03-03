@@ -40,6 +40,12 @@ Run `make`.
 
 Run `CROSS=1 make build`
 
+### Docker image
+
+Run `docker run --rm -it rancher/cli [ARGS]`  You can pass in credentials by bind mounting in a config file or setting env vars.  You can also use the wrapper script in `./contrib/rancher` that will make the process a bit easier.
+
+To build `rancher/cli` just run `make`.  To use a custom Docker repository do `REPO=custom make` and it will producte `custom/cli` image.
+
 ## Contact
 
 For bugs, questions, comments, corrections, suggestions, etc., open an issue in
