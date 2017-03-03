@@ -56,3 +56,23 @@ for i in build/bin/*; do
         fi
     )
 done
+
+
+ARCH=${ARCH:-"amd64"}
+SUFFIX=""
+[ "${ARCH}" != "amd64" ] && SUFFIX="_${ARCH}"
+
+cd package
+
+TAG=${TAG:-${VERSION}${SUFFIX}}
+REPO=${REPO:-rancher}
+
+if echo $TAG | grep -q dirty; then
+    TAG=dev
+fi
+
+cp ../bin/rancher .
+docker build -t ${REPO}/cli:${TAG} .
+
+echo ${REPO}/cli:${TAG} > ../dist/images
+echo Built ${REPO}/cli:${TAG}
