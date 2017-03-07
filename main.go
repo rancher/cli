@@ -131,6 +131,7 @@ func mainErr() error {
 		cmd.ExportCommand(),
 		cmd.HostCommand(),
 		cmd.LogsCommand(),
+		cmd.NetworkCommand(),
 		cmd.PsCommand(),
 		cmd.RestartCommand(),
 		cmd.RmCommand(),
