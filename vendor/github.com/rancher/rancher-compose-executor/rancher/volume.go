@@ -15,29 +15,24 @@ type RancherVolumesFactory struct {
 	Context *Context
 }
 
-func (f *RancherVolumesFactory) Create(projectName string, volumeConfigs map[string]*config.VolumeConfig, serviceConfigs *config.ServiceConfigs, volumeEnabled bool) (project.Volumes, error) {
+func (f *RancherVolumesFactory) Create(projectName string, volumeConfigs map[string]*config.VolumeConfig, serviceConfigs *config.ServiceConfigs) (project.Volumes, error) {
 	volumes := make([]*Volume, 0, len(volumeConfigs))
 	for name, config := range volumeConfigs {
 		volume := NewVolume(projectName, name, config, f.Context)
 		volumes = append(volumes, volume)
 	}
 	return &Volumes{
-		volumes:       volumes,
-		volumeEnabled: volumeEnabled,
-		Context:       f.Context,
+		volumes: volumes,
+		Context: f.Context,
 	}, nil
 }
 
 type Volumes struct {
-	volumes       []*Volume
-	volumeEnabled bool
-	Context       *Context
+	volumes []*Volume
+	Context *Context
 }
 
 func (v *Volumes) Initialize(ctx context.Context) error {
-	if !v.volumeEnabled {
-		return nil
-	}
 	for _, volume := range v.volumes {
 		if err := volume.EnsureItExists(ctx); err != nil {
 			return err
@@ -48,9 +43,6 @@ func (v *Volumes) Initialize(ctx context.Context) error {
 }
 
 func (v *Volumes) Remove(ctx context.Context) error {
-	if !v.volumeEnabled {
-		return nil
-	}
 	for _, volume := range v.volumes {
 		if err := volume.Remove(ctx); err != nil {
 			return err

@@ -1,3 +1,0 @@
-package version
-
-var VERSION = ""

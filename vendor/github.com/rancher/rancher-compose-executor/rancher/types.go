@@ -1,6 +1,9 @@
 package rancher
 
-import "github.com/rancher/go-rancher/v2"
+import (
+	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/rancher-compose-executor/config"
+)
 
 const (
 	LB_IMAGE       = "rancher/load-balancer-service"
@@ -19,26 +22,24 @@ const (
 type ServiceType int
 
 func FindServiceType(r *RancherService) ServiceType {
-	rancherConfig := r.RancherConfig()
-
-	if len(rancherConfig.ExternalIps) > 0 || rancherConfig.Hostname != "" {
+	if r.serviceConfig.Image == EXTERNAL_IMAGE {
 		return ExternalServiceType
 	} else if r.serviceConfig.Image == LB_IMAGE {
 		return LegacyLbServiceType
-	} else if isLbServiceType(r.RancherConfig().LbConfig) {
+	} else if isLbServiceType(r.serviceConfig.LbConfig) {
 		return LbServiceType
 	} else if r.serviceConfig.Image == DNS_IMAGE {
 		return DnsServiceType
-	} else if rancherConfig.NetworkDriver != nil {
+	} else if r.serviceConfig.NetworkDriver != nil {
 		return NetworkDriverType
-	} else if rancherConfig.StorageDriver != nil {
+	} else if r.serviceConfig.StorageDriver != nil {
 		return StorageDriverType
 	}
 
 	return RancherType
 }
 
-func isLbServiceType(lbConfig *LBConfig) bool {
+func isLbServiceType(lbConfig *config.LBConfig) bool {
 	if lbConfig == nil {
 		return false
 	}

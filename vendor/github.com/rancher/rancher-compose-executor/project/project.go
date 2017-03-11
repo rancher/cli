@@ -12,44 +12,49 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libcompose/logger"
 	"github.com/docker/libcompose/utils"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/rancher-compose-executor/config"
 	"github.com/rancher/rancher-compose-executor/lookup"
 	"github.com/rancher/rancher-compose-executor/project/events"
 )
-
-// ComposeVersion is name of docker-compose.yml file syntax supported version
-const ComposeVersion = "1.5.0"
 
 type wrapperAction func(*serviceWrapper, map[string]*serviceWrapper)
 type serviceAction func(service Service) error
 
 // Project holds libcompose project information.
 type Project struct {
-	Name           string
-	ServiceConfigs *config.ServiceConfigs
-	VolumeConfigs  map[string]*config.VolumeConfig
-	NetworkConfigs map[string]*config.NetworkConfig
-	Files          []string
-	ReloadCallback func() error
-	ParseOptions   *config.ParseOptions
+	Name              string
+	ServiceConfigs    *config.ServiceConfigs
+	ContainerConfigs  *config.ServiceConfigs
+	DependencyConfigs map[string]*config.DependencyConfig
+	VolumeConfigs     map[string]*config.VolumeConfig
+	NetworkConfigs    map[string]*config.NetworkConfig
+	SecretConfigs     map[string]*config.SecretConfig
+	HostConfigs       map[string]*client.Host
+	Files             []string
+	ReloadCallback    func() error
 
-	volumes       Volumes
-	configVersion string
-	context       *Context
-	reload        []string
-	upCount       int
-	listeners     []chan<- events.Event
-	hasListeners  bool
+	dependencies Dependencies
+	volumes      Volumes
+	secrets      Secrets
+	hosts        Hosts
+	context      *Context
+	reload       []string
+	listeners    []chan<- events.Event
+	hasListeners bool
 }
 
 // NewProject creates a new project with the specified context.
-func NewProject(context *Context, parseOptions *config.ParseOptions) *Project {
+func NewProject(context *Context) *Project {
 	p := &Project{
-		context:        context,
-		ParseOptions:   parseOptions,
-		ServiceConfigs: config.NewServiceConfigs(),
-		VolumeConfigs:  make(map[string]*config.VolumeConfig),
-		NetworkConfigs: make(map[string]*config.NetworkConfig),
+		context:           context,
+		ServiceConfigs:    config.NewServiceConfigs(),
+		ContainerConfigs:  config.NewServiceConfigs(),
+		DependencyConfigs: make(map[string]*config.DependencyConfig),
+		VolumeConfigs:     make(map[string]*config.VolumeConfig),
+		NetworkConfigs:    make(map[string]*config.NetworkConfig),
+		SecretConfigs:     make(map[string]*config.SecretConfig),
+		HostConfigs:       make(map[string]*client.Host),
 	}
 
 	if context.LoggerFactory == nil {
@@ -114,17 +119,21 @@ func (p *Project) Parse() error {
 	return nil
 }
 
-// CreateService creates a service with the specified name based. If there
-// is no config in the project for this service, it will return an error.
 func (p *Project) CreateService(name string) (Service, error) {
-	existing, ok := p.GetServiceConfig(name)
+	factory := p.context.ServiceFactory
+	existing, ok := p.ServiceConfigs.Get(name)
 	if !ok {
-		return nil, fmt.Errorf("Failed to find service: %s", name)
+		factory = p.context.ContainerFactory
+		existing, ok = p.ContainerConfigs.Get(name)
+		if !ok {
+			return nil, fmt.Errorf("Failed to find service or container: %s", name)
+		}
 	}
 
 	// Copy because we are about to modify the environment
 	config := *existing
 
+	// TODO: perform this transformation in config package
 	if p.context.EnvironmentLookup != nil {
 		parsedEnv := make([]string, 0, len(config.Environment))
 
@@ -162,121 +171,91 @@ func (p *Project) CreateService(name string) (Service, error) {
 		}
 	}
 
-	return p.context.ServiceFactory.Create(p, name, &config)
-}
-
-// AddConfig adds the specified service config for the specified name.
-func (p *Project) AddConfig(name string, config *config.ServiceConfig) error {
-	p.Notify(events.ServiceAdd, name, nil)
-
-	p.ServiceConfigs.Add(name, config)
-	p.reload = append(p.reload, name)
-
-	return nil
-}
-
-// AddVolumeConfig adds the specified volume config for the specified name.
-func (p *Project) AddVolumeConfig(name string, config *config.VolumeConfig) error {
-	p.Notify(events.VolumeAdd, name, nil)
-	p.VolumeConfigs[name] = config
-	return nil
-}
-
-// AddNetworkConfig adds the specified network config for the specified name.
-func (p *Project) AddNetworkConfig(name string, config *config.NetworkConfig) error {
-	p.Notify(events.NetworkAdd, name, nil)
-	p.NetworkConfigs[name] = config
-	return nil
-}
-
-// Load loads the specified byte array (the composefile content) and adds the
-// service configuration to the project.
-// FIXME is it needed ?
-func (p *Project) Load(bytes []byte) error {
-	return p.load("", bytes)
+	return factory.Create(p, name, &config)
 }
 
 func (p *Project) load(file string, bytes []byte) error {
-	version, serviceConfigs, volumeConfigs, networkConfigs, err := config.Merge(p.ServiceConfigs, p.context.EnvironmentLookup, p.context.ResourceLookup, file, bytes, p.ParseOptions)
+	config, err := config.Merge(p.ServiceConfigs, p.context.EnvironmentLookup, p.context.ResourceLookup, file, bytes)
 	if err != nil {
 		log.Errorf("Could not parse config for project %s : %v", p.Name, err)
 		return err
 	}
 
-	p.configVersion = version
+	for name, config := range config.Services {
+		p.ServiceConfigs.Add(name, config)
+		p.reload = append(p.reload, name)
+	}
+	for name, config := range config.Containers {
+		p.ContainerConfigs.Add(name, config)
+		p.reload = append(p.reload, name)
+	}
 
-	for name, config := range volumeConfigs {
-		err := p.AddVolumeConfig(name, config)
+	for name, config := range config.Dependencies {
+		p.DependencyConfigs[name] = config
+	}
+	for name, config := range config.Volumes {
+		p.VolumeConfigs[name] = config
+	}
+	for name, config := range config.Networks {
+		p.NetworkConfigs[name] = config
+	}
+	for name, config := range config.Secrets {
+		p.SecretConfigs[name] = config
+	}
+	for name, config := range config.Hosts {
+		p.HostConfigs[name] = config
+	}
+
+	if p.context.DependenciesFactory != nil {
+		dependencies, err := p.context.DependenciesFactory.Create(p.Name, p.DependencyConfigs)
 		if err != nil {
 			return err
 		}
+		p.dependencies = dependencies
 	}
-
-	for name, config := range networkConfigs {
-		err := p.AddNetworkConfig(name, config)
-		if err != nil {
-			return err
-		}
-	}
-
-	for name, config := range serviceConfigs {
-		err := p.AddConfig(name, config)
-		if err != nil {
-			return err
-		}
-	}
-
 	if p.context.VolumesFactory != nil {
-		volumes, err := p.context.VolumesFactory.Create(p.Name, p.VolumeConfigs, p.ServiceConfigs, p.isVolumeEnabled())
+		volumes, err := p.context.VolumesFactory.Create(p.Name, p.VolumeConfigs, p.ServiceConfigs)
 		if err != nil {
 			return err
 		}
-
 		p.volumes = volumes
+	}
+	if p.context.SecretsFactory != nil {
+		secrets, err := p.context.SecretsFactory.Create(p.Name, p.SecretConfigs)
+		if err != nil {
+			return err
+		}
+		p.secrets = secrets
+	}
+	if p.context.HostsFactory != nil {
+		hosts, err := p.context.HostsFactory.Create(p.Name, p.HostConfigs)
+		if err != nil {
+			return err
+		}
+		p.hosts = hosts
 	}
 
 	return nil
 }
 
-// TODO: where is this used?
-func (p *Project) handleVolumeConfig() {
-	if p.isVolumeEnabled() {
-		for _, serviceName := range p.ServiceConfigs.Keys() {
-			serviceConfig, _ := p.ServiceConfigs.Get(serviceName)
-			// Consolidate the name of the volume
-			// FIXME(vdemeester) probably shouldn't be there, maybe move that to interface/factory
-			if serviceConfig.Volumes == nil {
-				continue
-			}
-			for _, volume := range serviceConfig.Volumes.Volumes {
-				if !IsNamedVolume(volume.Source) {
-					continue
-				}
-
-				vol, ok := p.VolumeConfigs[volume.Source]
-				if !ok {
-					continue
-				}
-
-				if vol.External.External {
-					if vol.External.Name != "" {
-						volume.Source = vol.External.Name
-					}
-				} else {
-					volume.Source = p.Name + "_" + volume.Source
-				}
-			}
+func (p *Project) initialize(ctx context.Context) error {
+	if p.dependencies != nil {
+		if err := p.dependencies.Initialize(ctx); err != nil {
+			return err
 		}
 	}
-}
-
-func (p *Project) isVolumeEnabled() bool {
-	return p.configVersion == "2"
-}
-
-func (p *Project) initialize(ctx context.Context) error {
 	if p.volumes != nil {
 		if err := p.volumes.Initialize(ctx); err != nil {
+			return err
+		}
+	}
+	if p.secrets != nil {
+		if err := p.secrets.Initialize(ctx); err != nil {
+			return err
+		}
+	}
+	if p.hosts != nil {
+		if err := p.hosts.Initialize(ctx); err != nil {
 			return err
 		}
 	}
@@ -378,6 +357,9 @@ func (p *Project) traverse(start bool, selected map[string]bool, wrappers map[st
 		for _, name := range p.ServiceConfigs.Keys() {
 			wrapperList = append(wrapperList, name)
 		}
+		for _, name := range p.ContainerConfigs.Keys() {
+			wrapperList = append(wrapperList, name)
+		}
 	} else {
 		for _, wrapper := range wrappers {
 			if err := wrapper.Reset(); err != nil {
@@ -462,12 +444,6 @@ func (p *Project) Notify(eventType events.EventType, serviceName string, data ma
 	for _, l := range p.listeners {
 		l <- event
 	}
-}
-
-// GetServiceConfig looks up a service config for a given service name, returning the ServiceConfig
-// object and a bool flag indicating whether it was found
-func (p *Project) GetServiceConfig(name string) (*config.ServiceConfig, bool) {
-	return p.ServiceConfigs.Get(name)
 }
 
 // IsNamedVolume returns whether the specified volume (string) is a named volume or not.
