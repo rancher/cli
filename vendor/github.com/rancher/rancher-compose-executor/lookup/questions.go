@@ -69,14 +69,14 @@ func ParseQuestions(contents []byte) (map[string]model.Question, error) {
 }
 
 func ParseCatalogConfig(contents []byte) (*model.RancherCompose, error) {
-	cfg, err := config.CreateConfig(contents)
+	rawConfig, err := config.CreateRawConfig(contents)
 	if err != nil {
 		return nil, err
 	}
 	var rawCatalogConfig interface{}
 
-	if cfg.Version == "2" && cfg.Services[".catalog"] != nil {
-		rawCatalogConfig = cfg.Services[".catalog"]
+	if rawConfig.Version == "2" && rawConfig.Services[".catalog"] != nil {
+		rawCatalogConfig = rawConfig.Services[".catalog"]
 	}
 
 	var data map[string]interface{}

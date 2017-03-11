@@ -18,10 +18,6 @@ func (f *NormalFactory) Hash(service *RancherService) (digest.ServiceHash, error
 }
 
 func (f *NormalFactory) configAndHash(r *RancherService) (digest.ServiceHash, *CompositeService, error) {
-	if err := r.populateLbLinks(); err != nil {
-		return digest.ServiceHash{}, nil, err
-	}
-
 	rancherService, launchConfig, secondaryLaunchConfigs, err := f.config(r)
 	if err != nil {
 		return digest.ServiceHash{}, nil, err
@@ -50,24 +46,22 @@ func (f *NormalFactory) config(r *RancherService) (*CompositeService, *client.La
 		return nil, nil, nil, err
 	}
 
-	rancherConfig, _ := r.context.RancherConfig[r.name]
-
 	service := &CompositeService{
 		Service: client.Service{
 			Name:              r.name,
 			Metadata:          r.Metadata(),
 			Scale:             int64(r.getConfiguredScale()),
-			ScalePolicy:       rancherConfig.ScalePolicy,
-			RetainIp:          rancherConfig.RetainIp,
+			ScalePolicy:       r.serviceConfig.ScalePolicy,
+			RetainIp:          r.serviceConfig.RetainIp,
 			StackId:           r.Context().Stack.Id,
 			SelectorContainer: r.SelectorContainer(),
 			SelectorLink:      r.SelectorLink(),
 		},
-		ExternalIpAddresses: rancherConfig.ExternalIps,
-		Hostname:            rancherConfig.Hostname,
+		ExternalIpAddresses: r.serviceConfig.ExternalIps,
+		Hostname:            r.serviceConfig.Hostname,
 		HealthCheck:         r.HealthCheck(""),
-		StorageDriver:       rancherConfig.StorageDriver,
-		NetworkDriver:       rancherConfig.NetworkDriver,
+		StorageDriver:       r.serviceConfig.StorageDriver,
+		NetworkDriver:       r.serviceConfig.NetworkDriver,
 	}
 
 	if service.NetworkDriver != nil {
@@ -182,7 +176,7 @@ func (f *NormalFactory) upgrade(r *RancherService, existingService *client.Servi
 		InServiceStrategy: &client.InServiceUpgradeStrategy{
 			BatchSize:      r.context.BatchSize,
 			IntervalMillis: r.context.Interval,
-			StartFirst:     r.RancherConfig().UpgradeStrategy.StartFirst,
+			StartFirst:     r.serviceConfig.UpgradeStrategy.StartFirst,
 		},
 	}
 

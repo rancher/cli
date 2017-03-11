@@ -1,17 +1,15 @@
-package preprocess
+package config
 
 import (
 	"fmt"
 	"strconv"
-
-	"github.com/rancher/rancher-compose-executor/config"
 )
 
-func PreprocessServiceMap(serviceMap config.RawServiceMap) (config.RawServiceMap, error) {
-	newServiceMap := make(config.RawServiceMap)
+func PreprocessServiceMap(serviceMap RawServiceMap) (RawServiceMap, error) {
+	newServiceMap := make(RawServiceMap)
 
 	for k, v := range serviceMap {
-		newServiceMap[k] = make(config.RawService)
+		newServiceMap[k] = make(RawService)
 		for k2, v2 := range v {
 			if k2 == "environment" || k2 == "labels" {
 				newServiceMap[k][k2] = Preprocess(v2, true)
@@ -53,11 +51,11 @@ func Preprocess(item interface{}, replaceTypes bool) interface{} {
 	}
 }
 
-func TryConvertStringsToInts(serviceMap config.RawServiceMap, fields map[string]bool) (config.RawServiceMap, error) {
-	newServiceMap := make(config.RawServiceMap)
+func TryConvertStringsToInts(serviceMap RawServiceMap, fields map[string]bool) (RawServiceMap, error) {
+	newServiceMap := make(RawServiceMap)
 
 	for k, v := range serviceMap {
-		newServiceMap[k] = make(config.RawService)
+		newServiceMap[k] = make(RawService)
 
 		for k2, v2 := range v {
 			if _, ok := fields[k2]; ok {

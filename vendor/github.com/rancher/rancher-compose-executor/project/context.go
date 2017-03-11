@@ -24,11 +24,14 @@ type Context struct {
 	ProjectName         string
 	isOpen              bool
 	ServiceFactory      ServiceFactory
+	ContainerFactory    ServiceFactory
+	DependenciesFactory DependenciesFactory
 	VolumesFactory      VolumesFactory
+	SecretsFactory      SecretsFactory
+	HostsFactory        HostsFactory
 	EnvironmentLookup   config.EnvironmentLookup
 	ResourceLookup      config.ResourceLookup
 	LoggerFactory       logger.Factory
-	IgnoreMissingConfig bool
 	Project             *Project
 }
 
@@ -39,27 +42,22 @@ func (c *Context) readComposeFiles() error {
 
 	logrus.Debugf("Opening compose files: %s", strings.Join(c.ComposeFiles, ","))
 
-	// Handle STDIN (`-f -`)
-	if len(c.ComposeFiles) == 1 && c.ComposeFiles[0] == "-" {
-		composeBytes, err := ioutil.ReadAll(os.Stdin)
-		if err != nil {
-			logrus.Errorf("Failed to read compose file from stdin: %v", err)
-			return err
-		}
-		c.ComposeBytes = [][]byte{composeBytes}
-		return nil
-	}
-
 	for _, composeFile := range c.ComposeFiles {
-		composeBytes, err := ioutil.ReadFile(composeFile)
-		if err != nil && !os.IsNotExist(err) {
-			logrus.Errorf("Failed to open the compose file: %s", composeFile)
-			return err
+		var composeBytes []byte
+		var err error
+
+		if composeFile == "-" {
+			composeBytes, err = ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				return err
+			}
+		} else {
+			composeBytes, err = ioutil.ReadFile(composeFile)
+			if err != nil && !os.IsNotExist(err) {
+				return err
+			}
 		}
-		if err != nil && !c.IgnoreMissingConfig {
-			logrus.Errorf("Failed to find the compose file: %s", composeFile)
-			return err
-		}
+
 		c.ComposeBytes = append(c.ComposeBytes, composeBytes)
 	}
 

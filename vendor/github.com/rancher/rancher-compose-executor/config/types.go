@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"github.com/docker/libcompose/yaml"
+	legacyClient "github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 // EnvironmentLookup defines methods to provides environment variable loading.
@@ -67,6 +69,7 @@ type ServiceConfigV1 struct {
 	Privileged        bool                 `yaml:"privileged,omitempty"`
 	Restart           string               `yaml:"restart,omitempty"`
 	ReadOnly          bool                 `yaml:"read_only,omitempty"`
+	Secrets           SecretReferences     `yaml:"secrets,omitempty"`
 	ShmSize           yaml.StringorInt     `yaml:"shm_size,omitempty"`
 	StdinOpen         bool                 `yaml:"stdin_open,omitempty"`
 	SecurityOpt       []string             `yaml:"security_opt,omitempty"`
@@ -83,6 +86,31 @@ type ServiceConfigV1 struct {
 	LogOpt            map[string]string    `yaml:"log_opt,omitempty"`
 	ExtraHosts        []string             `yaml:"extra_hosts,omitempty"`
 	Ulimits           yaml.Ulimits         `yaml:"ulimits,omitempty"`
+
+	LbConfig                 *LBConfig                        `yaml:"lb_config"`
+	LegacyLoadBalancerConfig *legacyClient.LoadBalancerConfig `yaml:"load_balancer_config,omitempty"`
+	DefaultCert              string                           `yaml:"default_cert,omitempty"`
+	Certs                    []string                         `yaml:"certs,omitempty"`
+
+	Vcpu     yaml.StringorInt            `yaml:"vcpu,omitempty"`
+	Userdata string                      `yaml:"userdata,omitempty"`
+	Memory   yaml.StringorInt            `yaml:"memory,omitempty"`
+	Disks    []client.VirtualMachineDisk `yaml:"disks,omitempty"`
+
+	Type        string           `yaml:"type,omitempty"`
+	Scale       yaml.StringorInt `yaml:"scale,omitempty"`
+	RetainIp    bool             `yaml:"retain_ip,omitempty"`
+	ExternalIps []string         `yaml:"external_ips,omitempty"`
+	// TODO: hostname is in docker-compose.yml and rancher-compose.yml
+	//Hostname    string                      `yaml:"hostname,omitempty"`
+	HealthCheck *client.InstanceHealthCheck `yaml:"health_check,omitempty"`
+
+	Metadata        map[string]interface{}          `yaml:"metadata,omitempty"`
+	ScalePolicy     *client.ScalePolicy             `yaml:"scale_policy,omitempty"`
+	ServiceSchemas  map[string]client.Schema        `yaml:"service_schemas,omitempty"`
+	UpgradeStrategy client.InServiceUpgradeStrategy `yaml:"upgrade_strategy,omitempty"`
+	StorageDriver   *client.StorageDriver           `yaml:"storage_driver,omitempty"`
+	NetworkDriver   *client.NetworkDriver           `yaml:"network_driver,omitempty"`
 }
 
 // Log holds v2 logging information
@@ -142,6 +170,7 @@ type ServiceConfig struct {
 	Pid               string               `yaml:"pid,omitempty"`
 	Ports             []string             `yaml:"ports,omitempty"`
 	Privileged        bool                 `yaml:"privileged,omitempty"`
+	Secrets           SecretReferences     `yaml:"secrets,omitempty"`
 	SecurityOpt       []string             `yaml:"security_opt,omitempty"`
 	ShmSize           yaml.StringorInt     `yaml:"shm_size,omitempty"`
 	StopSignal        string               `yaml:"stop_signal,omitempty"`
@@ -157,6 +186,62 @@ type ServiceConfig struct {
 	User              string               `yaml:"user,omitempty"`
 	WorkingDir        string               `yaml:"working_dir,omitempty"`
 	Ulimits           yaml.Ulimits         `yaml:"ulimits,omitempty"`
+
+	LbConfig                 *LBConfig                        `yaml:"lb_config"`
+	LegacyLoadBalancerConfig *legacyClient.LoadBalancerConfig `yaml:"load_balancer_config,omitempty"`
+	DefaultCert              string                           `yaml:"default_cert,omitempty"`
+	Certs                    []string                         `yaml:"certs,omitempty"`
+
+	Vcpu     yaml.StringorInt            `yaml:"vcpu,omitempty"`
+	Userdata string                      `yaml:"userdata,omitempty"`
+	Memory   yaml.StringorInt            `yaml:"memory,omitempty"`
+	Disks    []client.VirtualMachineDisk `yaml:"disks,omitempty"`
+
+	Type        string           `yaml:"type,omitempty"`
+	Scale       yaml.StringorInt `yaml:"scale,omitempty"`
+	RetainIp    bool             `yaml:"retain_ip,omitempty"`
+	ExternalIps []string         `yaml:"external_ips,omitempty"`
+	// TODO: hostname is in docker-compose.yml and rancher-compose.yml
+	//Hostname    string                      `yaml:"hostname,omitempty"`
+	HealthCheck *client.InstanceHealthCheck `yaml:"health_check,omitempty"`
+
+	Metadata        map[string]interface{}          `yaml:"metadata,omitempty"`
+	ScalePolicy     *client.ScalePolicy             `yaml:"scale_policy,omitempty"`
+	ServiceSchemas  map[string]client.Schema        `yaml:"service_schemas,omitempty"`
+	UpgradeStrategy client.InServiceUpgradeStrategy `yaml:"upgrade_strategy,omitempty"`
+	StorageDriver   *client.StorageDriver           `yaml:"storage_driver,omitempty"`
+	NetworkDriver   *client.NetworkDriver           `yaml:"network_driver,omitempty"`
+}
+
+// TODO: json tags needed?
+type PortRule struct {
+	SourcePort  int    `json:"source_port" yaml:"source_port"`
+	Protocol    string `json:"protocol" yaml:"protocol"`
+	Path        string `json:"path" yaml:"path"`
+	Hostname    string `json:"hostname" yaml:"hostname"`
+	Service     string `json:"service" yaml:"service"`
+	TargetPort  int    `json:"target_port" yaml:"target_port"`
+	Priority    int    `json:"priority" yaml:"priority"`
+	BackendName string `json:"backend_name" yaml:"backend_name"`
+	Selector    string `json:"selector" yaml:"selector"`
+}
+
+type LBStickinessPolicy struct {
+	Name     string `json:"name" yaml:"name"`
+	Cookie   string `json:"cookie" yaml:"cookie"`
+	Domain   string `json:"domain" yaml:"domain"`
+	Indirect bool   `json:"indirect" yaml:"indirect"`
+	Nocache  bool   `json:"nocache" yaml:"nocache"`
+	Postonly bool   `json:"postonly" yaml:"postonly"`
+	Mode     string `json:"mode" yaml:"mode"`
+}
+
+type LBConfig struct {
+	Certs            []string            `json:"certs" yaml:"certs"`
+	DefaultCert      string              `json:"default_cert" yaml:"default_cert"`
+	PortRules        []PortRule          `json:"port_rules" yaml:"port_rules"`
+	Config           string              `json:"config" yaml:"config"`
+	StickinessPolicy *LBStickinessPolicy `json:"stickiness_policy" yaml:"stickiness_policy"`
 }
 
 // VolumeConfig holds v2 volume configuration
@@ -189,12 +274,48 @@ type NetworkConfig struct {
 	Ipam       Ipam              `yaml:"ipam,omitempty"`
 }
 
-// Config holds libcompose top level configuration
+type SecretConfig struct {
+	File     string `yaml:"file,omitempty"`
+	External string `yaml:"external,omitempty"`
+}
+
+type DependencyConfig struct {
+	Name     string `yaml:"name,omitempty"`
+	Template string `yaml:"template,omitempty"`
+	Version  string `yaml:"version,omitempty"`
+	// TODO: additional answers/environment?
+}
+
+type RawConfig struct {
+	Version string `yaml:"version,omitempty"`
+
+	Services        RawServiceMap `yaml:"services,omitempty"`
+	Containers      RawServiceMap `yaml:"containers,omitempty"`
+	LoadBalancers   RawServiceMap `yaml:"load_balancers,omitempty"`
+	StorageDrivers  RawServiceMap `yaml:"storage_drivers,omitempty"`
+	NetworkDrivers  RawServiceMap `yaml:"network_drivers,omitempty"`
+	VirtualMachines RawServiceMap `yaml:"virtual_machines,omitempty"`
+
+	Dependencies map[string]interface{} `yaml:"dependencies,omitempty"`
+	Volumes      map[string]interface{} `yaml:"volumes,omitempty"`
+	Networks     map[string]interface{} `yaml:"networks,omitempty"`
+	Secrets      map[string]interface{} `yaml:"secrets,omitempty"`
+	Hosts        map[string]interface{} `yaml:"hosts,omitempty"`
+}
+
 type Config struct {
-	Version  string                 `yaml:"version,omitempty"`
-	Services RawServiceMap          `yaml:"services,omitempty"`
-	Volumes  map[string]interface{} `yaml:"volumes,omitempty"`
-	Networks map[string]interface{} `yaml:"networks,omitempty"`
+	Services        map[string]*ServiceConfig `yaml:"services,omitempty"`
+	Containers      map[string]*ServiceConfig `yaml:"containers,omitempty"`
+	LoadBalancers   map[string]*ServiceConfig `yaml:"load_balancers,omitempty"`
+	StorageDrivers  map[string]*ServiceConfig `yaml:"storage_drivers,omitempty"`
+	NetworkDrivers  map[string]*ServiceConfig `yaml:"network_drivers,omitempty"`
+	VirtualMachines map[string]*ServiceConfig `yaml:"virtual_machines,omitempty"`
+
+	Dependencies map[string]*DependencyConfig `yaml:"dependencies,omitempty"`
+	Volumes      map[string]*VolumeConfig     `yaml:"volumes,omitempty"`
+	Networks     map[string]*NetworkConfig    `yaml:"networks,omitempty"`
+	Secrets      map[string]*SecretConfig     `yaml:"secrets,omitempty"`
+	Hosts        map[string]*client.Host      `yaml:"hosts,omitempty"`
 }
 
 // NewServiceConfigs initializes a new Configs struct
@@ -270,11 +391,3 @@ type RawService map[string]interface{}
 
 // RawServiceMap is a collection of RawServices
 type RawServiceMap map[string]RawService
-
-// ParseOptions are a set of options to customize the parsing process
-type ParseOptions struct {
-	Interpolate bool
-	Validate    bool
-	Preprocess  func(RawServiceMap) (RawServiceMap, error)
-	Postprocess func(map[string]*ServiceConfig) (map[string]*ServiceConfig, error)
-}
