@@ -187,6 +187,10 @@ type ServiceConfig struct {
 	WorkingDir        string               `yaml:"working_dir,omitempty"`
 	Ulimits           yaml.Ulimits         `yaml:"ulimits,omitempty"`
 
+	RancherConfig `yaml:",inline"`
+}
+
+type RancherConfig struct {
 	LbConfig                 *LBConfig                        `yaml:"lb_config"`
 	LegacyLoadBalancerConfig *legacyClient.LoadBalancerConfig `yaml:"load_balancer_config,omitempty"`
 	DefaultCert              string                           `yaml:"default_cert,omitempty"`
@@ -197,12 +201,10 @@ type ServiceConfig struct {
 	Memory   yaml.StringorInt            `yaml:"memory,omitempty"`
 	Disks    []client.VirtualMachineDisk `yaml:"disks,omitempty"`
 
-	Type        string           `yaml:"type,omitempty"`
-	Scale       yaml.StringorInt `yaml:"scale,omitempty"`
-	RetainIp    bool             `yaml:"retain_ip,omitempty"`
-	ExternalIps []string         `yaml:"external_ips,omitempty"`
-	// TODO: hostname is in docker-compose.yml and rancher-compose.yml
-	//Hostname    string                      `yaml:"hostname,omitempty"`
+	Type        string                      `yaml:"type,omitempty"`
+	Scale       yaml.StringorInt            `yaml:"scale,omitempty"`
+	RetainIp    bool                        `yaml:"retain_ip,omitempty"`
+	ExternalIps []string                    `yaml:"external_ips,omitempty"`
 	HealthCheck *client.InstanceHealthCheck `yaml:"health_check,omitempty"`
 
 	Metadata        map[string]interface{}          `yaml:"metadata,omitempty"`
