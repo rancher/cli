@@ -3,6 +3,9 @@ package config
 import (
 	"fmt"
 	"strconv"
+	"strings"
+
+	"github.com/fatih/structs"
 )
 
 func PreprocessServiceMap(serviceMap RawServiceMap) (RawServiceMap, error) {
@@ -102,4 +105,17 @@ func tryConvertStringsToInts(item interface{}, replaceTypes bool) interface{} {
 	default:
 		return item
 	}
+}
+
+func getRancherConfigObjects() map[string]bool {
+	rancherConfig := structs.New(RancherConfig{})
+	fields := map[string]bool{}
+	for _, field := range rancherConfig.Fields() {
+		kind := field.Kind().String()
+		if kind == "struct" || kind == "ptr" || kind == "slice" {
+			split := strings.Split(field.Tag("yaml"), ",")
+			fields[split[0]] = true
+		}
+	}
+	return fields
 }

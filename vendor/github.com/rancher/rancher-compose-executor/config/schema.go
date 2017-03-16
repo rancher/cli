@@ -137,6 +137,7 @@ var schemaDataV1 = `{
         "scale_policy": {"type": "object"},
         "security_opt": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "shm_size": {"type": ["number", "string"]},
+        "start_on_create": {"type": "boolean"},
         "stdin_open": {"type": "boolean"},
         "stop_signal": {"type": "string"},
         "storage_driver": {"type": "object"},
@@ -433,6 +434,7 @@ var servicesSchemaDataV2 = `{
             ]
           }
         },
+        "start_on_create": {"type": "boolean"},
         "stickiness_policy": {"type": "object"},
         "stdin_open": {"type": "boolean"},
         "stop_signal": {"type": "string"},

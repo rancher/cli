@@ -139,6 +139,15 @@ func Merge(existingServices *ServiceConfigs, environmentLookup EnvironmentLookup
 		return nil, err
 	}
 
+	baseRawServices, err = TryConvertStringsToInts(baseRawServices, getRancherConfigObjects())
+	if err != nil {
+		return nil, err
+	}
+	baseRawContainers, err = TryConvertStringsToInts(baseRawContainers, getRancherConfigObjects())
+	if err != nil {
+		return nil, err
+	}
+
 	var serviceConfigs map[string]*ServiceConfig
 	if rawConfig.Version == "2" {
 		var err error
