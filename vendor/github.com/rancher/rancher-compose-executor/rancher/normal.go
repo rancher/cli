@@ -18,10 +18,6 @@ func (f *NormalFactory) Hash(service *RancherService) (digest.ServiceHash, error
 }
 
 func (f *NormalFactory) configAndHash(r *RancherService) (digest.ServiceHash, *CompositeService, error) {
-	if err := r.populateLbLinks(); err != nil {
-		return digest.ServiceHash{}, nil, err
-	}
-
 	rancherService, launchConfig, secondaryLaunchConfigs, err := f.config(r)
 	if err != nil {
 		return digest.ServiceHash{}, nil, err

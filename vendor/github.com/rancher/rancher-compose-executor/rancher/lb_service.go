@@ -6,35 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/libcompose/utils"
 	legacyClient "github.com/rancher/go-rancher/client"
 	"github.com/rancher/go-rancher/v2"
 )
-
-// Links to target services should be automatically added to load balancers
-func (r *RancherService) populateLbLinks() error {
-	links, err := r.getLinks()
-	if err != nil {
-		return err
-	}
-
-	var linkServiceNames []string
-	for link := range links {
-		linkServiceNames = append(linkServiceNames, link.ServiceName)
-	}
-
-	lbConfig := r.RancherConfig().LbConfig
-	serviceType := FindServiceType(r)
-	if lbConfig != nil && (serviceType == LbServiceType || serviceType == LegacyLbServiceType) {
-		for _, portRule := range lbConfig.PortRules {
-			if portRule.Service != "" && !utils.Contains(linkServiceNames, portRule.Service) {
-				r.serviceConfig.Links = append(r.serviceConfig.Links, portRule.Service)
-			}
-		}
-	}
-
-	return nil
-}
 
 func populateLbFields(r *RancherService, launchConfig *client.LaunchConfig, service *CompositeService) error {
 	serviceType := FindServiceType(r)
