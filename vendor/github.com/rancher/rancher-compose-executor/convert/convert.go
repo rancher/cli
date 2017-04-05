@@ -273,6 +273,7 @@ func Convert(c *config.ServiceConfig, ctx project.Context) (*container.Config, *
 		RestartPolicy:  *restartPolicy,
 		ShmSize:        int64(c.ShmSize),
 		SecurityOpt:    utils.CopySlice(c.SecurityOpt),
+		Sysctls:        utils.CopyMap(c.Sysctls),
 		Tmpfs:          tmpfs,
 		VolumeDriver:   c.VolumeDriver,
 		Resources:      resources,

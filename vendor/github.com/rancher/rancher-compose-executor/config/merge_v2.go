@@ -9,13 +9,15 @@ import (
 )
 
 // MergeServicesV2 merges a v2 compose file into an existing set of service configs
-func MergeServicesV2(existingServices *ServiceConfigs, environmentLookup EnvironmentLookup, resourceLookup ResourceLookup, file string, datas RawServiceMap) (map[string]*ServiceConfig, error) {
-	if err := validateV2(datas); err != nil {
-		return nil, err
+func MergeServicesV2(existingServices *ServiceConfigs, environmentLookup EnvironmentLookup, resourceLookup ResourceLookup, file string, datas RawServiceMap, options *ParseOptions) (map[string]*ServiceConfig, error) {
+	if options.Validate {
+		if err := validateV2(datas); err != nil {
+			return nil, err
+		}
 	}
 
 	for name, data := range datas {
-		data, err := parseV2(resourceLookup, environmentLookup, file, data, datas)
+		data, err := parseV2(resourceLookup, environmentLookup, file, data, datas, options)
 		if err != nil {
 			logrus.Errorf("Failed to parse service %s: %v", name, err)
 			return nil, err
@@ -41,7 +43,7 @@ func MergeServicesV2(existingServices *ServiceConfigs, environmentLookup Environ
 	return serviceConfigs, nil
 }
 
-func parseV2(resourceLookup ResourceLookup, environmentLookup EnvironmentLookup, inFile string, serviceData RawService, datas RawServiceMap) (RawService, error) {
+func parseV2(resourceLookup ResourceLookup, environmentLookup EnvironmentLookup, inFile string, serviceData RawService, datas RawServiceMap, options *ParseOptions) (RawService, error) {
 	serviceData, err := readEnvFile(resourceLookup, inFile, serviceData)
 	if err != nil {
 		return nil, err
@@ -74,7 +76,7 @@ func parseV2(resourceLookup ResourceLookup, environmentLookup EnvironmentLookup,
 
 	if file == "" {
 		if serviceData, ok := datas[service]; ok {
-			baseService, err = parseV2(resourceLookup, environmentLookup, inFile, serviceData, datas)
+			baseService, err = parseV2(resourceLookup, environmentLookup, inFile, serviceData, datas, options)
 		} else {
 			return nil, fmt.Errorf("Failed to find service %s to extend", service)
 		}
@@ -85,23 +87,22 @@ func parseV2(resourceLookup ResourceLookup, environmentLookup EnvironmentLookup,
 			return nil, err
 		}
 
-		rawConfig, err := CreateRawConfig(bytes)
+		config, err := CreateConfig(bytes)
 		if err != nil {
 			return nil, err
 		}
-		baseRawServices := rawConfig.Services
+		baseRawServices := config.Services
 
-		if err = InterpolateRawServiceMap(&baseRawServices, environmentLookup); err != nil {
-			return nil, err
+		if options.Interpolate {
+			if err = InterpolateRawServiceMap(&baseRawServices, environmentLookup); err != nil {
+				return nil, err
+			}
 		}
 
-		baseRawServices, err = PreprocessServiceMap(baseRawServices)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := validateV2(baseRawServices); err != nil {
-			return nil, err
+		if options.Validate {
+			if err := validate(baseRawServices); err != nil {
+				return nil, err
+			}
 		}
 
 		baseService, ok = baseRawServices[service]
@@ -109,7 +110,7 @@ func parseV2(resourceLookup ResourceLookup, environmentLookup EnvironmentLookup,
 			return nil, fmt.Errorf("Failed to find service %s in file %s", service, file)
 		}
 
-		baseService, err = parseV2(resourceLookup, environmentLookup, resolved, baseService, baseRawServices)
+		baseService, err = parseV2(resourceLookup, environmentLookup, resolved, baseService, baseRawServices, options)
 	}
 
 	if err != nil {

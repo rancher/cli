@@ -1,18 +1,17 @@
-package config
+package preprocess
 
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
-	"github.com/fatih/structs"
+	"github.com/rancher/rancher-compose-executor/config"
 )
 
-func PreprocessServiceMap(serviceMap RawServiceMap) (RawServiceMap, error) {
-	newServiceMap := make(RawServiceMap)
+func PreprocessServiceMap(serviceMap config.RawServiceMap) (config.RawServiceMap, error) {
+	newServiceMap := make(config.RawServiceMap)
 
 	for k, v := range serviceMap {
-		newServiceMap[k] = make(RawService)
+		newServiceMap[k] = make(config.RawService)
 		for k2, v2 := range v {
 			if k2 == "environment" || k2 == "labels" {
 				newServiceMap[k][k2] = Preprocess(v2, true)
@@ -54,11 +53,11 @@ func Preprocess(item interface{}, replaceTypes bool) interface{} {
 	}
 }
 
-func TryConvertStringsToInts(serviceMap RawServiceMap, fields map[string]bool) (RawServiceMap, error) {
-	newServiceMap := make(RawServiceMap)
+func TryConvertStringsToInts(serviceMap config.RawServiceMap, fields map[string]bool) (config.RawServiceMap, error) {
+	newServiceMap := make(config.RawServiceMap)
 
 	for k, v := range serviceMap {
-		newServiceMap[k] = make(RawService)
+		newServiceMap[k] = make(config.RawService)
 
 		for k2, v2 := range v {
 			if _, ok := fields[k2]; ok {
@@ -105,17 +104,4 @@ func tryConvertStringsToInts(item interface{}, replaceTypes bool) interface{} {
 	default:
 		return item
 	}
-}
-
-func getRancherConfigObjects() map[string]bool {
-	rancherConfig := structs.New(RancherConfig{})
-	fields := map[string]bool{}
-	for _, field := range rancherConfig.Fields() {
-		kind := field.Kind().String()
-		if kind == "struct" || kind == "ptr" || kind == "slice" {
-			split := strings.Split(field.Tag("yaml"), ",")
-			fields[split[0]] = true
-		}
-	}
-	return fields
 }

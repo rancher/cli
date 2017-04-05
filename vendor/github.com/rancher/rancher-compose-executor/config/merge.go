@@ -9,8 +9,6 @@ import (
 	"github.com/docker/docker/pkg/urlutil"
 	"github.com/docker/libcompose/utils"
 	composeYaml "github.com/docker/libcompose/yaml"
-	"github.com/fatih/structs"
-	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/rancher-compose-executor/template"
 	"gopkg.in/yaml.v2"
 )
@@ -20,199 +18,126 @@ var (
 		"links",
 		"volumes_from",
 	}
+	defaultParseOptions = ParseOptions{
+		Interpolate: true,
+		Validate:    true,
+	}
 )
 
-func transferFields(from, to RawService, prefixField string, instance interface{}) {
-	s := structs.New(instance)
-	for _, f := range s.Fields() {
-		field := strings.SplitN(f.Tag("yaml"), ",", 2)[0]
-		if fieldValue, ok := from[field]; ok {
-			if _, ok = to[prefixField]; !ok {
-				to[prefixField] = map[interface{}]interface{}{}
-			}
-			to[prefixField].(map[interface{}]interface{})[field] = fieldValue
-		}
-	}
-}
-
-// CreateRawConfig unmarshals contents to config and creates config based on version
-func CreateRawConfig(contents []byte) (*RawConfig, error) {
-	var rawConfig RawConfig
-	if err := yaml.Unmarshal(contents, &rawConfig); err != nil {
+// CreateConfig unmarshals contents to config and creates config based on version
+func CreateConfig(contents []byte) (*Config, error) {
+	var config Config
+	if err := yaml.Unmarshal(contents, &config); err != nil {
 		return nil, err
 	}
 
-	if rawConfig.Version != "2" {
+	if config.Version != "2" {
 		var baseRawServices RawServiceMap
 		if err := yaml.Unmarshal(contents, &baseRawServices); err != nil {
 			return nil, err
 		}
-		if _, ok := baseRawServices[".catalog"]; ok {
-			delete(baseRawServices, ".catalog")
-		}
-		rawConfig.Services = baseRawServices
+		config.Services = baseRawServices
 	}
 
-	if rawConfig.Services == nil {
-		rawConfig.Services = make(RawServiceMap)
+	if config.Volumes == nil {
+		config.Volumes = make(map[string]interface{})
 	}
-	if rawConfig.Volumes == nil {
-		rawConfig.Volumes = make(map[string]interface{})
-	}
-	if rawConfig.Networks == nil {
-		rawConfig.Networks = make(map[string]interface{})
-	}
-	if rawConfig.Hosts == nil {
-		rawConfig.Hosts = make(map[string]interface{})
-	}
-	if rawConfig.Secrets == nil {
-		rawConfig.Secrets = make(map[string]interface{})
+	if config.Networks == nil {
+		config.Networks = make(map[string]interface{})
 	}
 
-	// Merge other service types into primary service map
-	for name, baseRawLoadBalancer := range rawConfig.LoadBalancers {
-		rawConfig.Services[name] = baseRawLoadBalancer
-		transferFields(baseRawLoadBalancer, rawConfig.Services[name], "lb_config", LBConfig{})
-	}
-	// TODO: validation will throw errors for fields directly under service
-	for name, baseRawStorageDriver := range rawConfig.StorageDrivers {
-		rawConfig.Services[name] = baseRawStorageDriver
-		transferFields(baseRawStorageDriver, rawConfig.Services[name], "storage_driver", client.StorageDriver{})
-	}
-	// TODO: validation will throw errors for fields directly under service
-	for name, baseRawNetworkDriver := range rawConfig.NetworkDrivers {
-		rawConfig.Services[name] = baseRawNetworkDriver
-		transferFields(baseRawNetworkDriver, rawConfig.Services[name], "network_driver", client.NetworkDriver{})
-	}
-	for name, baseRawVirtualMachine := range rawConfig.VirtualMachines {
-		rawConfig.Services[name] = baseRawVirtualMachine
-	}
-
-	return &rawConfig, nil
+	return &config, nil
 }
 
-// TODO: get rid of existingServices
 // Merge merges a compose file into an existing set of service configs
-func Merge(existingServices *ServiceConfigs, environmentLookup EnvironmentLookup, resourceLookup ResourceLookup, file string, contents []byte) (*Config, error) {
+func Merge(existingServices *ServiceConfigs, environmentLookup EnvironmentLookup, resourceLookup ResourceLookup, file string, contents []byte, options *ParseOptions) (string, map[string]*ServiceConfig, map[string]*VolumeConfig, map[string]*NetworkConfig, error) {
+	if options == nil {
+		options = &defaultParseOptions
+	}
+
 	var err error
 	contents, err = template.Apply(contents, environmentLookup.Variables())
 	if err != nil {
-		return nil, err
+		return "", nil, nil, nil, err
 	}
 
-	rawConfig, err := CreateRawConfig(contents)
+	config, err := CreateConfig(contents)
 	if err != nil {
-		return nil, err
+		return "", nil, nil, nil, err
 	}
+	baseRawServices := config.Services
 
-	baseRawServices := rawConfig.Services
-	baseRawContainers := rawConfig.Containers
-
-	// TODO: just interpolate at the map level earlier
-	if err := InterpolateRawServiceMap(&baseRawServices, environmentLookup); err != nil {
-		return nil, err
-	}
-	if err := InterpolateRawServiceMap(&baseRawContainers, environmentLookup); err != nil {
-		return nil, err
-	}
-
-	for k, v := range rawConfig.Volumes {
-		if err := Interpolate(k, &v, environmentLookup); err != nil {
-			return nil, err
+	if options.Interpolate {
+		if err := InterpolateRawServiceMap(&baseRawServices, environmentLookup); err != nil {
+			return "", nil, nil, nil, err
 		}
-		rawConfig.Volumes[k] = v
-	}
 
-	for k, v := range rawConfig.Networks {
-		if err := Interpolate(k, &v, environmentLookup); err != nil {
-			return nil, err
+		for k, v := range config.Volumes {
+			if err := Interpolate(k, &v, environmentLookup); err != nil {
+				return "", nil, nil, nil, err
+			}
+			config.Volumes[k] = v
 		}
-		rawConfig.Networks[k] = v
+
+		for k, v := range config.Networks {
+			if err := Interpolate(k, &v, environmentLookup); err != nil {
+				return "", nil, nil, nil, err
+			}
+			config.Networks[k] = v
+		}
 	}
 
-	baseRawServices, err = PreprocessServiceMap(baseRawServices)
-	if err != nil {
-		return nil, err
-	}
-	baseRawContainers, err = PreprocessServiceMap(baseRawContainers)
-	if err != nil {
-		return nil, err
-	}
-
-	baseRawServices, err = TryConvertStringsToInts(baseRawServices, getRancherConfigObjects())
-	if err != nil {
-		return nil, err
-	}
-	baseRawContainers, err = TryConvertStringsToInts(baseRawContainers, getRancherConfigObjects())
-	if err != nil {
-		return nil, err
+	if options.Preprocess != nil {
+		var err error
+		baseRawServices, err = options.Preprocess(baseRawServices)
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
 	}
 
 	var serviceConfigs map[string]*ServiceConfig
-	if rawConfig.Version == "2" {
+	if config.Version == "2" {
 		var err error
-		serviceConfigs, err = MergeServicesV2(existingServices, environmentLookup, resourceLookup, file, baseRawServices)
+		serviceConfigs, err = MergeServicesV2(existingServices, environmentLookup, resourceLookup, file, baseRawServices, options)
 		if err != nil {
-			return nil, err
+			return "", nil, nil, nil, err
 		}
 	} else {
-		serviceConfigsV1, err := MergeServicesV1(existingServices, environmentLookup, resourceLookup, file, baseRawServices)
+		serviceConfigsV1, err := MergeServicesV1(existingServices, environmentLookup, resourceLookup, file, baseRawServices, options)
 		if err != nil {
-			return nil, err
+			return "", nil, nil, nil, err
 		}
 		serviceConfigs, err = ConvertServices(serviceConfigsV1)
 		if err != nil {
-			return nil, err
-		}
-	}
-
-	var containerConfigs map[string]*ServiceConfig
-	if rawConfig.Version == "2" {
-		var err error
-		containerConfigs, err = MergeServicesV2(existingServices, environmentLookup, resourceLookup, file, baseRawContainers)
-		if err != nil {
-			return nil, err
+			return "", nil, nil, nil, err
 		}
 	}
 
 	adjustValues(serviceConfigs)
-	adjustValues(containerConfigs)
 
-	var dependencies map[string]*DependencyConfig
+	if options.Postprocess != nil {
+		var err error
+		serviceConfigs, err = options.Postprocess(serviceConfigs)
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
+	}
+
 	var volumes map[string]*VolumeConfig
 	var networks map[string]*NetworkConfig
-	var secrets map[string]*SecretConfig
-	var hosts map[string]*client.Host
-	if err := utils.Convert(rawConfig.Dependencies, &dependencies); err != nil {
-		return nil, err
-	}
-	if err := utils.Convert(rawConfig.Volumes, &volumes); err != nil {
-		return nil, err
+	if err := utils.Convert(config.Volumes, &volumes); err != nil {
+		return "", nil, nil, nil, err
 	}
 	for i, volume := range volumes {
 		if volume == nil {
 			volumes[i] = &VolumeConfig{}
 		}
 	}
-	if err := utils.Convert(rawConfig.Networks, &networks); err != nil {
-		return nil, err
-	}
-	if err := utils.Convert(rawConfig.Hosts, &hosts); err != nil {
-		return nil, err
-	}
-	if err := utils.Convert(rawConfig.Secrets, &secrets); err != nil {
-		return nil, err
+	if err := utils.Convert(config.Networks, &networks); err != nil {
+		return "", nil, nil, nil, err
 	}
 
-	return &Config{
-		Services:     serviceConfigs,
-		Containers:   containerConfigs,
-		Dependencies: dependencies,
-		Volumes:      volumes,
-		Networks:     networks,
-		Secrets:      secrets,
-		Hosts:        hosts,
-	}, nil
+	return config.Version, serviceConfigs, volumes, networks, nil
 }
 
 func InterpolateRawServiceMap(baseRawServices *RawServiceMap, environmentLookup EnvironmentLookup) error {

@@ -8,23 +8,31 @@ import (
 
 	legacyClient "github.com/rancher/go-rancher/client"
 	"github.com/rancher/go-rancher/v2"
-	"github.com/rancher/rancher-compose-executor/config"
 )
 
 func populateLbFields(r *RancherService, launchConfig *client.LaunchConfig, service *CompositeService) error {
 	serviceType := FindServiceType(r)
 
-	config := r.serviceConfig
-	if serviceType == RancherType && config.LbConfig != nil {
-		service.LbConfig = &client.LbTargetConfig{}
-		service.LbConfig.PortRules = []client.TargetPortRule{}
-		for _, portRule := range config.LbConfig.PortRules {
-			service.LbConfig.PortRules = append(service.LbConfig.PortRules, client.TargetPortRule{
-				BackendName: portRule.BackendName,
-				Hostname:    portRule.Hostname,
-				Path:        portRule.Path,
-				TargetPort:  int64(portRule.TargetPort),
-			})
+	config, ok := r.context.RancherConfig[r.name]
+	if ok {
+		if serviceType == RancherType && config.LbConfig != nil {
+			service.LbConfig = &client.LbTargetConfig{}
+			service.LbConfig.PortRules = []client.TargetPortRule{}
+			for _, portRule := range config.LbConfig.PortRules {
+				service.LbConfig.PortRules = append(service.LbConfig.PortRules, client.TargetPortRule{
+					BackendName: portRule.BackendName,
+					Hostname:    portRule.Hostname,
+					Path:        portRule.Path,
+					TargetPort:  int64(portRule.TargetPort),
+				})
+			}
+		}
+	} else {
+		if serviceType == LegacyLbServiceType {
+			r.context.RancherConfig[r.name] = RancherConfig{}
+			config = r.context.RancherConfig[r.name]
+		} else {
+			return nil
 		}
 	}
 
@@ -268,8 +276,8 @@ func rewritePorts(ports []string) ([]string, error) {
 	return updatedPorts, nil
 }
 
-func convertLb(ports, links, externalLinks []string, selector string) ([]config.PortRule, error) {
-	portRules := []config.PortRule{}
+func convertLb(ports, links, externalLinks []string, selector string) ([]PortRule, error) {
+	portRules := []PortRule{}
 
 	for _, port := range ports {
 		protocol := "http"
@@ -311,7 +319,7 @@ func convertLb(ports, links, externalLinks []string, selector string) ([]config.
 		}
 		for _, link := range links {
 			split := strings.Split(link, ":")
-			portRules = append(portRules, config.PortRule{
+			portRules = append(portRules, PortRule{
 				SourcePort: int(sourcePort),
 				TargetPort: int(targetPort),
 				Service:    split[0],
@@ -320,7 +328,7 @@ func convertLb(ports, links, externalLinks []string, selector string) ([]config.
 		}
 		for _, externalLink := range externalLinks {
 			split := strings.Split(externalLink, ":")
-			portRules = append(portRules, config.PortRule{
+			portRules = append(portRules, PortRule{
 				SourcePort: int(sourcePort),
 				TargetPort: int(targetPort),
 				Service:    split[0],
@@ -328,7 +336,7 @@ func convertLb(ports, links, externalLinks []string, selector string) ([]config.
 			})
 		}
 		if selector != "" {
-			portRules = append(portRules, config.PortRule{
+			portRules = append(portRules, PortRule{
 				SourcePort: int(sourcePort),
 				TargetPort: int(targetPort),
 				Selector:   selector,
@@ -389,8 +397,8 @@ func readPath(label string, pos int) (string, int, error) {
 	return path.String(), pos, nil
 }
 
-func convertLbLabel(label string) ([]config.PortRule, error) {
-	var portRules []config.PortRule
+func convertLbLabel(label string) ([]PortRule, error) {
+	var portRules []PortRule
 
 	labels := strings.Split(label, ",")
 	for _, label := range labels {
@@ -437,21 +445,21 @@ func convertLbLabel(label string) ([]config.PortRule, error) {
 		}
 
 		if hostname == "" && path == "" && target == 0 {
-			portRules = append(portRules, config.PortRule{
+			portRules = append(portRules, PortRule{
 				TargetPort: int(source),
 			})
 			continue
 		}
 
 		if target == 0 && strings.Contains(label, "=") {
-			portRules = append(portRules, config.PortRule{
+			portRules = append(portRules, PortRule{
 				Hostname:   hostname,
 				TargetPort: int(source),
 			})
 			continue
 		}
 
-		portRules = append(portRules, config.PortRule{
+		portRules = append(portRules, PortRule{
 			Hostname:   hostname,
 			SourcePort: int(source),
 			Path:       path,
@@ -462,8 +470,8 @@ func convertLbLabel(label string) ([]config.PortRule, error) {
 	return portRules, nil
 }
 
-func mergePortRules(baseRules, overrideRules []config.PortRule) []config.PortRule {
-	newRules := []config.PortRule{}
+func mergePortRules(baseRules, overrideRules []PortRule) []PortRule {
+	newRules := []PortRule{}
 	for _, baseRule := range baseRules {
 		prevLength := len(newRules)
 		for _, overrideRule := range overrideRules {
