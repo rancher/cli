@@ -2,6 +2,8 @@ package rancher
 
 import (
 	"github.com/Sirupsen/logrus"
+	"github.com/rancher/rancher-compose-executor/config"
+	"github.com/rancher/rancher-compose-executor/preprocess"
 	"github.com/rancher/rancher-compose-executor/project"
 )
 
@@ -10,27 +12,15 @@ func NewProject(context *Context) (*project.Project, error) {
 		Context: context,
 	}
 
-	context.ContainerFactory = &RancherContainerFactory{
-		Context: context,
-	}
-
-	context.DependenciesFactory = &RancherDependenciesFactory{
-		Context: context,
-	}
-
 	context.VolumesFactory = &RancherVolumesFactory{
 		Context: context,
 	}
 
-	context.HostsFactory = &RancherHostsFactory{
-		Context: context,
-	}
-
-	context.SecretsFactory = &RancherSecretsFactory{
-		Context: context,
-	}
-
-	p := project.NewProject(&context.Context)
+	p := project.NewProject(&context.Context, &config.ParseOptions{
+		Interpolate: true,
+		Validate:    true,
+		Preprocess:  preprocess.PreprocessServiceMap,
+	})
 
 	err := p.Parse()
 	if err != nil {

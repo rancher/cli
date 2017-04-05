@@ -35,6 +35,7 @@ var (
 type defaultListener struct {
 	project    *Project
 	listenChan chan events.Event
+	upCount    int
 }
 
 // NewDefaultListener create a default listener for the specified project.
@@ -61,6 +62,10 @@ func (d *defaultListener) start() {
 			}
 		}
 
+		if event.EventType == events.ServiceUp {
+			d.upCount++
+		}
+
 		logf := logrus.Debugf
 
 		if infoEvents[event.EventType] {
@@ -70,7 +75,7 @@ func (d *defaultListener) start() {
 		if event.ServiceName == "" {
 			logf("Project [%s]: %s %s", d.project.Name, event.EventType, buffer.Bytes())
 		} else {
-			logf("[%s]: %s %s", event.ServiceName, event.EventType, buffer.Bytes())
+			logf("[%d/%d] [%s]: %s %s", d.upCount, d.project.ServiceConfigs.Len(), event.ServiceName, event.EventType, buffer.Bytes())
 		}
 	}
 }
