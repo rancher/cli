@@ -2,8 +2,6 @@ package rancher
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/rancher/rancher-compose-executor/config"
-	"github.com/rancher/rancher-compose-executor/preprocess"
 	"github.com/rancher/rancher-compose-executor/project"
 )
 
@@ -12,29 +10,38 @@ func NewProject(context *Context) (*project.Project, error) {
 		Context: context,
 	}
 
+	context.ContainerFactory = &RancherContainerFactory{
+		Context: context,
+	}
+
+	context.DependenciesFactory = &RancherDependenciesFactory{
+		Context: context,
+	}
+
 	context.VolumesFactory = &RancherVolumesFactory{
 		Context: context,
 	}
 
-	p := project.NewProject(&context.Context, &config.ParseOptions{
-		Interpolate: true,
-		Validate:    true,
-		Preprocess:  preprocess.PreprocessServiceMap,
-	})
-
-	err := p.Parse()
-	if err != nil {
-		return nil, err
+	context.HostsFactory = &RancherHostsFactory{
+		Context: context,
 	}
 
-	if err = context.open(); err != nil {
+	context.SecretsFactory = &RancherSecretsFactory{
+		Context: context,
+	}
+
+	p := project.NewProject(&context.Context)
+
+	if err := p.Parse(); err != nil {
+		return nil, err
+	}
+	if err := context.open(); err != nil {
 		logrus.Errorf("Failed to open project %s: %v", p.Name, err)
 		return nil, err
 	}
-
 	p.Name = context.ProjectName
 
 	context.SidekickInfo = NewSidekickInfo(p)
 
-	return p, err
+	return p, nil
 }

@@ -1,7 +1,10 @@
 package app
 
 import (
+	"fmt"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -12,7 +15,6 @@ import (
 	"github.com/rancher/rancher-compose-executor/project"
 	"github.com/rancher/rancher-compose-executor/project/options"
 	"github.com/rancher/rancher-compose-executor/rancher"
-	"github.com/rancher/rancher-compose-executor/upgrade"
 	"github.com/urfave/cli"
 )
 
@@ -20,7 +22,22 @@ type RancherProjectFactory struct {
 }
 
 func (p *RancherProjectFactory) Create(c *cli.Context) (*project.Project, error) {
-	rancherComposeFile, err := rancher.ResolveRancherCompose(c.GlobalString("file"),
+	context := &rancher.Context{
+		Context: project.Context{
+			ResourceLookup: &lookup.FileResourceLookup{},
+			LoggerFactory:  logger.NewColorLoggerFactory(),
+		},
+		Url:        c.GlobalString("url"),
+		AccessKey:  c.GlobalString("access-key"),
+		SecretKey:  c.GlobalString("secret-key"),
+		PullCached: c.Bool("cached"),
+		Uploader:   &rancher.S3Uploader{},
+		Args:       c.Args(),
+	}
+
+	Populate(&context.Context, c)
+
+	rancherComposeFile, err := resolveRancherCompose(context.ComposeFiles[0],
 		c.GlobalString("rancher-file"))
 	if err != nil {
 		return nil, err
@@ -36,24 +53,8 @@ func (p *RancherProjectFactory) Create(c *cli.Context) (*project.Project, error)
 		return nil, err
 	}
 
-	context := &rancher.Context{
-		Context: project.Context{
-			ResourceLookup:    &lookup.FileResourceLookup{},
-			EnvironmentLookup: envLookup,
-			LoggerFactory:     logger.NewColorLoggerFactory(),
-		},
-		RancherComposeFile: c.GlobalString("rancher-file"),
-		Url:                c.GlobalString("url"),
-		AccessKey:          c.GlobalString("access-key"),
-		SecretKey:          c.GlobalString("secret-key"),
-		PullCached:         c.Bool("cached"),
-		Uploader:           &rancher.S3Uploader{},
-		Args:               c.Args(),
-	}
-	// TODO
-	//qLookup.Context = context
-
-	Populate(&context.Context, c)
+	context.EnvironmentLookup = envLookup
+	context.ComposeFiles = append(context.ComposeFiles, rancherComposeFile)
 
 	context.Upgrade = c.Bool("upgrade") || c.Bool("force-upgrade")
 	context.ForceUpgrade = c.Bool("force-upgrade")
@@ -64,6 +65,17 @@ func (p *RancherProjectFactory) Create(c *cli.Context) (*project.Project, error)
 	context.Pull = c.Bool("pull")
 
 	return rancher.NewProject(context)
+}
+
+func resolveRancherCompose(composeFile, rancherComposeFile string) (string, error) {
+	if rancherComposeFile == "" && composeFile != "" {
+		f, err := filepath.Abs(composeFile)
+		if err != nil {
+			return "", err
+		}
+		return path.Join(path.Dir(f), "rancher-compose.yml"), nil
+	}
+	return rancherComposeFile, nil
 }
 
 func Populate(context *project.Context, c *cli.Context) {
@@ -98,47 +110,6 @@ func WithProject(factory ProjectFactory, action ProjectAction) func(context *cli
 	}
 }
 
-func UpgradeCommand(factory ProjectFactory) cli.Command {
-	return cli.Command{
-		Name:   "upgrade",
-		Usage:  "Perform rolling upgrade between services",
-		Action: WithProject(factory, Upgrade),
-		Flags: []cli.Flag{
-			cli.IntFlag{
-				Name:  "batch-size",
-				Usage: "Number of containers to upgrade at once",
-				Value: 2,
-			},
-			cli.IntFlag{
-				Name:  "scale",
-				Usage: "Final number of running containers",
-				Value: -1,
-			},
-			cli.IntFlag{
-				Name:  "interval",
-				Usage: "Update interval in milliseconds",
-				Value: 2000,
-			},
-			cli.BoolTFlag{
-				Name:  "update-links",
-				Usage: "Update inbound links on target service",
-			},
-			cli.BoolFlag{
-				Name:  "wait,w",
-				Usage: "Wait for upgrade to complete",
-			},
-			cli.BoolFlag{
-				Name:  "pull, p",
-				Usage: "Before doing the upgrade do an image pull on all hosts that have the image already",
-			},
-			cli.BoolFlag{
-				Name:  "cleanup, c",
-				Usage: "Remove the original service definition once upgraded, implies --wait",
-			},
-		},
-	}
-}
-
 func UpCommand(factory ProjectFactory) cli.Command {
 	return cli.Command{
 		Name:   "up",
@@ -152,6 +123,10 @@ func UpCommand(factory ProjectFactory) cli.Command {
 			cli.BoolFlag{
 				Name:  "d",
 				Usage: "Do not block and log",
+			},
+			cli.BoolFlag{
+				Name:  "render",
+				Usage: "Display processed Compose files and exit",
 			},
 			cli.BoolFlag{
 				Name:  "upgrade, u, recreate",
@@ -205,6 +180,17 @@ func ProjectCreate(p *project.Project, c *cli.Context) error {
 }
 
 func ProjectUp(p *project.Project, c *cli.Context) error {
+	if c.Bool("render") {
+		renderedComposeBytes, err := p.Render()
+		if err != nil {
+			return err
+		}
+		for _, contents := range renderedComposeBytes {
+			fmt.Println(string(contents))
+		}
+		return nil
+	}
+
 	if err := p.Create(context.Background(), options.Create{}, c.Args()...); err != nil {
 		return err
 	}
@@ -219,27 +205,5 @@ func ProjectUp(p *project.Project, c *cli.Context) error {
 		<-make(chan interface{})
 	}
 
-	return nil
-}
-
-func Upgrade(p *project.Project, c *cli.Context) error {
-	args := c.Args()
-	if len(args) != 2 {
-		logrus.Fatalf("Please pass arguments in the form: [from service] [to service]")
-	}
-
-	err := upgrade.Upgrade(p, args[0], args[1], upgrade.UpgradeOpts{
-		BatchSize:      c.Int("batch-size"),
-		IntervalMillis: c.Int("interval"),
-		FinalScale:     c.Int("scale"),
-		UpdateLinks:    c.Bool("update-links"),
-		Wait:           c.Bool("wait"),
-		CleanUp:        c.Bool("cleanup"),
-		Pull:           c.Bool("pull"),
-	})
-
-	if err != nil {
-		logrus.Fatal(err)
-	}
 	return nil
 }

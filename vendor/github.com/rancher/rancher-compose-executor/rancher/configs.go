@@ -52,8 +52,6 @@ func createLaunchConfigs(r *RancherService) (client.LaunchConfig, []client.Secon
 func createLaunchConfig(r *RancherService, name string, serviceConfig *config.ServiceConfig) (client.LaunchConfig, error) {
 	var result client.LaunchConfig
 
-	rancherConfig := r.context.RancherConfig[name]
-
 	schemasUrl := strings.SplitN(r.Context().Client.GetSchemas().Links["self"], "/schemas", 2)[0]
 	scriptsUrl := schemasUrl + "/scripts/transform"
 
@@ -103,17 +101,22 @@ func createLaunchConfig(r *RancherService, name string, serviceConfig *config.Se
 	setupNetworking(serviceConfig.NetworkMode, &result)
 	setupVolumesFrom(serviceConfig.VolumesFrom, &result)
 
-	err = setupBuild(r, name, &result, serviceConfig)
+	if err = setupBuild(r, name, &result, serviceConfig); err != nil {
+		return result, err
+	}
+	if err = setupSecrets(r, name, &result, serviceConfig); err != nil {
+		return result, err
+	}
 
 	if result.Labels == nil {
 		result.Labels = map[string]interface{}{}
 	}
 
-	result.Kind = rancherConfig.Type
-	result.Vcpu = int64(rancherConfig.Vcpu)
-	result.Userdata = rancherConfig.Userdata
-	result.MemoryMb = int64(rancherConfig.Memory)
-	result.Disks = rancherConfig.Disks
+	result.Kind = serviceConfig.Type
+	result.Vcpu = int64(serviceConfig.Vcpu)
+	result.Userdata = serviceConfig.Userdata
+	result.MemoryMb = int64(serviceConfig.Memory)
+	result.Disks = serviceConfig.Disks
 
 	if strings.EqualFold(result.Kind, "virtual_machine") || strings.EqualFold(result.Kind, "virtualmachine") {
 		result.Kind = "virtualMachine"
@@ -176,5 +179,29 @@ func setupBuild(r *RancherService, name string, result *client.LaunchConfig, ser
 		}
 	}
 
+	return nil
+}
+
+func setupSecrets(r *RancherService, name string, result *client.LaunchConfig, serviceConfig *config.ServiceConfig) error {
+	for _, secret := range r.serviceConfig.Secrets {
+		existingSecrets, err := r.Client().Secret.List(&client.ListOpts{
+			Filters: map[string]interface{}{
+				"name": secret.Source,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if len(existingSecrets.Data) == 0 {
+			return fmt.Errorf("Failed to find secret %s", secret.Source)
+		}
+		result.Secrets = append(result.Secrets, client.SecretReference{
+			SecretId: existingSecrets.Data[0].Id,
+			Name:     secret.Target,
+			Uid:      secret.Uid,
+			Gid:      secret.Gid,
+			Mode:     secret.Mode,
+		})
+	}
 	return nil
 }
