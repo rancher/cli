@@ -9,6 +9,8 @@ type ComposeProject struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	Answers map[string]interface{} `json:"answers,omitempty" yaml:"answers,omitempty"`
+
 	Binding *Binding `json:"binding,omitempty" yaml:"binding,omitempty"`
 
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`

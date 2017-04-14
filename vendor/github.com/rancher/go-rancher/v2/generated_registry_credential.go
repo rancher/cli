@@ -15,8 +15,6 @@ type RegistryCredential struct {
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
-	Email string `json:"email,omitempty" yaml:"email,omitempty"`
-
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`

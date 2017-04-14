@@ -22,8 +22,9 @@ const (
 )
 
 var (
-	debug  = false
-	dialer = &websocket.Dialer{}
+	debug             = false
+	dialer            = &websocket.Dialer{}
+	privateFieldRegex = regexp.MustCompile("^[[:lower:]]")
 )
 
 type ClientOpts struct {

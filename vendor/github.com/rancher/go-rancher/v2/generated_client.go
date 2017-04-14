@@ -62,6 +62,7 @@ type RancherClient struct {
 	Host                                     HostOperations
 	HostAccess                               HostAccessOperations
 	HostApiProxyToken                        HostApiProxyTokenOperations
+	HostTemplate                             HostTemplateOperations
 	Identity                                 IdentityOperations
 	Image                                    ImageOperations
 	InServiceUpgradeStrategy                 InServiceUpgradeStrategyOperations
@@ -232,6 +233,7 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.Host = newHostClient(client)
 	client.HostAccess = newHostAccessClient(client)
 	client.HostApiProxyToken = newHostApiProxyTokenClient(client)
+	client.HostTemplate = newHostTemplateClient(client)
 	client.Identity = newIdentityClient(client)
 	client.Image = newImageClient(client)
 	client.InServiceUpgradeStrategy = newInServiceUpgradeStrategyClient(client)
