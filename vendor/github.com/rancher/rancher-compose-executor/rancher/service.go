@@ -52,13 +52,6 @@ func (r *RancherService) Context() *Context {
 	return r.context
 }
 
-func (r *RancherService) RancherConfig() RancherConfig {
-	if config, ok := r.context.RancherConfig[r.name]; ok {
-		return config
-	}
-	return RancherConfig{}
-}
-
 func NewService(name string, config *config.ServiceConfig, context *Context) *RancherService {
 	return &RancherService{
 		name:          name,
@@ -81,10 +74,6 @@ func (r *RancherService) Create(ctx context.Context, options options.Create) err
 	}
 
 	return err
-}
-
-func (r *RancherService) Start(ctx context.Context) error {
-	return r.up(false)
 }
 
 func (r *RancherService) Up(ctx context.Context, options options.Up) error {
@@ -160,29 +149,6 @@ func (r *RancherService) up(create bool) error {
 	return err
 }
 
-func (r *RancherService) Delete(ctx context.Context, options options.Delete) error {
-	service, err := r.FindExisting(r.name)
-
-	if err == nil && service == nil {
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if service.Removed != "" || service.State == "removing" || service.State == "removed" {
-		return nil
-	}
-
-	err = r.context.Client.Service.Delete(service)
-	if err != nil {
-		return err
-	}
-
-	return r.Wait(service)
-}
-
 func (r *RancherService) resolveServiceAndStackId(name string) (string, string, error) {
 	parts := strings.SplitN(name, "/", 2)
 	if len(parts) == 1 {
@@ -236,32 +202,24 @@ func (r *RancherService) FindExisting(name string) (*client.Service, error) {
 }
 
 func (r *RancherService) Metadata() map[string]interface{} {
-	if config, ok := r.context.RancherConfig[r.name]; ok {
-		return rUtils.NestedMapsToMapInterface(config.Metadata)
-	}
-	return map[string]interface{}{}
+	return rUtils.NestedMapsToMapInterface(r.serviceConfig.Metadata)
 }
 
 func (r *RancherService) HealthCheck(service string) *client.InstanceHealthCheck {
 	if service == "" {
 		service = r.name
 	}
-	if config, ok := r.context.RancherConfig[service]; ok {
+	if config, ok := r.context.Project.ServiceConfigs.Get(service); ok {
 		return config.HealthCheck
 	}
-
 	return nil
 }
 
 func (r *RancherService) getConfiguredScale() int {
-	scale := 1
-	if config, ok := r.context.RancherConfig[r.name]; ok {
-		if config.Scale > 0 {
-			scale = int(config.Scale)
-		}
+	if r.serviceConfig.Scale > 0 {
+		return int(r.serviceConfig.Scale)
 	}
-
-	return scale
+	return 1
 }
 
 func (r *RancherService) createService() (*client.Service, error) {
@@ -285,14 +243,14 @@ func (r *RancherService) createService() (*client.Service, error) {
 		return nil, err
 	}
 
-	err = r.Wait(service)
-	return service, err
+	return service, r.Wait(service)
 }
 
 func (r *RancherService) setupLinks(service *client.Service, update bool) error {
 	// Don't modify links for selector based linking, don't want to conflict
 	// Don't modify links for load balancers, they're created by cattle
-	if service.SelectorLink != "" || FindServiceType(r) == ExternalServiceType || FindServiceType(r) == LbServiceType {
+	serviceType := FindServiceType(r)
+	if service.SelectorLink != "" || serviceType == ExternalServiceType || serviceType == LbServiceType || serviceType == LegacyLbServiceType {
 		return nil
 	}
 
@@ -375,26 +333,6 @@ func (r *RancherService) getLinks() (map[Link]string, error) {
 	return result, nil
 }
 
-func (r *RancherService) Scale(ctx context.Context, count int, timeout int) error {
-	service, err := r.FindExisting(r.name)
-	if err != nil {
-		return err
-	}
-
-	if service == nil {
-		return fmt.Errorf("Failed to find %s to scale", r.name)
-	}
-
-	service, err = r.context.Client.Service.Update(service, map[string]interface{}{
-		"scale": count,
-	})
-	if err != nil {
-		return err
-	}
-
-	return r.Wait(service)
-}
-
 func (r *RancherService) containers() ([]client.Container, error) {
 	service, err := r.FindExisting(r.name)
 	if err != nil {
@@ -409,31 +347,6 @@ func (r *RancherService) containers() ([]client.Container, error) {
 	}
 
 	return instances.Data, nil
-}
-
-func (r *RancherService) Restart(ctx context.Context, timeout int) error {
-	service, err := r.FindExisting(r.name)
-	if err != nil {
-		return err
-	}
-
-	if service == nil {
-		return fmt.Errorf("Failed to find %s to restart", r.name)
-	}
-
-	service, err = r.context.Client.Service.ActionRestart(service, &client.ServiceRestart{
-		RollingRestartStrategy: client.RollingRestartStrategy{
-			BatchSize:      r.context.BatchSize,
-			IntervalMillis: r.context.Interval,
-		},
-	})
-
-	if err != nil {
-		logrus.Errorf("Failed to restart %s: %v", r.Name(), err)
-		return err
-	}
-
-	return r.Wait(service)
 }
 
 func (r *RancherService) Log(ctx context.Context, follow bool) error {
@@ -510,7 +423,7 @@ func (r *RancherService) DependentServices() []project.ServiceRelationship {
 	}
 
 	// Load balancers should depend on non-external target services
-	lbConfig := r.RancherConfig().LbConfig
+	lbConfig := r.serviceConfig.LbConfig
 	if lbConfig != nil {
 		for _, portRule := range lbConfig.PortRules {
 			if portRule.Service != "" && !strings.Contains(portRule.Service, "/") {
@@ -524,10 +437,6 @@ func (r *RancherService) DependentServices() []project.ServiceRelationship {
 
 func (r *RancherService) Client() *client.RancherClient {
 	return r.context.Client
-}
-
-func (r *RancherService) Kill(ctx context.Context, signal string) error {
-	return project.ErrUnsupported
 }
 
 func (r *RancherService) pullImage(image string, labels map[string]string) error {

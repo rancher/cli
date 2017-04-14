@@ -137,13 +137,14 @@ var schemaDataV1 = `{
         "scale_policy": {"type": "object"},
         "security_opt": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "shm_size": {"type": ["number", "string"]},
+        "start_on_create": {"type": "boolean"},
         "stdin_open": {"type": "boolean"},
         "stop_signal": {"type": "string"},
         "storage_driver": {"type": "object"},
         "sysctls": {"$ref": "#/definitions/list_or_dict"},
         "tty": {"type": "boolean"},
         "type": {"type": "string"},
-        "update_strategy": {"type": "object"},
+        "upgrade_strategy": {"type": "object"},
         "ulimits": {
           "type": "object",
           "patternProperties": {
@@ -275,6 +276,7 @@ var servicesSchemaDataV2 = `{
             {"type": "array", "items": {"type": "string"}}
           ]
         },
+        "config": {"type": "string"},
         "container_name": {"type": "string"},
         "cpu_period": {"type": ["number", "string"]},
         "cpu_shares": {"type": ["number", "string"]},
@@ -406,14 +408,35 @@ var servicesSchemaDataV2 = `{
           "uniqueItems": true
         },
 
+        "port_rules": {"type": "array"},
         "privileged": {"type": "boolean"},
         "read_only": {"type": "boolean"},
         "restart": {"type": "string"},
         "retain_ip": {"type": "boolean"},
-        "scale": {"type": "number"},
+        "scale": {"type": ["number", "string"]},
         "scale_policy": {"type": "object"},
         "security_opt": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "shm_size": {"type": ["number", "string"]},
+        "secrets": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {"type": "string"},
+              {
+                "type": "object",
+                "properties": {
+                  "source": {"type": "string"},
+                  "target": {"type": "string"},
+                  "uid": {"type": "string"},
+                  "gid": {"type": "string"},
+                  "mode": {"type": "number"}
+                }
+              }
+            ]
+          }
+        },
+        "start_on_create": {"type": "boolean"},
+        "stickiness_policy": {"type": "object"},
         "stdin_open": {"type": "boolean"},
         "stop_signal": {"type": "string"},
         "storage_driver": {"type": "object"},
@@ -421,7 +444,7 @@ var servicesSchemaDataV2 = `{
         "tmpfs": {"$ref": "#/definitions/string_or_list"},
         "tty": {"type": "boolean"},
         "type": {"type": "string"},
-        "update_strategy": {"type": "object"},
+        "upgrade_strategy": {"type": "object"},
         "ulimits": {
           "type": "object",
           "patternProperties": {

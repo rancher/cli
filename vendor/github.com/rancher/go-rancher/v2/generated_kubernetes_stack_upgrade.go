@@ -7,6 +7,8 @@ const (
 type KubernetesStackUpgrade struct {
 	Resource
 
+	Answers map[string]interface{} `json:"answers,omitempty" yaml:"answers,omitempty"`
+
 	Environment map[string]interface{} `json:"environment,omitempty" yaml:"environment,omitempty"`
 
 	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`

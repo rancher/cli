@@ -9,6 +9,8 @@ type Stack struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	Answers map[string]interface{} `json:"answers,omitempty" yaml:"answers,omitempty"`
+
 	Binding *Binding `json:"binding,omitempty" yaml:"binding,omitempty"`
 
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
@@ -50,6 +52,8 @@ type Stack struct {
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
 	System bool `json:"system,omitempty" yaml:"system,omitempty"`
+
+	Templates map[string]interface{} `json:"templates,omitempty" yaml:"templates,omitempty"`
 
 	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 

@@ -55,6 +55,8 @@ type Host struct {
 
 	ExtractedConfig string `json:"extractedConfig,omitempty" yaml:"extracted_config,omitempty"`
 
+	HostTemplateId string `json:"hostTemplateId,omitempty" yaml:"host_template_id,omitempty"`
+
 	Hostname string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 
 	Info interface{} `json:"info,omitempty" yaml:"info,omitempty"`
