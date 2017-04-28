@@ -106,6 +106,17 @@ func (r *RancherService) up(create bool) error {
 			}
 		}
 
+		if service.State == "upgraded" {
+			service, err = r.context.Client.Service.ActionFinishupgrade(service)
+			if err != nil {
+				return err
+			}
+			err = r.Wait(service)
+			if err != nil {
+				return err
+			}
+		}
+
 		service, err = r.upgrade(service, r.context.ForceUpgrade, r.context.Args)
 		if err != nil {
 			return err
