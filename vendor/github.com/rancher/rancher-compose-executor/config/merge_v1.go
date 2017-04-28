@@ -15,27 +15,10 @@ func MergeServicesV1(existingServices *ServiceConfigs, environmentLookup Environ
 	}
 
 	for name, data := range datas {
-		data, err := parseV1(resourceLookup, environmentLookup, file, data, datas)
+		var err error
+		datas[name], err = parseV1(resourceLookup, environmentLookup, file, data, datas)
 		if err != nil {
 			logrus.Errorf("Failed to parse service %s: %v", name, err)
-			return nil, err
-		}
-
-		if serviceConfig, ok := existingServices.Get(name); ok {
-			var rawExistingService RawService
-			if err := utils.Convert(serviceConfig, &rawExistingService); err != nil {
-				return nil, err
-			}
-
-			data = mergeConfig(rawExistingService, data)
-		}
-
-		datas[name] = data
-	}
-
-	for name, data := range datas {
-		err := validateServiceConstraints(data, name)
-		if err != nil {
 			return nil, err
 		}
 	}

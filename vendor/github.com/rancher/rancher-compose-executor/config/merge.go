@@ -179,6 +179,25 @@ func Merge(existingServices *ServiceConfigs, environmentLookup EnvironmentLookup
 		}
 	}
 
+	// TODO: merge container configs
+	for name, serviceConfig := range serviceConfigs {
+		if existingServiceConfig, ok := existingServices.Get(name); ok {
+			var rawService RawService
+			if err := utils.Convert(serviceConfig, &rawService); err != nil {
+				return nil, err
+			}
+			var rawExistingService RawService
+			if err := utils.Convert(existingServiceConfig, &rawExistingService); err != nil {
+				return nil, err
+			}
+
+			rawService = mergeConfig(rawExistingService, rawService)
+			if err := utils.Convert(rawService, &serviceConfig); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	var containerConfigs map[string]*ServiceConfig
 	if rawConfig.Version == "2" {
 		var err error
