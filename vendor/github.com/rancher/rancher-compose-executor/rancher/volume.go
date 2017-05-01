@@ -124,10 +124,11 @@ func (v *Volume) create(ctx context.Context) error {
 		Name:         v.name,
 		Driver:       v.driver,
 		DriverOpts:   driverOptions,
-		StackId:      v.context.Stack.Id,
 		PerContainer: v.perContainer,
 	}
-	if !v.external {
+	if v.external {
+		volumeTemplate.External = true
+	} else {
 		volumeTemplate.StackId = v.context.Stack.Id
 	}
 	_, err := v.context.Client.VolumeTemplate.Create(&volumeTemplate)
