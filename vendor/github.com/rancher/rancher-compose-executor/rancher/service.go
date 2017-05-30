@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -157,6 +158,21 @@ func (r *RancherService) up(create bool) error {
 		err = r.Wait(service)
 	}
 
+	// TODO: revisit whether this is the best place to perform this check
+	if _, ok := r.serviceConfig.Labels["io.rancher.service.wait_for_healthcheck"]; ok {
+		logrus.Debugf("Detected label io.rancher.service.wait_for_healthcheck. Polling for health")
+		for {
+			logrus.Debugf("Service %s has health state %s", service.Name, service.HealthState)
+			if service.HealthState == "healthy" {
+				break
+			}
+			time.Sleep(150 * time.Millisecond)
+			err := r.context.Client.Reload(&service.Resource, service)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return err
 }
 
