@@ -231,7 +231,7 @@ func templateNameAndVersion(name string) (string, string) {
 
 func catalogInstall(ctx *cli.Context) error {
 	if len(ctx.Args()) != 1 {
-		return errors.New("Exactly one arguement is required")
+		return errors.New("Exactly one argument is required")
 	}
 
 	_, c, proj, cc, err := setupCatalogContext(ctx)
