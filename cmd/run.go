@@ -6,6 +6,7 @@ import (
 	"github.com/rancher/go-rancher/v2"
 
 	"github.com/urfave/cli"
+	"os"
 )
 
 /*
@@ -188,6 +189,10 @@ func RunCommand() cli.Command {
 				Name:  "label,l",
 				Usage: "Add label in the form of key=value",
 			},
+			cli.StringSliceFlag{
+				Name:  "env,e",
+				Usage: "Set one or more environment variable in the form of key=value, key=, and key",
+			},
 			cli.BoolFlag{
 				Name:  "pull",
 				Usage: "Always pull image on container start",
@@ -233,15 +238,16 @@ func serviceRun(ctx *cli.Context) error {
 		CapAdd:  ctx.StringSlice("cap-add"),
 		CapDrop: ctx.StringSlice("cap-drop"),
 		//CpuSet: ctx.String(""),
-		CpuShares:  ctx.Int64("cpu-shares"),
-		Devices:    ctx.StringSlice("device"),
-		Dns:        ctx.StringSlice("dns"),
-		DnsSearch:  ctx.StringSlice("dns-search"),
-		EntryPoint: ctx.StringSlice("entrypoint"),
-		Expose:     ctx.StringSlice("expose"),
-		Hostname:   ctx.String("hostname"),
-		ImageUuid:  "docker:" + ctx.Args()[0],
-		Labels:     map[string]interface{}{},
+		CpuShares:   ctx.Int64("cpu-shares"),
+		Devices:     ctx.StringSlice("device"),
+		Dns:         ctx.StringSlice("dns"),
+		DnsSearch:   ctx.StringSlice("dns-search"),
+		EntryPoint:  ctx.StringSlice("entrypoint"),
+		Expose:      ctx.StringSlice("expose"),
+		Hostname:    ctx.String("hostname"),
+		ImageUuid:   "docker:" + ctx.Args()[0],
+		Labels:      map[string]interface{}{},
+		Environment: map[string]interface{}{},
 		//LogConfig:
 		Memory:     ctx.Int64("memory"),
 		MemorySwap: ctx.Int64("memory-swap"),
@@ -283,6 +289,17 @@ func serviceRun(ctx *cli.Context) error {
 			value = parts[1]
 		}
 		launchConfig.Labels[parts[0]] = value
+	}
+
+	for _, env := range ctx.StringSlice("env") {
+		parts := strings.SplitN(env, "=", 2)
+		value := ""
+		if len(parts) > 1 {
+			value = parts[1]
+		} else if len(parts) == 1 {
+			value = os.Getenv(parts[0])
+		}
+		launchConfig.Environment[parts[0]] = value
 	}
 
 	if ctx.Bool("schedule-global") {
