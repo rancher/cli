@@ -3,9 +3,9 @@ package config
 import (
 	"sync"
 
-	"github.com/docker/libcompose/yaml"
 	legacyClient "github.com/rancher/go-rancher/client"
 	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/rancher-compose-executor/yaml"
 )
 
 // EnvironmentLookup defines methods to provides environment variable loading.
@@ -55,8 +55,8 @@ type ServiceConfigV1 struct {
 	Links             yaml.MaporColonSlice `yaml:"links,omitempty"`
 	LogDriver         string               `yaml:"log_driver,omitempty"`
 	MacAddress        string               `yaml:"mac_address,omitempty"`
-	MemLimit          yaml.StringorInt     `yaml:"mem_limit,omitempty"`
-	MemSwapLimit      yaml.StringorInt     `yaml:"memswap_limit,omitempty"`
+	MemLimit          yaml.MemStringorInt  `yaml:"mem_limit,omitempty"`
+	MemSwapLimit      yaml.MemStringorInt  `yaml:"memswap_limit,omitempty"`
 	MemSwappiness     yaml.StringorInt     `yaml:"mem_swappiness,omitempty"`
 	Name              string               `yaml:"name,omitempty"`
 	Net               string               `yaml:"net,omitempty"`
@@ -70,7 +70,7 @@ type ServiceConfigV1 struct {
 	Restart           string               `yaml:"restart,omitempty"`
 	ReadOnly          bool                 `yaml:"read_only,omitempty"`
 	Secrets           SecretReferences     `yaml:"secrets,omitempty"`
-	ShmSize           yaml.StringorInt     `yaml:"shm_size,omitempty"`
+	ShmSize           yaml.MemStringorInt  `yaml:"shm_size,omitempty"`
 	StdinOpen         bool                 `yaml:"stdin_open,omitempty"`
 	SecurityOpt       []string             `yaml:"security_opt,omitempty"`
 	StopSignal        string               `yaml:"stop_signal,omitempty"`
@@ -95,7 +95,7 @@ type ServiceConfigV1 struct {
 
 	Vcpu     yaml.StringorInt            `yaml:"vcpu,omitempty"`
 	Userdata string                      `yaml:"userdata,omitempty"`
-	Memory   yaml.StringorInt            `yaml:"memory,omitempty"`
+	Memory   yaml.MemStringorInt         `yaml:"memory,omitempty"`
 	Disks    []client.VirtualMachineDisk `yaml:"disks,omitempty"`
 
 	Type        string           `yaml:"type,omitempty"`
@@ -160,9 +160,9 @@ type ServiceConfig struct {
 	Links             yaml.MaporColonSlice `yaml:"links,omitempty"`
 	Logging           Log                  `yaml:"logging,omitempty"`
 	MacAddress        string               `yaml:"mac_address,omitempty"`
-	MemLimit          yaml.StringorInt     `yaml:"mem_limit,omitempty"`
-	MemReservation    yaml.StringorInt     `yaml:"mem_reservation,omitempty"`
-	MemSwapLimit      yaml.StringorInt     `yaml:"memswap_limit,omitempty"`
+	MemLimit          yaml.MemStringorInt  `yaml:"mem_limit,omitempty"`
+	MemReservation    yaml.MemStringorInt  `yaml:"mem_reservation,omitempty"`
+	MemSwapLimit      yaml.MemStringorInt  `yaml:"memswap_limit,omitempty"`
 	MemSwappiness     yaml.StringorInt     `yaml:"mem_swappiness,omitempty"`
 	NetworkMode       string               `yaml:"network_mode,omitempty"`
 	Networks          *yaml.Networks       `yaml:"networks,omitempty"`
@@ -173,7 +173,7 @@ type ServiceConfig struct {
 	Privileged        bool                 `yaml:"privileged,omitempty"`
 	Secrets           SecretReferences     `yaml:"secrets,omitempty"`
 	SecurityOpt       []string             `yaml:"security_opt,omitempty"`
-	ShmSize           yaml.StringorInt     `yaml:"shm_size,omitempty"`
+	ShmSize           yaml.MemStringorInt  `yaml:"shm_size,omitempty"`
 	StopSignal        string               `yaml:"stop_signal,omitempty"`
 	Sysctls           yaml.SliceorMap      `yaml:"sysctls,omitempty"`
 	Tmpfs             yaml.Stringorslice   `yaml:"tmpfs,omitempty"`
@@ -200,7 +200,7 @@ type RancherConfig struct {
 
 	Vcpu     yaml.StringorInt            `yaml:"vcpu,omitempty"`
 	Userdata string                      `yaml:"userdata,omitempty"`
-	Memory   yaml.StringorInt            `yaml:"memory,omitempty"`
+	Memory   yaml.MemStringorInt         `yaml:"memory,omitempty"`
 	Disks    []client.VirtualMachineDisk `yaml:"disks,omitempty"`
 
 	Type        string                      `yaml:"type,omitempty"`

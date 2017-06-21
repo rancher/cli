@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/docker/libcompose/utils"
-	"github.com/docker/libcompose/yaml"
+	"github.com/rancher/rancher-compose-executor/yaml"
 )
 
 // ConvertServices converts a set of v1 service configs to v2 service configs
