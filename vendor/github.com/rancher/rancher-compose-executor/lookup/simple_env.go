@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/docker/libcompose/yaml"
 	"github.com/rancher/rancher-compose-executor/config"
+	"github.com/rancher/rancher-compose-executor/yaml"
 )
 
 // OsEnvLookup is a "bare" structure that implements the project.EnvironmentLookup interface

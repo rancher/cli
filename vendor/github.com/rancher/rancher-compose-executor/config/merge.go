@@ -8,10 +8,10 @@ import (
 
 	"github.com/docker/docker/pkg/urlutil"
 	"github.com/docker/libcompose/utils"
-	composeYaml "github.com/docker/libcompose/yaml"
 	"github.com/fatih/structs"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/rancher-compose-executor/template"
+	composeYaml "github.com/rancher/rancher-compose-executor/yaml"
 	"gopkg.in/yaml.v2"
 )
 
