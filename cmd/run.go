@@ -6,6 +6,7 @@ import (
 	"github.com/rancher/go-rancher/v2"
 
 	"github.com/urfave/cli"
+	"os"
 )
 
 /*
@@ -190,7 +191,7 @@ func RunCommand() cli.Command {
 			},
 			cli.StringSliceFlag{
 				Name:  "env,e",
-				Usage: "Add environment variable in the form of key=value",
+				Usage: "Set one or more environment variable in the form of key=value, key=, and key",
 			},
 			cli.BoolFlag{
 				Name:  "pull",
@@ -295,6 +296,8 @@ func serviceRun(ctx *cli.Context) error {
 		value := ""
 		if len(parts) > 1 {
 			value = parts[1]
+		} else if len(parts) == 1 {
+			value = os.Getenv(parts[0])
 		}
 		launchConfig.Environment[parts[0]] = value
 	}
