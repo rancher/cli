@@ -5,6 +5,7 @@ import (
 
 	"github.com/rancher/go-rancher/v2"
 
+	"fmt"
 	"github.com/urfave/cli"
 	"os"
 )
@@ -294,8 +295,14 @@ func serviceRun(ctx *cli.Context) error {
 	for _, env := range ctx.StringSlice("env") {
 		parts := strings.SplitN(env, "=", 2)
 		value := ""
+
 		if len(parts) > 1 {
 			value = parts[1]
+
+			if parts[0] == "" {
+				errMsg := fmt.Sprintf("invalid argument \"%s\" for e: invalid environment variable: %s\nSee 'rancher run --help'.", env, env)
+				return cli.NewExitError(errMsg, 1)
+			}
 		} else if len(parts) == 1 {
 			value = os.Getenv(parts[0])
 		}
