@@ -55,14 +55,20 @@ func (c Config) EnvironmentURL() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		projectID = project.Id
+		if project != nil {
+			projectID = project.Id
+		}
 	}
 
 	url, err := baseURL(c.URL)
 	if err != nil {
 		return "", err
 	}
-	url = url + "/v2-beta/projects/" + projectID + "/schemas"
+	if projectID == "" || projectID == "ALL" {
+		url = url + "/v2-beta/schemas"
+	} else {
+		url = url + "/v2-beta/projects/" + projectID + "/schemas"
+	}
 	return url, nil
 }
 

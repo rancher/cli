@@ -111,8 +111,12 @@ func GetEnvironment(def string, c *client.RancherClient) (*client.Project, error
 		for _, p := range resp.Data {
 			names = append(names, fmt.Sprintf("%s(%s)", p.Name, p.Id))
 		}
+		names = append(names, "ALL")
 
 		idx := selectFromList("Environments:", names)
+		if idx == len(resp.Data) {
+			return nil, nil
+		}
 		return &resp.Data[idx], nil
 	}
 
@@ -120,6 +124,9 @@ func GetEnvironment(def string, c *client.RancherClient) (*client.Project, error
 }
 
 func LookupEnvironment(c *client.RancherClient, name string) (*client.Project, error) {
+	if name == "ALL" {
+		return nil, nil
+	}
 	env, err := Lookup(c, name, "account")
 	if err != nil {
 		return nil, err
