@@ -21,7 +21,7 @@ func StackCommand() cli.Command {
 		},
 		cli.StringFlag{
 			Name:  "format",
-			Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+			Usage: "'json' or Custom format: '{{.ID}} {{.Stack.Name}}'",
 		},
 	}
 

@@ -21,7 +21,7 @@ func EventsCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "format",
-				Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+				Usage: "'json' or Custom format: '{{.Name}} {{.Data.resource.kind}}'",
 			},
 			cli.BoolFlag{
 				Name:  "reconnect,r",
