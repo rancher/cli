@@ -127,6 +127,19 @@ Example:
 				Action:    envActivate,
 				Flags:     []cli.Flag{},
 			},
+			cli.Command{
+				Name:  "select",
+				Usage: "Select environment",
+				Description: `
+Interactively select an environment
+
+Example:
+	$ rancher env select
+`,
+				ArgsUsage: "None",
+				Action:    envSelect,
+				Flags:     []cli.Flag{},
+			},
 		},
 	}
 }
@@ -364,4 +377,46 @@ func envTemplateExport(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+func envSelect(ctx *cli.Context) error {
+	config, err := lookupConfig(ctx)
+	if err != nil && err != errNoURL {
+		return err
+	}
+
+	c, err := client.NewRancherClient(&client.ClientOpts{
+		Url:       config.URL,
+		AccessKey: config.AccessKey,
+		SecretKey: config.SecretKey,
+	})
+	if err != nil {
+		return err
+	}
+
+	if schema, ok := c.GetSchemas().CheckSchema("schema"); ok {
+		// Normalize URL
+		config.URL = schema.Links["collection"]
+	} else {
+		return fmt.Errorf("Failed to find schema URL")
+	}
+
+	c, err = client.NewRancherClient(&client.ClientOpts{
+		Url:       config.URL,
+		AccessKey: config.AccessKey,
+		SecretKey: config.SecretKey,
+	})
+	if err != nil {
+		return err
+	}
+
+	project, err := GetEnvironment("", c)
+	if err != errNoEnv {
+		if err != nil {
+			return err
+		}
+		config.Environment = project.Id
+	}
+
+	return config.Write()
 }
