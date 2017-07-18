@@ -29,7 +29,7 @@ func PsCommand() cli.Command {
 			},
 			cli.StringFlag{
 				Name:  "format",
-				Usage: "'json' or Custom format: {{.Id}} {{.Name}}",
+				Usage: "'json' or Custom format: '{{.Service.Id}} {{.Service.Name}} {{.Service.LaunchConfig.ImageUuid}}'",
 			},
 		},
 	}
