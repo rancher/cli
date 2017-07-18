@@ -258,6 +258,7 @@ func Convert(c *config.ServiceConfig, ctx project.Context) (*container.Config, *
 		DNS:         utils.CopySlice(c.DNS),
 		DNSOptions:  utils.CopySlice(c.DNSOpt),
 		DNSSearch:   utils.CopySlice(c.DNSSearch),
+		Init:        &[]bool{c.Init}[0],
 		Isolation:   container.Isolation(c.Isolation),
 		LogConfig: container.LogConfig{
 			Type:   c.Logging.Driver,

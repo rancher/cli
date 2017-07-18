@@ -75,6 +75,7 @@ type ServiceConfigV1 struct {
 	SecurityOpt       []string             `yaml:"security_opt,omitempty"`
 	StopSignal        string               `yaml:"stop_signal,omitempty"`
 	Sysctls           yaml.SliceorMap      `yaml:"sysctls,omitempty"`
+	Init              bool                 `yaml:"init,omitempty"`
 	Tmpfs             yaml.Stringorslice   `yaml:"tmpfs,omitempty"`
 	Tty               bool                 `yaml:"tty,omitempty"`
 	User              string               `yaml:"user,omitempty"`
@@ -153,6 +154,7 @@ type ServiceConfig struct {
 	ExtraHosts        []string             `yaml:"extra_hosts,omitempty"`
 	GroupAdd          []string             `yaml:"group_add,omitempty"`
 	Image             string               `yaml:"image,omitempty"`
+	Init              bool                 `yaml:"init,omitempty"`
 	Isolation         string               `yaml:"isolation,omitempty"`
 	Hostname          string               `yaml:"hostname,omitempty"`
 	Ipc               string               `yaml:"ipc,omitempty"`

@@ -159,9 +159,10 @@ func (p *Project) CreateService(name string) (Service, error) {
 }
 
 func (p *Project) load(file string, bytes []byte) error {
-	config, err := config.Merge(p.ServiceConfigs, p.context.EnvironmentLookup, p.context.ResourceLookup, template.ReleaseInfo{
+	config, err := config.Merge(p.ServiceConfigs, p.context.EnvironmentLookup, p.context.ResourceLookup, template.StackInfo{
 		Version:         p.context.Version,
 		PreviousVersion: p.context.PreviousVersion,
+		Name:            p.Name,
 	}, file, bytes)
 	if err != nil {
 		log.Errorf("Could not parse config for project %s : %v", p.Name, err)
