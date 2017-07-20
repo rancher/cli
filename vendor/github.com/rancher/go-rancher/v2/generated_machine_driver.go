@@ -31,8 +31,6 @@ type MachineDriver struct {
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
-	SchemaVersion string `json:"schemaVersion,omitempty" yaml:"schema_version,omitempty"`
-
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
 	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
@@ -66,6 +64,8 @@ type MachineDriverOperations interface {
 	Delete(container *MachineDriver) error
 
 	ActionActivate(*MachineDriver) (*MachineDriver, error)
+
+	ActionCreate(*MachineDriver) (*MachineDriver, error)
 
 	ActionDeactivate(*MachineDriver) (*MachineDriver, error)
 
@@ -133,6 +133,15 @@ func (c *MachineDriverClient) ActionActivate(resource *MachineDriver) (*MachineD
 	resp := &MachineDriver{}
 
 	err := c.rancherClient.doAction(MACHINE_DRIVER_TYPE, "activate", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *MachineDriverClient) ActionCreate(resource *MachineDriver) (*MachineDriver, error) {
+
+	resp := &MachineDriver{}
+
+	err := c.rancherClient.doAction(MACHINE_DRIVER_TYPE, "create", &resource.Resource, nil, resp)
 
 	return resp, err
 }

@@ -73,8 +73,6 @@ type RegistryOperations interface {
 
 	ActionRemove(*Registry) (*StoragePool, error)
 
-	ActionRestore(*Registry) (*StoragePool, error)
-
 	ActionUpdate(*Registry) (*StoragePool, error)
 }
 
@@ -169,15 +167,6 @@ func (c *RegistryClient) ActionRemove(resource *Registry) (*StoragePool, error) 
 	resp := &StoragePool{}
 
 	err := c.rancherClient.doAction(REGISTRY_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *RegistryClient) ActionRestore(resource *Registry) (*StoragePool, error) {
-
-	resp := &StoragePool{}
-
-	err := c.rancherClient.doAction(REGISTRY_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

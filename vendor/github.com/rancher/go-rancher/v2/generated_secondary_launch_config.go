@@ -107,6 +107,8 @@ type SecondaryLaunchConfig struct {
 
 	ImageUuid string `json:"imageUuid,omitempty" yaml:"image_uuid,omitempty"`
 
+	RunInit bool `json:"runInit,omitempty" yaml:"runInit,omitempty"`
+
 	InstanceLinks map[string]interface{} `json:"instanceLinks,omitempty" yaml:"instance_links,omitempty"`
 
 	InstanceTriggeredStop string `json:"instanceTriggeredStop,omitempty" yaml:"instance_triggered_stop,omitempty"`
@@ -293,8 +295,6 @@ type SecondaryLaunchConfigOperations interface {
 
 	ActionRestart(*SecondaryLaunchConfig) (*Instance, error)
 
-	ActionRestore(*SecondaryLaunchConfig) (*Instance, error)
-
 	ActionStart(*SecondaryLaunchConfig) (*Instance, error)
 
 	ActionStop(*SecondaryLaunchConfig, *InstanceStop) (*Instance, error)
@@ -453,15 +453,6 @@ func (c *SecondaryLaunchConfigClient) ActionRestart(resource *SecondaryLaunchCon
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(SECONDARY_LAUNCH_CONFIG_TYPE, "restart", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *SecondaryLaunchConfigClient) ActionRestore(resource *SecondaryLaunchConfig) (*Instance, error) {
-
-	resp := &Instance{}
-
-	err := c.rancherClient.doAction(SECONDARY_LAUNCH_CONFIG_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

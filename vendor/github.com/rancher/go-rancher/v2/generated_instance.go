@@ -73,8 +73,6 @@ type InstanceOperations interface {
 
 	ActionRestart(*Instance) (*Instance, error)
 
-	ActionRestore(*Instance) (*Instance, error)
-
 	ActionStart(*Instance) (*Instance, error)
 
 	ActionStop(*Instance, *InstanceStop) (*Instance, error)
@@ -215,15 +213,6 @@ func (c *InstanceClient) ActionRestart(resource *Instance) (*Instance, error) {
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(INSTANCE_TYPE, "restart", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *InstanceClient) ActionRestore(resource *Instance) (*Instance, error) {
-
-	resp := &Instance{}
-
-	err := c.rancherClient.doAction(INSTANCE_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

@@ -87,6 +87,8 @@ type VirtualMachine struct {
 
 	ImageUuid string `json:"imageUuid,omitempty" yaml:"image_uuid,omitempty"`
 
+	RunInit bool `json:"runInit,omitempty" yaml:"runInit,omitempty"`
+
 	InstanceLinks map[string]interface{} `json:"instanceLinks,omitempty" yaml:"instance_links,omitempty"`
 
 	InstanceTriggeredStop string `json:"instanceTriggeredStop,omitempty" yaml:"instance_triggered_stop,omitempty"`
@@ -250,8 +252,6 @@ type VirtualMachineOperations interface {
 	ActionRemove(*VirtualMachine) (*Instance, error)
 
 	ActionRestart(*VirtualMachine) (*Instance, error)
-
-	ActionRestore(*VirtualMachine) (*Instance, error)
 
 	ActionStart(*VirtualMachine) (*Instance, error)
 
@@ -420,15 +420,6 @@ func (c *VirtualMachineClient) ActionRestart(resource *VirtualMachine) (*Instanc
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(VIRTUAL_MACHINE_TYPE, "restart", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *VirtualMachineClient) ActionRestore(resource *VirtualMachine) (*Instance, error) {
-
-	resp := &Instance{}
-
-	err := c.rancherClient.doAction(VIRTUAL_MACHINE_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

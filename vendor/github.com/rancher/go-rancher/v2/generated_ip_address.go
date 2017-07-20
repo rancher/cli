@@ -69,8 +69,6 @@ type IpAddressOperations interface {
 
 	ActionRemove(*IpAddress) (*IpAddress, error)
 
-	ActionRestore(*IpAddress) (*IpAddress, error)
-
 	ActionUpdate(*IpAddress) (*IpAddress, error)
 }
 
@@ -183,15 +181,6 @@ func (c *IpAddressClient) ActionRemove(resource *IpAddress) (*IpAddress, error) 
 	resp := &IpAddress{}
 
 	err := c.rancherClient.doAction(IP_ADDRESS_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *IpAddressClient) ActionRestore(resource *IpAddress) (*IpAddress, error) {
-
-	resp := &IpAddress{}
-
-	err := c.rancherClient.doAction(IP_ADDRESS_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

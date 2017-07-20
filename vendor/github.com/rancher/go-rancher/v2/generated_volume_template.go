@@ -71,8 +71,6 @@ type VolumeTemplateOperations interface {
 
 	ActionRemove(*VolumeTemplate) (*VolumeTemplate, error)
 
-	ActionRestore(*VolumeTemplate) (*VolumeTemplate, error)
-
 	ActionUpdate(*VolumeTemplate) (*VolumeTemplate, error)
 }
 
@@ -167,15 +165,6 @@ func (c *VolumeTemplateClient) ActionRemove(resource *VolumeTemplate) (*VolumeTe
 	resp := &VolumeTemplate{}
 
 	err := c.rancherClient.doAction(VOLUME_TEMPLATE_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *VolumeTemplateClient) ActionRestore(resource *VolumeTemplate) (*VolumeTemplate, error) {
-
-	resp := &VolumeTemplate{}
-
-	err := c.rancherClient.doAction(VOLUME_TEMPLATE_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

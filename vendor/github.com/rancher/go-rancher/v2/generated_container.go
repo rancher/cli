@@ -103,6 +103,8 @@ type Container struct {
 
 	ImageUuid string `json:"imageUuid,omitempty" yaml:"image_uuid,omitempty"`
 
+	RunInit bool `json:"runInit,omitempty" yaml:"runInit,omitempty"`
+
 	InstanceLinks map[string]interface{} `json:"instanceLinks,omitempty" yaml:"instance_links,omitempty"`
 
 	InstanceTriggeredStop string `json:"instanceTriggeredStop,omitempty" yaml:"instance_triggered_stop,omitempty"`
@@ -283,8 +285,6 @@ type ContainerOperations interface {
 
 	ActionRestart(*Container) (*Instance, error)
 
-	ActionRestore(*Container) (*Instance, error)
-
 	ActionStart(*Container) (*Instance, error)
 
 	ActionStop(*Container, *InstanceStop) (*Instance, error)
@@ -452,15 +452,6 @@ func (c *ContainerClient) ActionRestart(resource *Container) (*Instance, error) 
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(CONTAINER_TYPE, "restart", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *ContainerClient) ActionRestore(resource *Container) (*Instance, error) {
-
-	resp := &Instance{}
-
-	err := c.rancherClient.doAction(CONTAINER_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

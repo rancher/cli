@@ -59,8 +59,6 @@ type ExternalHandlerProcessOperations interface {
 
 	ActionRemove(*ExternalHandlerProcess) (*ExternalHandlerProcess, error)
 
-	ActionRestore(*ExternalHandlerProcess) (*ExternalHandlerProcess, error)
-
 	ActionUpdate(*ExternalHandlerProcess) (*ExternalHandlerProcess, error)
 }
 
@@ -155,15 +153,6 @@ func (c *ExternalHandlerProcessClient) ActionRemove(resource *ExternalHandlerPro
 	resp := &ExternalHandlerProcess{}
 
 	err := c.rancherClient.doAction(EXTERNAL_HANDLER_PROCESS_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *ExternalHandlerProcessClient) ActionRestore(resource *ExternalHandlerProcess) (*ExternalHandlerProcess, error) {
-
-	resp := &ExternalHandlerProcess{}
-
-	err := c.rancherClient.doAction(EXTERNAL_HANDLER_PROCESS_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }
