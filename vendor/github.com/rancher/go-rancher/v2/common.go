@@ -131,10 +131,10 @@ func appendFilters(urlString string, filters map[string]interface{}) (string, er
 	return u.String(), nil
 }
 
-func setupRancherBaseClient(rancherClient *RancherBaseClientImpl, opts *ClientOpts) error {
-	u, err := url.Parse(opts.Url)
+func NormalizeUrl(existingUrl string) (string, error) {
+	u, err := url.Parse(existingUrl)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if u.Path == "" || u.Path == "/" {
@@ -142,7 +142,16 @@ func setupRancherBaseClient(rancherClient *RancherBaseClientImpl, opts *ClientOp
 	} else if u.Path == "/v1" || strings.HasPrefix(u.Path, "/v1/") {
 		u.Path = strings.Replace(u.Path, "/v1", "/v2-beta", 1)
 	}
-	opts.Url = u.String()
+
+	return u.String(), nil
+}
+
+func setupRancherBaseClient(rancherClient *RancherBaseClientImpl, opts *ClientOpts) error {
+	var err error
+	opts.Url, err = NormalizeUrl(opts.Url)
+	if err != nil {
+		return err
+	}
 
 	if opts.Timeout == 0 {
 		opts.Timeout = time.Second * 10

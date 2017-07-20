@@ -67,8 +67,6 @@ type ExternalHandlerExternalHandlerProcessMapOperations interface {
 
 	ActionRemove(*ExternalHandlerExternalHandlerProcessMap) (*ExternalHandlerExternalHandlerProcessMap, error)
 
-	ActionRestore(*ExternalHandlerExternalHandlerProcessMap) (*ExternalHandlerExternalHandlerProcessMap, error)
-
 	ActionUpdate(*ExternalHandlerExternalHandlerProcessMap) (*ExternalHandlerExternalHandlerProcessMap, error)
 }
 
@@ -163,15 +161,6 @@ func (c *ExternalHandlerExternalHandlerProcessMapClient) ActionRemove(resource *
 	resp := &ExternalHandlerExternalHandlerProcessMap{}
 
 	err := c.rancherClient.doAction(EXTERNAL_HANDLER_EXTERNAL_HANDLER_PROCESS_MAP_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *ExternalHandlerExternalHandlerProcessMapClient) ActionRestore(resource *ExternalHandlerExternalHandlerProcessMap) (*ExternalHandlerExternalHandlerProcessMap, error) {
-
-	resp := &ExternalHandlerExternalHandlerProcessMap{}
-
-	err := c.rancherClient.doAction(EXTERNAL_HANDLER_EXTERNAL_HANDLER_PROCESS_MAP_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

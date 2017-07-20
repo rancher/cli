@@ -23,8 +23,6 @@ type TemplateVersion struct {
 
 	Questions []Question `json:"questions,omitempty" yaml:"questions,omitempty"`
 
-	Revision int64 `json:"revision,omitempty" yaml:"revision,omitempty"`
-
 	TemplateId string `json:"templateId,omitempty" yaml:"template_id,omitempty"`
 
 	Type string `json:"type,omitempty" yaml:"type,omitempty"`
