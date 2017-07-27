@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/go-connections/nat"
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -66,10 +67,25 @@ func parseValidTypesFromSchema(schema map[string]interface{}, context string) []
 	contextSplit := strings.Split(context, ".")
 	key := contextSplit[len(contextSplit)-1]
 
-	definitions := schema["definitions"].(map[string]interface{})
-	service := definitions["service"].(map[string]interface{})
-	properties := service["properties"].(map[string]interface{})
-	property := properties[key].(map[string]interface{})
+	definitions := make(map[string]interface{})
+	if _, ok := schema["definitions"]; ok {
+		definitions = schema["definitions"].(map[string]interface{})
+	}
+
+	service := make(map[string]interface{})
+	if _, ok := definitions["service"]; ok {
+		service = definitions["service"].(map[string]interface{})
+	}
+
+	properties := make(map[string]interface{})
+	if _, ok := service["properties"]; ok {
+		properties = service["properties"].(map[string]interface{})
+	}
+
+	property := make(map[string]interface{})
+	if _, ok := properties[key]; ok {
+		property = properties[key].(map[string]interface{})
+	}
 
 	var validTypes []string
 
@@ -78,9 +94,12 @@ func parseValidTypesFromSchema(schema map[string]interface{}, context string) []
 
 		for _, validCondition := range validConditions {
 			condition := validCondition.(map[string]interface{})
-			validTypes = append(validTypes, condition["type"].(string))
+			if _, ok := condition["type"]; ok {
+				validTypes = append(validTypes, condition["type"].(string))
+			}
 		}
 	} else if val, ok := property["$ref"]; ok {
+		logrus.Infof("REFERENCE %v\n", property["$ref"])
 		reference := val.(string)
 		if reference == "#/definitions/string_or_list" {
 			return []string{"string", "array"}
@@ -88,6 +107,32 @@ func parseValidTypesFromSchema(schema map[string]interface{}, context string) []
 			return []string{"array"}
 		} else if reference == "#/definitions/list_or_dict" {
 			return []string{"array", "object"}
+		}
+	}
+
+	// specifically address schema for 'secrets'
+	if _, ok := property["oneOf"]; !ok {
+		key = contextSplit[len(contextSplit)-2]
+
+		property := make(map[string]interface{})
+		if _, ok := properties[key]; ok {
+			property = properties[key].(map[string]interface{})
+		}
+
+		items := make(map[string]interface{})
+		if _, ok := property["items"]; ok {
+			items = property["items"].(map[string]interface{})
+		}
+
+		if val, ok := items["oneOf"]; ok {
+			validConditions := val.([]interface{})
+
+			for _, validCondition := range validConditions {
+				condition := validCondition.(map[string]interface{})
+				if _, ok := condition["type"]; ok {
+					validTypes = append(validTypes, condition["type"].(string))
+				}
+			}
 		}
 	}
 
