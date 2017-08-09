@@ -36,6 +36,7 @@ type Run struct {
 // Up holds options of compose up.
 type Up struct {
 	Create
+	Waiter Waiter
 }
 
 // ImageType defines the type of image (local, all)

@@ -13,6 +13,7 @@ import (
 	"github.com/rancher/rancher-compose-executor/config"
 	"github.com/rancher/rancher-compose-executor/lookup"
 	"github.com/rancher/rancher-compose-executor/project/events"
+	"github.com/rancher/rancher-compose-executor/project/options"
 	"github.com/rancher/rancher-compose-executor/template"
 )
 
@@ -262,10 +263,10 @@ func (p *Project) loadWrappers(wrappers map[string]*serviceWrapper, servicesToCo
 	return nil
 }
 
-func (p *Project) perform(start, done events.EventType, services []string, action wrapperAction, cycleAction serviceAction) error {
+func (p *Project) perform(waiter options.Waiter, start, done events.EventType, services []string, action wrapperAction, cycleAction serviceAction) error {
 	p.Notify(start, "", nil)
 
-	err := p.forEach(services, action, cycleAction)
+	err := p.forEach(waiter, services, action, cycleAction)
 
 	p.Notify(done, "", nil)
 	return err
@@ -275,7 +276,7 @@ func isSelected(wrapper *serviceWrapper, selected map[string]bool) bool {
 	return len(selected) == 0 || selected[wrapper.name]
 }
 
-func (p *Project) forEach(services []string, action wrapperAction, cycleAction serviceAction) error {
+func (p *Project) forEach(waiter options.Waiter, services []string, action wrapperAction, cycleAction serviceAction) error {
 	selected := make(map[string]bool)
 	wrappers := make(map[string]*serviceWrapper)
 
@@ -283,7 +284,7 @@ func (p *Project) forEach(services []string, action wrapperAction, cycleAction s
 		selected[s] = true
 	}
 
-	return p.traverse(true, selected, wrappers, action, cycleAction)
+	return p.traverse(waiter, true, selected, wrappers, action, cycleAction)
 }
 
 func (p *Project) startService(wrappers map[string]*serviceWrapper, history []string, selected, launched map[string]bool, wrapper *serviceWrapper, action wrapperAction, cycleAction serviceAction) error {
@@ -337,7 +338,7 @@ func (p *Project) startService(wrappers map[string]*serviceWrapper, history []st
 	return nil
 }
 
-func (p *Project) traverse(start bool, selected map[string]bool, wrappers map[string]*serviceWrapper, action wrapperAction, cycleAction serviceAction) error {
+func (p *Project) traverse(waiter options.Waiter, start bool, selected map[string]bool, wrappers map[string]*serviceWrapper, action wrapperAction, cycleAction serviceAction) error {
 	restart := false
 	wrapperList := []string{}
 
@@ -381,6 +382,11 @@ func (p *Project) traverse(start bool, selected map[string]bool, wrappers map[st
 		if !isSelected(wrapper, selected) {
 			continue
 		}
+
+		if id := wrapper.service.ID(); id != "" && waiter != nil {
+			waiter.Add(id)
+		}
+
 		if err := wrapper.Wait(); err == ErrRestart {
 			restart = true
 		} else if err != nil {
@@ -391,13 +397,16 @@ func (p *Project) traverse(start bool, selected map[string]bool, wrappers map[st
 		}
 	}
 
+	if waiter != nil {
+		waiter.Wait()
+	}
 	if restart {
 		if p.ReloadCallback != nil {
 			if err := p.ReloadCallback(); err != nil {
 				log.Errorf("Failed calling callback: %v", err)
 			}
 		}
-		return p.traverse(false, selected, wrappers, action, cycleAction)
+		return p.traverse(waiter, false, selected, wrappers, action, cycleAction)
 	}
 	return firstError
 }
