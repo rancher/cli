@@ -19,6 +19,7 @@ type Service interface {
 	DependentServices() []ServiceRelationship
 	Config() *config.ServiceConfig
 	Name() string
+	ID() string
 }
 
 // ServiceState holds the state of a service.

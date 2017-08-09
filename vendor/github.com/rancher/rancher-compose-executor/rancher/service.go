@@ -53,6 +53,15 @@ func (r *RancherService) Context() *Context {
 	return r.context
 }
 
+func (r *RancherService) ID() string {
+	service, err := r.FindExisting(r.name)
+	if err != nil || service == nil {
+		return ""
+	}
+
+	return service.Id
+}
+
 func NewService(name string, config *config.ServiceConfig, context *Context) *RancherService {
 	return &RancherService{
 		name:          name,

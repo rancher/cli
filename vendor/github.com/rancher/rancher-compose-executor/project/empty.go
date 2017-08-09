@@ -49,3 +49,7 @@ func (e *EmptyService) Config() *config.ServiceConfig {
 func (e *EmptyService) Name() string {
 	return ""
 }
+
+func (e *EmptyService) ID() string {
+	return ""
+}

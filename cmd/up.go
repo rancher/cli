@@ -29,7 +29,19 @@ func UpCommand() cli.Command {
 			Usage: "Specify an alternate project name (default: directory name)",
 		},
 	}...)
+
+	cmd.Action = app.WithProject(factory, ProjectUp)
+
 	return cmd
+}
+
+func ProjectUp(p *project.Project, c *cli.Context) error {
+	w, err := NewWaiter(c)
+	if err != nil {
+		return err
+	}
+
+	return app.ProjectUpAndWait(p, w, c)
 }
 
 type projectFactory struct {

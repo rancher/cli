@@ -8,6 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/cli/monitor"
 	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/rancher-compose-executor/project/options"
 	"github.com/urfave/cli"
 )
 
@@ -55,10 +56,15 @@ func NewWaiter(ctx *cli.Context) (*Waiter, error) {
 		return nil, err
 	}
 
+	waitState := ctx.GlobalString("wait-state")
+	if waitState == "" {
+		waitState = "active"
+	}
+
 	return &Waiter{
 		enabled: ctx.GlobalBool("wait"),
 		timeout: ctx.GlobalInt("wait-timeout"),
-		state:   ctx.GlobalString("wait-state"),
+		state:   waitState,
 		client:  client,
 	}, nil
 }
@@ -88,7 +94,7 @@ func (r ResourceID) Type() string {
 	return str[:strings.Index(str, ":")]
 }
 
-func (w *Waiter) Add(resources ...string) *Waiter {
+func (w *Waiter) Add(resources ...string) options.Waiter {
 	for _, resource := range resources {
 		fmt.Println(resource)
 		w.resources = append(w.resources, resource)
@@ -130,11 +136,7 @@ func (w *Waiter) checkDone(resourceType, id string, data map[string]interface{})
 		return true, nil
 	}
 
-	if w.state == "healthy" {
-		return data["healthState"] == w.state, nil
-	}
-
-	return data["state"] == w.state, nil
+	return (data["state"] == w.state || data["healthState"] == w.state), nil
 }
 
 func (w *Waiter) Wait() error {

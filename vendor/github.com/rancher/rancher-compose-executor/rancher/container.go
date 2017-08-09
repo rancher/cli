@@ -17,6 +17,10 @@ type RancherContainer struct {
 	context       *Context
 }
 
+func (r *RancherContainer) ID() string {
+	return ""
+}
+
 func (r *RancherContainer) Name() string {
 	return r.name
 }

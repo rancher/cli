@@ -180,6 +180,10 @@ func ProjectCreate(p *project.Project, c *cli.Context) error {
 }
 
 func ProjectUp(p *project.Project, c *cli.Context) error {
+	return ProjectUpAndWait(p, nil, c)
+}
+
+func ProjectUpAndWait(p *project.Project, waiter options.Waiter, c *cli.Context) error {
 	if c.Bool("render") {
 		renderedComposeBytes, err := p.Render()
 		if err != nil {
@@ -195,7 +199,9 @@ func ProjectUp(p *project.Project, c *cli.Context) error {
 		return err
 	}
 
-	if err := p.Up(context.Background(), options.Up{}, c.Args()...); err != nil {
+	if err := p.Up(context.Background(), options.Up{
+		Waiter: waiter,
+	}, c.Args()...); err != nil {
 		return err
 	}
 

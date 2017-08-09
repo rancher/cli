@@ -11,7 +11,7 @@ import (
 )
 
 func (p *Project) Build(ctx context.Context, buildOptions options.Build, services ...string) error {
-	return p.perform(events.ProjectBuildStart, events.ProjectBuildDone, services, wrapperAction(func(wrapper *serviceWrapper, wrappers map[string]*serviceWrapper) {
+	return p.perform(nil, events.ProjectBuildStart, events.ProjectBuildDone, services, wrapperAction(func(wrapper *serviceWrapper, wrappers map[string]*serviceWrapper) {
 		wrapper.Do(wrappers, events.ServiceBuildStart, events.ServiceBuild, func(service Service) error {
 			return service.Build(ctx, buildOptions)
 		})
@@ -25,7 +25,7 @@ func (p *Project) Create(ctx context.Context, options options.Create, services .
 	if err := p.initialize(ctx); err != nil {
 		return err
 	}
-	return p.perform(events.ProjectCreateStart, events.ProjectCreateDone, services, wrapperAction(func(wrapper *serviceWrapper, wrappers map[string]*serviceWrapper) {
+	return p.perform(nil, events.ProjectCreateStart, events.ProjectCreateDone, services, wrapperAction(func(wrapper *serviceWrapper, wrappers map[string]*serviceWrapper) {
 		wrapper.Do(wrappers, events.ServiceCreateStart, events.ServiceCreate, func(service Service) error {
 			return service.Create(ctx, options)
 		})
@@ -33,7 +33,7 @@ func (p *Project) Create(ctx context.Context, options options.Create, services .
 }
 
 func (p *Project) Log(ctx context.Context, follow bool, services ...string) error {
-	return p.forEach(services, wrapperAction(func(wrapper *serviceWrapper, wrappers map[string]*serviceWrapper) {
+	return p.forEach(nil, services, wrapperAction(func(wrapper *serviceWrapper, wrappers map[string]*serviceWrapper) {
 		wrapper.Do(nil, events.NoEvent, events.NoEvent, func(service Service) error {
 			return service.Log(ctx, follow)
 		})
@@ -41,10 +41,11 @@ func (p *Project) Log(ctx context.Context, follow bool, services ...string) erro
 }
 
 func (p *Project) Up(ctx context.Context, options options.Up, services ...string) error {
+
 	if err := p.initialize(ctx); err != nil {
 		return err
 	}
-	return p.perform(events.ProjectUpStart, events.ProjectUpDone, services, wrapperAction(func(wrapper *serviceWrapper, wrappers map[string]*serviceWrapper) {
+	return p.perform(options.Waiter, events.ProjectUpStart, events.ProjectUpDone, services, wrapperAction(func(wrapper *serviceWrapper, wrappers map[string]*serviceWrapper) {
 		wrapper.Do(wrappers, events.ServiceUpStart, events.ServiceUp, func(service Service) error {
 			return service.Up(ctx, options)
 		})
