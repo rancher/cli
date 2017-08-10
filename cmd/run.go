@@ -6,8 +6,9 @@ import (
 	"github.com/rancher/go-rancher/v2"
 
 	"fmt"
-	"github.com/urfave/cli"
 	"os"
+
+	"github.com/urfave/cli"
 )
 
 /*
@@ -69,6 +70,14 @@ func RunCommand() cli.Command {
 		Action: serviceRun,
 		Flags: []cli.Flag{
 			cli.Int64Flag{
+				Name:  "blkio-weight",
+				Usage: "Block IO (relative weight), between 10 and 1000, or 0 to disable (default 0)",
+			},
+			cli.Int64Flag{
+				Name:  "cpu-quota",
+				Usage: "Limit CPU CFS (Completely Fair Scheduler) quota",
+			},
+			cli.Int64Flag{
 				Name:  "cpu-shares",
 				Usage: "CPU shares (relative weight)",
 			},
@@ -80,6 +89,18 @@ func RunCommand() cli.Command {
 				Name:  "cap-drop",
 				Usage: "Drop Linux capabilities",
 			},
+			cli.StringFlag{
+				Name:  "cgroup-parent",
+				Usage: "Optional parent cgroup for the container",
+			},
+			cli.Int64Flag{
+				Name:  "cpu-period",
+				Usage: "Limit CPU CFS (Completely Fair Scheduler) period",
+			},
+			cli.StringFlag{
+				Name:  "cpuset-mems",
+				Usage: "MEMs in which to allow execution (0-3, 0,1)",
+			},
 			cli.StringSliceFlag{
 				Name:  "device",
 				Usage: "Add a host device to the container",
@@ -87,6 +108,10 @@ func RunCommand() cli.Command {
 			cli.StringSliceFlag{
 				Name:  "dns",
 				Usage: "Set custom DNS servers",
+			},
+			cli.StringSliceFlag{
+				Name:  "dns-opt, dns-option",
+				Usage: "Set DNS options",
 			},
 			cli.StringSliceFlag{
 				Name:  "dns-search",
@@ -100,28 +125,92 @@ func RunCommand() cli.Command {
 				Name:  "expose",
 				Usage: "Expose a port or a range of ports",
 			},
+			cli.StringSliceFlag{
+				Name:  "group-add",
+				Usage: "Add additional groups to join",
+			},
+			cli.StringSliceFlag{
+				Name:  "health-cmd",
+				Usage: "Command to run to check health",
+			},
+			cli.Int64Flag{
+				Name:  "health-interval",
+				Usage: "Time between running the check (ms|s|m|h) (default 0s)",
+			},
+			cli.Int64Flag{
+				Name:  "health-retries",
+				Usage: "Consecutive failures needed to report unhealthy",
+			},
+			cli.Int64Flag{
+				Name:  "health-timeout",
+				Usage: "Maximum time to allow one check to run (ms|s|m|h) (default 0s)",
+			},
 			cli.StringFlag{
 				Name:  "hostname",
 				Usage: "Container host name",
 			},
 			cli.BoolFlag{
+				Name:  "init",
+				Usage: "Run an init inside the container that forwards signals and reaps processes",
+			},
+			cli.BoolFlag{
 				Name:  "interactive, i",
 				Usage: "Keep STDIN open even if not attached",
+			},
+			cli.StringFlag{
+				Name:  "ip",
+				Usage: "IPv4 address (e.g., 172.30.100.104)",
+			},
+			cli.StringFlag{
+				Name:  "ip6",
+				Usage: "IPv6 address (e.g., 2001:db8::33)",
+			},
+			cli.StringFlag{
+				Name:  "ipc",
+				Usage: "IPC namespace to use",
+			},
+			cli.StringFlag{
+				Name:  "isolation",
+				Usage: "Container isolation technology",
+			},
+			cli.Int64Flag{
+				Name:  "kernel-memory",
+				Usage: "Kernel memory limit",
 			},
 			cli.Int64Flag{
 				Name:  "memory, m",
 				Usage: "Memory limit",
 			},
 			cli.Int64Flag{
+				Name:  "memory-reservation",
+				Usage: "Memory soft limit",
+			},
+			cli.Int64Flag{
 				Name:  "memory-swap",
 				Usage: "Swap limit equal to memory plus swap: '-1' to enable unlimited swap",
+			},
+			cli.Int64Flag{
+				Name:  "memory-swappiness",
+				Usage: "Tune container memory swappiness (0 to 100)",
 			},
 			cli.StringFlag{
 				Name:  "name",
 				Usage: "Assign a name to the container",
 			},
+			cli.StringSliceFlag{
+				Name:  "net-alias, network-alias",
+				Usage: "Add network-scoped alias for the container",
+			},
 			cli.BoolFlag{
-				Name:  "publish-all",
+				Name:  "oom-kill-disable",
+				Usage: "Disable OOM Killer",
+			},
+			cli.Int64Flag{
+				Name:  "oom-score-adj",
+				Usage: "Tune host’s OOM preferences (-1000 to 1000)",
+			},
+			cli.BoolFlag{
+				Name:  "publish-all, P",
 				Usage: "Publish all exposed ports to random ports",
 			},
 			cli.StringSliceFlag{
@@ -131,6 +220,10 @@ func RunCommand() cli.Command {
 			cli.StringFlag{
 				Name:  "pid",
 				Usage: "PID namespace to use",
+			},
+			cli.Int64Flag{
+				Name:  "pids-limit",
+				Usage: "Tune container pids limit (set -1 for unlimited)",
 			},
 			cli.BoolFlag{
 				Name:  "privileged",
@@ -143,6 +236,10 @@ func RunCommand() cli.Command {
 			cli.StringSliceFlag{
 				Name:  "security-opt",
 				Usage: "Security Options",
+			},
+			cli.Int64Flag{
+				Name:  "shm-size",
+				Usage: "Size of /dev/shm",
 			},
 			cli.BoolFlag{
 				Name:  "tty, t",
@@ -168,6 +265,10 @@ func RunCommand() cli.Command {
 				Name:  "log-opt",
 				Usage: "Log driver options",
 			},
+			cli.StringFlag{
+				Name:  "uts",
+				Usage: "UTS namespace to use",
+			},
 			cli.StringSliceFlag{
 				Name:  "volume, v",
 				Usage: "Bind mount a volume",
@@ -185,6 +286,10 @@ func RunCommand() cli.Command {
 			cli.BoolFlag{
 				Name:  "schedule-global",
 				Usage: "Run 1 container per host",
+			},
+			cli.StringFlag{
+				Name:  "stop-signal",
+				Usage: "Signal to stop a container",
 			},
 			cli.StringSliceFlag{
 				Name:  "label,l",
@@ -233,36 +338,61 @@ func serviceRun(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
 	launchConfig := &client.LaunchConfig{
 		//BlkioDeviceOptions:
-		CapAdd:  ctx.StringSlice("cap-add"),
-		CapDrop: ctx.StringSlice("cap-drop"),
+		BlkioWeight: ctx.Int64("blkio-weight"),
+		CapAdd:      ctx.StringSlice("cap-add"),
+		CapDrop:     ctx.StringSlice("cap-drop"),
 		//CpuSet: ctx.String(""),
-		CpuShares:   ctx.Int64("cpu-shares"),
-		Devices:     ctx.StringSlice("device"),
-		Dns:         ctx.StringSlice("dns"),
-		DnsSearch:   ctx.StringSlice("dns-search"),
-		EntryPoint:  ctx.StringSlice("entrypoint"),
-		Expose:      ctx.StringSlice("expose"),
-		Hostname:    ctx.String("hostname"),
-		ImageUuid:   "docker:" + ctx.Args()[0],
-		Labels:      map[string]interface{}{},
-		Environment: map[string]interface{}{},
+		CgroupParent:   ctx.String("cgroup-parent"),
+		CpuSetMems:     ctx.String("cpuset-mems"),
+		CpuPeriod:      ctx.Int64("cpu-period"),
+		CpuQuota:       ctx.Int64("cpu-quota"),
+		CpuShares:      ctx.Int64("cpu-shares"),
+		Devices:        ctx.StringSlice("device"),
+		Dns:            ctx.StringSlice("dns"),
+		DnsOpt:         ctx.StringSlice("dns-opt"),
+		DnsSearch:      ctx.StringSlice("dns-search"),
+		EntryPoint:     ctx.StringSlice("entrypoint"),
+		Expose:         ctx.StringSlice("expose"),
+		GroupAdd:       ctx.StringSlice("group-add"),
+		HealthCmd:      ctx.StringSlice("health-cmd"),
+		HealthTimeout:  ctx.Int64("health-timeout"),
+		HealthInterval: ctx.Int64("health-interval"),
+		HealthRetries:  ctx.Int64("health-retries"),
+		Hostname:       ctx.String("hostname"),
+		ImageUuid:      "docker:" + ctx.Args()[0],
+		Ip:             ctx.String("ip"),
+		Ip6:            ctx.String("ip6"),
+		IpcMode:        ctx.String("ipc"),
+		Isolation:      ctx.String("isolation"),
+		KernelMemory:   ctx.Int64("kernel-memory"),
+		Labels:         map[string]interface{}{},
+		Environment:    map[string]interface{}{},
 		//LogConfig:
-		Memory:     ctx.Int64("memory"),
-		MemorySwap: ctx.Int64("memory-swap"),
+		Memory:            ctx.Int64("memory"),
+		MemoryReservation: ctx.Int64("memory-reservation"),
+		MemorySwap:        ctx.Int64("memory-swap"),
+		MemorySwappiness:  ctx.Int64("memory-swappiness"),
 		//NetworkIds: ctx.StringSlice("networkids"),
+		NetAlias:        ctx.StringSlice("net-alias"),
 		NetworkMode:     ctx.String("net"),
+		OomKillDisable:  ctx.Bool("oom-kill-disable"),
+		OomScoreAdj:     ctx.Int64("oom-score-adj"),
 		PidMode:         ctx.String("pid"),
+		PidsLimit:       ctx.Int64("pids-limit"),
 		Ports:           ctx.StringSlice("publish"),
 		Privileged:      ctx.Bool("privileged"),
 		PublishAllPorts: ctx.Bool("publish-all"),
 		ReadOnly:        ctx.Bool("read-only"),
+		RunInit:         ctx.Bool("init"),
 		SecurityOpt:     ctx.StringSlice("security-opt"),
+		ShmSize:         ctx.Int64("shm-size"),
 		StdinOpen:       ctx.Bool("interactive"),
+		StopSignal:      ctx.String("stop-signal"),
 		Tty:             ctx.Bool("tty"),
 		User:            ctx.String("user"),
+		Uts:             ctx.String("uts"),
 		VolumeDriver:    ctx.String("volume-driver"),
 		WorkingDir:      ctx.String("workdir"),
 		DataVolumes:     ctx.StringSlice("volume"),
