@@ -15,6 +15,8 @@ type Catalog struct {
 
 	EnvironmentId string `json:"environmentId,omitempty" yaml:"environment_id,omitempty"`
 
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+
 	Links map[string]interface{} `json:"links,omitempty" yaml:"links,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`

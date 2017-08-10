@@ -61,8 +61,6 @@ type ImageOperations interface {
 
 	ActionRemove(*Image) (*Image, error)
 
-	ActionRestore(*Image) (*Image, error)
-
 	ActionUpdate(*Image) (*Image, error)
 }
 
@@ -157,15 +155,6 @@ func (c *ImageClient) ActionRemove(resource *Image) (*Image, error) {
 	resp := &Image{}
 
 	err := c.rancherClient.doAction(IMAGE_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *ImageClient) ActionRestore(resource *Image) (*Image, error) {
-
-	resp := &Image{}
-
-	err := c.rancherClient.doAction(IMAGE_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

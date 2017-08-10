@@ -24,6 +24,8 @@ type Identity struct {
 	ProjectId string `json:"projectId,omitempty" yaml:"project_id,omitempty"`
 
 	Role string `json:"role,omitempty" yaml:"role,omitempty"`
+
+	User bool `json:"user,omitempty" yaml:"user,omitempty"`
 }
 
 type IdentityCollection struct {

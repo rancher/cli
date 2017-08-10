@@ -45,7 +45,7 @@ type Machine struct {
 
 	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
 
-	ExtractedConfig string `json:"extractedConfig,omitempty" yaml:"extracted_config,omitempty"`
+	HostTemplateId string `json:"hostTemplateId,omitempty" yaml:"host_template_id,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 

@@ -73,8 +73,6 @@ type SubnetOperations interface {
 
 	ActionRemove(*Subnet) (*Subnet, error)
 
-	ActionRestore(*Subnet) (*Subnet, error)
-
 	ActionUpdate(*Subnet) (*Subnet, error)
 }
 
@@ -169,15 +167,6 @@ func (c *SubnetClient) ActionRemove(resource *Subnet) (*Subnet, error) {
 	resp := &Subnet{}
 
 	err := c.rancherClient.doAction(SUBNET_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *SubnetClient) ActionRestore(resource *Subnet) (*Subnet, error) {
-
-	resp := &Subnet{}
-
-	err := c.rancherClient.doAction(SUBNET_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

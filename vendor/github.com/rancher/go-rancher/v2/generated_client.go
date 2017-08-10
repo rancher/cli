@@ -40,7 +40,6 @@ type RancherClient struct {
 	DigitaloceanConfig                       DigitaloceanConfigOperations
 	DnsService                               DnsServiceOperations
 	DockerBuild                              DockerBuildOperations
-	DynamicSchema                            DynamicSchemaOperations
 	ExtensionImplementation                  ExtensionImplementationOperations
 	ExtensionPoint                           ExtensionPointOperations
 	ExternalDnsEvent                         ExternalDnsEventOperations
@@ -80,7 +79,6 @@ type RancherClient struct {
 	LaunchConfig                             LaunchConfigOperations
 	LbConfig                                 LbConfigOperations
 	LbTargetConfig                           LbTargetConfigOperations
-	Ldapconfig                               LdapconfigOperations
 	LoadBalancerCookieStickinessPolicy       LoadBalancerCookieStickinessPolicyOperations
 	LoadBalancerService                      LoadBalancerServiceOperations
 	LocalAuthConfig                          LocalAuthConfigOperations
@@ -154,13 +152,13 @@ type RancherClient struct {
 	StorageDriverService                     StorageDriverServiceOperations
 	StoragePool                              StoragePoolOperations
 	Subnet                                   SubnetOperations
-	Subscribe                                SubscribeOperations
 	TargetPortRule                           TargetPortRuleOperations
 	Task                                     TaskOperations
 	TaskInstance                             TaskInstanceOperations
 	ToServiceUpgradeStrategy                 ToServiceUpgradeStrategyOperations
 	TypeDocumentation                        TypeDocumentationOperations
 	Ulimit                                   UlimitOperations
+	UserPreference                           UserPreferenceOperations
 	VirtualMachine                           VirtualMachineOperations
 	VirtualMachineDisk                       VirtualMachineDiskOperations
 	Volume                                   VolumeOperations
@@ -211,7 +209,6 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.DigitaloceanConfig = newDigitaloceanConfigClient(client)
 	client.DnsService = newDnsServiceClient(client)
 	client.DockerBuild = newDockerBuildClient(client)
-	client.DynamicSchema = newDynamicSchemaClient(client)
 	client.ExtensionImplementation = newExtensionImplementationClient(client)
 	client.ExtensionPoint = newExtensionPointClient(client)
 	client.ExternalDnsEvent = newExternalDnsEventClient(client)
@@ -251,7 +248,6 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.LaunchConfig = newLaunchConfigClient(client)
 	client.LbConfig = newLbConfigClient(client)
 	client.LbTargetConfig = newLbTargetConfigClient(client)
-	client.Ldapconfig = newLdapconfigClient(client)
 	client.LoadBalancerCookieStickinessPolicy = newLoadBalancerCookieStickinessPolicyClient(client)
 	client.LoadBalancerService = newLoadBalancerServiceClient(client)
 	client.LocalAuthConfig = newLocalAuthConfigClient(client)
@@ -325,13 +321,13 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.StorageDriverService = newStorageDriverServiceClient(client)
 	client.StoragePool = newStoragePoolClient(client)
 	client.Subnet = newSubnetClient(client)
-	client.Subscribe = newSubscribeClient(client)
 	client.TargetPortRule = newTargetPortRuleClient(client)
 	client.Task = newTaskClient(client)
 	client.TaskInstance = newTaskInstanceClient(client)
 	client.ToServiceUpgradeStrategy = newToServiceUpgradeStrategyClient(client)
 	client.TypeDocumentation = newTypeDocumentationClient(client)
 	client.Ulimit = newUlimitClient(client)
+	client.UserPreference = newUserPreferenceClient(client)
 	client.VirtualMachine = newVirtualMachineClient(client)
 	client.VirtualMachineDisk = newVirtualMachineDiskClient(client)
 	client.Volume = newVolumeClient(client)

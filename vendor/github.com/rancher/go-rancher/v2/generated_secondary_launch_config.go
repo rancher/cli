@@ -191,6 +191,8 @@ type SecondaryLaunchConfig struct {
 
 	RequestedIpAddress string `json:"requestedIpAddress,omitempty" yaml:"requested_ip_address,omitempty"`
 
+	RunInit bool `json:"runInit,omitempty" yaml:"run_init,omitempty"`
+
 	Secrets []SecretReference `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 
 	SecurityOpt []string `json:"securityOpt,omitempty" yaml:"security_opt,omitempty"`
@@ -212,6 +214,8 @@ type SecondaryLaunchConfig struct {
 	StdinOpen bool `json:"stdinOpen,omitempty" yaml:"stdin_open,omitempty"`
 
 	StopSignal string `json:"stopSignal,omitempty" yaml:"stop_signal,omitempty"`
+
+	StopTimeout int64 `json:"stopTimeout,omitempty" yaml:"stop_timeout,omitempty"`
 
 	StorageOpt map[string]interface{} `json:"storageOpt,omitempty" yaml:"storage_opt,omitempty"`
 
@@ -292,8 +296,6 @@ type SecondaryLaunchConfigOperations interface {
 	ActionRemove(*SecondaryLaunchConfig) (*Instance, error)
 
 	ActionRestart(*SecondaryLaunchConfig) (*Instance, error)
-
-	ActionRestore(*SecondaryLaunchConfig) (*Instance, error)
 
 	ActionStart(*SecondaryLaunchConfig) (*Instance, error)
 
@@ -453,15 +455,6 @@ func (c *SecondaryLaunchConfigClient) ActionRestart(resource *SecondaryLaunchCon
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(SECONDARY_LAUNCH_CONFIG_TYPE, "restart", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *SecondaryLaunchConfigClient) ActionRestore(resource *SecondaryLaunchConfig) (*Instance, error) {
-
-	resp := &Instance{}
-
-	err := c.rancherClient.doAction(SECONDARY_LAUNCH_CONFIG_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

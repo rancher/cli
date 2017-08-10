@@ -183,6 +183,8 @@ type Container struct {
 
 	RestartPolicy *RestartPolicy `json:"restartPolicy,omitempty" yaml:"restart_policy,omitempty"`
 
+	RunInit bool `json:"runInit,omitempty" yaml:"run_init,omitempty"`
+
 	Secrets []SecretReference `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 
 	SecurityOpt []string `json:"securityOpt,omitempty" yaml:"security_opt,omitempty"`
@@ -204,6 +206,8 @@ type Container struct {
 	StdinOpen bool `json:"stdinOpen,omitempty" yaml:"stdin_open,omitempty"`
 
 	StopSignal string `json:"stopSignal,omitempty" yaml:"stop_signal,omitempty"`
+
+	StopTimeout int64 `json:"stopTimeout,omitempty" yaml:"stop_timeout,omitempty"`
 
 	StorageOpt map[string]interface{} `json:"storageOpt,omitempty" yaml:"storage_opt,omitempty"`
 
@@ -282,8 +286,6 @@ type ContainerOperations interface {
 	ActionRemove(*Container) (*Instance, error)
 
 	ActionRestart(*Container) (*Instance, error)
-
-	ActionRestore(*Container) (*Instance, error)
 
 	ActionStart(*Container) (*Instance, error)
 
@@ -452,15 +454,6 @@ func (c *ContainerClient) ActionRestart(resource *Container) (*Instance, error) 
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(CONTAINER_TYPE, "restart", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *ContainerClient) ActionRestore(resource *Container) (*Instance, error) {
-
-	resp := &Instance{}
-
-	err := c.rancherClient.doAction(CONTAINER_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

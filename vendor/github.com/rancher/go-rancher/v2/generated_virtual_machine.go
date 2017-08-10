@@ -157,6 +157,8 @@ type VirtualMachine struct {
 
 	RestartPolicy *RestartPolicy `json:"restartPolicy,omitempty" yaml:"restart_policy,omitempty"`
 
+	RunInit bool `json:"runInit,omitempty" yaml:"run_init,omitempty"`
+
 	SecurityOpt []string `json:"securityOpt,omitempty" yaml:"security_opt,omitempty"`
 
 	ServiceId string `json:"serviceId,omitempty" yaml:"service_id,omitempty"`
@@ -174,6 +176,8 @@ type VirtualMachine struct {
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
 	StopSignal string `json:"stopSignal,omitempty" yaml:"stop_signal,omitempty"`
+
+	StopTimeout int64 `json:"stopTimeout,omitempty" yaml:"stop_timeout,omitempty"`
 
 	StorageOpt map[string]interface{} `json:"storageOpt,omitempty" yaml:"storage_opt,omitempty"`
 
@@ -250,8 +254,6 @@ type VirtualMachineOperations interface {
 	ActionRemove(*VirtualMachine) (*Instance, error)
 
 	ActionRestart(*VirtualMachine) (*Instance, error)
-
-	ActionRestore(*VirtualMachine) (*Instance, error)
 
 	ActionStart(*VirtualMachine) (*Instance, error)
 
@@ -420,15 +422,6 @@ func (c *VirtualMachineClient) ActionRestart(resource *VirtualMachine) (*Instanc
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(VIRTUAL_MACHINE_TYPE, "restart", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *VirtualMachineClient) ActionRestore(resource *VirtualMachine) (*Instance, error) {
-
-	resp := &Instance{}
-
-	err := c.rancherClient.doAction(VIRTUAL_MACHINE_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

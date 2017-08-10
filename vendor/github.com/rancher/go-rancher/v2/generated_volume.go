@@ -89,8 +89,6 @@ type VolumeOperations interface {
 
 	ActionRemove(*Volume) (*Volume, error)
 
-	ActionRestore(*Volume) (*Volume, error)
-
 	ActionRestorefrombackup(*Volume, *RestoreFromBackupInput) (*Volume, error)
 
 	ActionReverttosnapshot(*Volume, *RevertToSnapshotInput) (*Volume, error)
@@ -191,15 +189,6 @@ func (c *VolumeClient) ActionRemove(resource *Volume) (*Volume, error) {
 	resp := &Volume{}
 
 	err := c.rancherClient.doAction(VOLUME_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *VolumeClient) ActionRestore(resource *Volume) (*Volume, error) {
-
-	resp := &Volume{}
-
-	err := c.rancherClient.doAction(VOLUME_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

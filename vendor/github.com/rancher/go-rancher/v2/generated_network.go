@@ -77,8 +77,6 @@ type NetworkOperations interface {
 
 	ActionRemove(*Network) (*Network, error)
 
-	ActionRestore(*Network) (*Network, error)
-
 	ActionUpdate(*Network) (*Network, error)
 }
 
@@ -173,15 +171,6 @@ func (c *NetworkClient) ActionRemove(resource *Network) (*Network, error) {
 	resp := &Network{}
 
 	err := c.rancherClient.doAction(NETWORK_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *NetworkClient) ActionRestore(resource *Network) (*Network, error) {
-
-	resp := &Network{}
-
-	err := c.rancherClient.doAction(NETWORK_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

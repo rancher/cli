@@ -27,6 +27,8 @@ type Openldapconfig struct {
 
 	GroupObjectClass string `json:"groupObjectClass,omitempty" yaml:"group_object_class,omitempty"`
 
+	GroupSearchDomain string `json:"groupSearchDomain,omitempty" yaml:"group_search_domain,omitempty"`
+
 	GroupSearchField string `json:"groupSearchField,omitempty" yaml:"group_search_field,omitempty"`
 
 	LoginDomain string `json:"loginDomain,omitempty" yaml:"login_domain,omitempty"`

@@ -166,6 +166,7 @@ func Convert(c *config.ServiceConfig, ctx project.Context) (*container.Config, *
 		Volumes:      toMap(Filter(vols, isVolume)),
 		MacAddress:   c.MacAddress,
 		StopSignal:   c.StopSignal,
+		StopTimeout:  &[]int64{int64(c.StopGracePeriod)}[0],
 	}
 
 	ulimits := []*units.Ulimit{}
@@ -258,6 +259,7 @@ func Convert(c *config.ServiceConfig, ctx project.Context) (*container.Config, *
 		DNS:         utils.CopySlice(c.DNS),
 		DNSOptions:  utils.CopySlice(c.DNSOpt),
 		DNSSearch:   utils.CopySlice(c.DNSSearch),
+		Init:        &c.Init,
 		Isolation:   container.Isolation(c.Isolation),
 		LogConfig: container.LogConfig{
 			Type:   c.Logging.Driver,

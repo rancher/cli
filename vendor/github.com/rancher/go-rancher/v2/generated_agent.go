@@ -71,8 +71,6 @@ type AgentOperations interface {
 
 	ActionRemove(*Agent) (*Agent, error)
 
-	ActionRestore(*Agent) (*Agent, error)
-
 	ActionUpdate(*Agent) (*Agent, error)
 }
 
@@ -194,15 +192,6 @@ func (c *AgentClient) ActionRemove(resource *Agent) (*Agent, error) {
 	resp := &Agent{}
 
 	err := c.rancherClient.doAction(AGENT_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *AgentClient) ActionRestore(resource *Agent) (*Agent, error) {
-
-	resp := &Agent{}
-
-	err := c.rancherClient.doAction(AGENT_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

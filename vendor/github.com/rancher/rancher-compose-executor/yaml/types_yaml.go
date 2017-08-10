@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/go-units"
 )
@@ -58,6 +60,33 @@ func (s *MemStringorInt) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	}
 
 	return errors.New("Failed to unmarshal MemStringorInt")
+}
+
+// DurationStringorInt represents a string or an integer
+// the String supports notations like 1m30s for 90 seconds
+type DurationStringorInt int64
+
+// UnmarshalYAML implements the Unmarshaller interface.
+func (s *DurationStringorInt) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var intType int64
+	if err := unmarshal(&intType); err == nil {
+		*s = DurationStringorInt(intType)
+		return nil
+	}
+
+	var stringType string
+
+	if err := unmarshal(&stringType); err == nil {
+		duration, err := time.ParseDuration(stringType)
+		if err != nil {
+			logrus.Errorf("Failed to parse duration:%v", s)
+			return err
+		}
+		*s = (DurationStringorInt)(duration.Seconds())
+		return nil
+	}
+
+	return errors.New("Failed to unmarshal DurationStringorInt")
 }
 
 // Stringorslice represents
