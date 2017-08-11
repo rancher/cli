@@ -1,4 +1,4 @@
-# Rancher Compose [![Build Status](http://ci.rancher.io/api/badge/github.com/rancher/rancher-compose/status.svg?branch=master)](http://ci.rancher.io/github.com/rancher/rancher-compose)
+# Rancher Compose
 
 Docker compose compatible client that deploys to [Rancher](https://github.com/rancher/rancher).
 

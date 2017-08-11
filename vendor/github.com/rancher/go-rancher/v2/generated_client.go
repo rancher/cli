@@ -79,7 +79,6 @@ type RancherClient struct {
 	LaunchConfig                             LaunchConfigOperations
 	LbConfig                                 LbConfigOperations
 	LbTargetConfig                           LbTargetConfigOperations
-	Ldapconfig                               LdapconfigOperations
 	LoadBalancerCookieStickinessPolicy       LoadBalancerCookieStickinessPolicyOperations
 	LoadBalancerService                      LoadBalancerServiceOperations
 	LocalAuthConfig                          LocalAuthConfigOperations
@@ -249,7 +248,6 @@ func constructClient(rancherBaseClient *RancherBaseClientImpl) *RancherClient {
 	client.LaunchConfig = newLaunchConfigClient(client)
 	client.LbConfig = newLbConfigClient(client)
 	client.LbTargetConfig = newLbTargetConfigClient(client)
-	client.Ldapconfig = newLdapconfigClient(client)
 	client.LoadBalancerCookieStickinessPolicy = newLoadBalancerCookieStickinessPolicyClient(client)
 	client.LoadBalancerService = newLoadBalancerServiceClient(client)
 	client.LocalAuthConfig = newLocalAuthConfigClient(client)
