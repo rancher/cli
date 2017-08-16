@@ -22,6 +22,7 @@ type Context struct {
 	ComposeFiles        []string
 	ComposeBytes        [][]byte
 	ProjectName         string
+	EnvironmentName     string
 	Version             string
 	PreviousVersion     string
 	isOpen              bool

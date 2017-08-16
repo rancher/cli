@@ -31,15 +31,19 @@ func NewProject(context *Context) (*project.Project, error) {
 	}
 
 	p := project.NewProject(&context.Context)
-
-	if err := p.Parse(); err != nil {
+	err := p.Open()
+	if err != nil {
 		return nil, err
 	}
+
 	if err := context.open(); err != nil {
 		logrus.Errorf("Failed to open project %s: %v", p.Name, err)
 		return nil, err
 	}
-	p.Name = context.ProjectName
+
+	if err := p.Parse(); err != nil {
+		return nil, err
+	}
 
 	context.SidekickInfo = NewSidekickInfo(p)
 

@@ -76,11 +76,6 @@ func (p *Project) Open() error {
 }
 
 func (p *Project) Parse() error {
-	err := p.Open()
-	if err != nil {
-		return err
-	}
-
 	p.Name = p.context.ProjectName
 
 	p.Files = p.context.ComposeFiles
@@ -164,6 +159,8 @@ func (p *Project) load(file string, bytes []byte) error {
 		Version:         p.context.Version,
 		PreviousVersion: p.context.PreviousVersion,
 		Name:            p.Name,
+	}, template.EnvironmentInfo{
+		Name: p.context.EnvironmentName,
 	}, file, bytes)
 	if err != nil {
 		log.Errorf("Could not parse config for project %s : %v", p.Name, err)

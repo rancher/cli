@@ -15,7 +15,11 @@ type StackInfo struct {
 	Name            string
 }
 
-func Apply(contents []byte, stackInfo StackInfo, variables map[string]string) ([]byte, error) {
+type EnvironmentInfo struct {
+	Name string
+}
+
+func Apply(contents []byte, stackInfo StackInfo, environmentInfo EnvironmentInfo, variables map[string]string) ([]byte, error) {
 	// Skip templating if contents begin with '# notemplating'
 	trimmedContents := strings.TrimSpace(string(contents))
 	if strings.HasPrefix(trimmedContents, "#notemplating") || strings.HasPrefix(trimmedContents, "# notemplating") {
@@ -32,9 +36,10 @@ func Apply(contents []byte, stackInfo StackInfo, variables map[string]string) ([
 
 	buf := bytes.Buffer{}
 	t.Execute(&buf, map[string]interface{}{
-		"Values":  variables,
-		"Release": stackInfo,
-		"Stack":   stackInfo,
+		"Values":      variables,
+		"Release":     stackInfo,
+		"Stack":       stackInfo,
+		"Environment": environmentInfo,
 	})
 	return buf.Bytes(), nil
 }

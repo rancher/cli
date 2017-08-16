@@ -81,9 +81,15 @@ func (c *Context) open() error {
 		return fmt.Errorf("Can not create a stack, check API key [%s] for [%s]", c.AccessKey, c.Url)
 	}
 
-	if _, err := c.LoadStack(); err != nil {
+	stack, err := c.LoadStack()
+	if err != nil {
 		return err
 	}
+	proj, err := c.Client.Project.ById(stack.AccountId)
+	if err != nil {
+		return err
+	}
+	c.EnvironmentName = proj.Name
 
 	c.isOpen = true
 	return nil
