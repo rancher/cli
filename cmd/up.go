@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"github.com/pkg/errors"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/rancher-compose-executor/app"
 	"github.com/rancher/rancher-compose-executor/project"
 	"github.com/urfave/cli"
@@ -58,6 +60,16 @@ func (p *projectFactory) Create(c *cli.Context) (*project.Project, error) {
 		return nil, err
 	}
 
+	rc, err := GetClient(c)
+	if err != nil {
+		return nil, err
+	}
+
+	w, err := NewWaiter(c)
+	if err != nil {
+		return nil, err
+	}
+
 	// from config
 	c.GlobalSet("url", url)
 	c.GlobalSet("access-key", config.AccessKey)
@@ -72,5 +84,24 @@ func (p *projectFactory) Create(c *cli.Context) (*project.Project, error) {
 	}
 
 	factory := &app.RancherProjectFactory{}
-	return factory.Create(c)
+	proj, err := factory.Create(c)
+	if err != nil {
+		return nil, err
+	}
+	stacks, err := rc.Stack.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"name": proj.Name,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(stacks.Data) == 0 {
+		return nil, errors.Errorf("can't find the stack with name %s", proj.Name)
+	}
+	w.Add(stacks.Data[0].Id)
+	if err := w.Wait(); err != nil {
+		return nil, err
+	}
+	return proj, nil
 }

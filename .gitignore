@@ -4,3 +4,5 @@
 /dist
 *.swp
 /.trash-cache
+/.idea
+/cli
