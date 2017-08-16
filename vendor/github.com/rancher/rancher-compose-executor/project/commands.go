@@ -58,7 +58,7 @@ func (p *Project) Render() ([][]byte, error) {
 	var renderedComposeBytes [][]byte
 	for _, contents := range p.context.ComposeBytes {
 		// TODO: figure out story for release variables when using CLI
-		contents, err := template.Apply(contents, template.StackInfo{Name: p.Name}, p.context.EnvironmentLookup.Variables())
+		contents, err := template.Apply(contents, template.StackInfo{Name: p.Name}, template.EnvironmentInfo{Name: p.context.EnvironmentName}, p.context.EnvironmentLookup.Variables())
 		if err != nil {
 			return nil, err
 		}
