@@ -60,26 +60,53 @@ func setupSchemaLoaders(schemaData string, schema *map[string]interface{}, schem
 	return nil
 }
 
+func appendValidTypes(oneOf interface{}, validTypes []string) []string {
+	validConditions, ok := oneOf.([]interface{})
+
+	if ok {
+		for _, validCondition := range validConditions {
+			condition := validCondition.(map[string]interface{})
+			if _, ok := condition["type"]; ok {
+				validTypes = append(validTypes, condition["type"].(string))
+			}
+		}
+
+		return validTypes
+	}
+
+	return []string{}
+}
+
 // gojsonschema doesn't provide a list of valid types for a property
 // This parses the schema manually to find all valid types
 func parseValidTypesFromSchema(schema map[string]interface{}, context string) []string {
 	contextSplit := strings.Split(context, ".")
 	key := contextSplit[len(contextSplit)-1]
 
-	definitions := schema["definitions"].(map[string]interface{})
-	service := definitions["service"].(map[string]interface{})
-	properties := service["properties"].(map[string]interface{})
-	property := properties[key].(map[string]interface{})
+	definitions := make(map[string]interface{})
+	if _, ok := schema["definitions"]; ok {
+		definitions = schema["definitions"].(map[string]interface{})
+	}
+
+	service := make(map[string]interface{})
+	if _, ok := definitions["service"]; ok {
+		service = definitions["service"].(map[string]interface{})
+	}
+
+	properties := make(map[string]interface{})
+	if _, ok := service["properties"]; ok {
+		properties = service["properties"].(map[string]interface{})
+	}
+
+	property := make(map[string]interface{})
+	if _, ok := properties[key]; ok {
+		property = properties[key].(map[string]interface{})
+	}
 
 	var validTypes []string
 
 	if val, ok := property["oneOf"]; ok {
-		validConditions := val.([]interface{})
-
-		for _, validCondition := range validConditions {
-			condition := validCondition.(map[string]interface{})
-			validTypes = append(validTypes, condition["type"].(string))
-		}
+		validTypes = appendValidTypes(val, validTypes)
 	} else if val, ok := property["$ref"]; ok {
 		reference := val.(string)
 		if reference == "#/definitions/string_or_list" {
@@ -88,6 +115,35 @@ func parseValidTypesFromSchema(schema map[string]interface{}, context string) []
 			return []string{"array"}
 		} else if reference == "#/definitions/list_or_dict" {
 			return []string{"array", "object"}
+		}
+	}
+
+	if _, ok := property["oneOf"]; !ok {
+		key = contextSplit[len(contextSplit)-2]
+
+		property := make(map[string]interface{})
+		if _, ok := properties[key]; ok {
+			property = properties[key].(map[string]interface{})
+		}
+
+		if _, ok := property["patternProperties"]; ok {
+			// address schema for 'ulimits'
+			patternProperties := property["patternProperties"].(map[string]interface{})
+
+			for _, value := range patternProperties {
+				patternProperty := value.(map[string]interface{})
+
+				if _, ok := patternProperty["oneOf"]; ok {
+					validTypes = appendValidTypes(patternProperty["oneOf"], validTypes)
+				}
+			}
+		} else if _, ok := property["items"]; ok {
+			// address schema for 'secrets'
+			items := property["items"].(map[string]interface{})
+
+			if val, ok := items["oneOf"]; ok {
+				validTypes = appendValidTypes(val, validTypes)
+			}
 		}
 	}
 
