@@ -30,12 +30,15 @@ func containsTypeError(resultError gojsonschema.ResultError) bool {
 }
 
 func addArticle(s string) string {
-	switch s[0] {
-	case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U':
-		return "an " + s
-	default:
-		return "a " + s
+	if len(s) > 0 {
+		switch s[0] {
+		case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U':
+			return "an " + s
+		default:
+			return "a " + s
+		}
 	}
+	return ""
 }
 
 // Gets the value in a service map at a given error context
