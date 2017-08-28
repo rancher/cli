@@ -134,7 +134,7 @@ func getHostnameAndContainerIDFromList(c *client.RancherClient, containers clien
 		} else {
 			name = container.Name
 		}
-		names = append(names, fmt.Sprintf("%s (%s)", name, container.PrimaryIpAddress))
+		names = append(names, fmt.Sprintf("%s (%s, %s)", name, container.PrimaryIpAddress, container.State))
 	}
 
 	index := selectFromList("Containers:", names)
