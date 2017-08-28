@@ -164,6 +164,10 @@ func parseAnswers(ctx *cli.Context) (map[string]interface{}, error) {
 			answers[parts[0]] = parts[1]
 		}
 	}
+	// if we scanned the file for key/value pairs but found none, something is wrong
+	if len(answers) < 1 {
+		return nil, errors.New("No valid data found in answers file")
+	}
 
 	return answers, scanner.Err()
 }
