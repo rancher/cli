@@ -157,22 +157,6 @@ func RunCommand() cli.Command {
 				Name:  "interactive, i",
 				Usage: "Keep STDIN open even if not attached",
 			},
-			cli.StringFlag{
-				Name:  "ip",
-				Usage: "IPv4 address (e.g., 172.30.100.104)",
-			},
-			cli.StringFlag{
-				Name:  "ip6",
-				Usage: "IPv6 address (e.g., 2001:db8::33)",
-			},
-			cli.StringFlag{
-				Name:  "ipc",
-				Usage: "IPC namespace to use",
-			},
-			cli.StringFlag{
-				Name:  "isolation",
-				Usage: "Container isolation technology",
-			},
 			cli.Int64Flag{
 				Name:  "kernel-memory",
 				Usage: "Kernel memory limit",
@@ -196,10 +180,6 @@ func RunCommand() cli.Command {
 			cli.StringFlag{
 				Name:  "name",
 				Usage: "Assign a name to the container",
-			},
-			cli.StringSliceFlag{
-				Name:  "net-alias, network-alias",
-				Usage: "Add network-scoped alias for the container",
 			},
 			cli.BoolFlag{
 				Name:  "oom-kill-disable",
@@ -362,10 +342,6 @@ func serviceRun(ctx *cli.Context) error {
 		HealthRetries:  ctx.Int64("health-retries"),
 		Hostname:       ctx.String("hostname"),
 		ImageUuid:      "docker:" + ctx.Args()[0],
-		Ip:             ctx.String("ip"),
-		Ip6:            ctx.String("ip6"),
-		IpcMode:        ctx.String("ipc"),
-		Isolation:      ctx.String("isolation"),
 		KernelMemory:   ctx.Int64("kernel-memory"),
 		Labels:         map[string]interface{}{},
 		Environment:    map[string]interface{}{},
@@ -375,7 +351,6 @@ func serviceRun(ctx *cli.Context) error {
 		MemorySwap:        ctx.Int64("memory-swap"),
 		MemorySwappiness:  ctx.Int64("memory-swappiness"),
 		//NetworkIds: ctx.StringSlice("networkids"),
-		NetAlias:        ctx.StringSlice("net-alias"),
 		NetworkMode:     ctx.String("net"),
 		OomKillDisable:  ctx.Bool("oom-kill-disable"),
 		OomScoreAdj:     ctx.Int64("oom-score-adj"),
