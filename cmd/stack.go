@@ -1,14 +1,12 @@
 package cmd
 
 import (
-	"bufio"
-	"bytes"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/rancher-compose-executor/lookup"
 	"github.com/urfave/cli"
 )
 
@@ -145,27 +143,9 @@ func getFile(name string) (string, error) {
 }
 
 func parseAnswers(ctx *cli.Context) (map[string]interface{}, error) {
-	answers := map[string]interface{}{}
-	answersFile, err := getFile(ctx.String("answers"))
-	if err != nil {
-		return nil, err
-	}
+	file := ctx.String("answers")
 
-	scanner := bufio.NewScanner(bytes.NewBuffer([]byte(answersFile)))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 1 {
-			answers[parts[0]] = ""
-		} else {
-			answers[parts[0]] = parts[1]
-		}
-	}
-
-	return answers, scanner.Err()
+	return lookup.ParseEnvFile(file)
 }
 
 func stackCreate(ctx *cli.Context) error {
