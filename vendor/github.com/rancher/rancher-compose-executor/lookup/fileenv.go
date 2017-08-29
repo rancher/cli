@@ -20,8 +20,8 @@ type FileEnvLookup struct {
 	variables map[string]string
 }
 
-func parseMultiLineEnv(file string, parent config.EnvironmentLookup) (*FileEnvLookup, error) {
-	variables := map[string]string{}
+func parseMultiLineEnv(file string) (map[string]interface{}, error) {
+	variables := map[string]interface{}{}
 
 	contents, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -54,14 +54,11 @@ func parseMultiLineEnv(file string, parent config.EnvironmentLookup) (*FileEnvLo
 		}
 	}
 
-	return &FileEnvLookup{
-		parent:    parent,
-		variables: variables,
-	}, nil
+	return variables, nil
 }
 
-func parseCustomEnvFile(file string, parent config.EnvironmentLookup) (*FileEnvLookup, error) {
-	variables := map[string]string{}
+func parseCustomEnvFile(file string) (map[string]interface{}, error) {
+	variables := map[string]interface{}{}
 
 	f, err := os.Open(file)
 	if err != nil {
@@ -82,23 +79,49 @@ func parseCustomEnvFile(file string, parent config.EnvironmentLookup) (*FileEnvL
 		return nil, scanner.Err()
 	}
 
-	return &FileEnvLookup{
-		parent:    parent,
-		variables: variables,
-	}, nil
+	return variables, nil
+}
+
+func ParseEnvFile(file string) (map[string]interface{}, error) {
+	if file != "" {
+		if strings.HasSuffix(file, ".yml") || strings.HasSuffix(file, ".yaml") || strings.HasSuffix(file, ".json") {
+
+			v, err := parseMultiLineEnv(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return v, nil
+		}
+
+		v, err := parseCustomEnvFile(file)
+		if err != nil {
+			return nil, err
+		}
+
+		return v, nil
+	}
+	return map[string]interface{}{}, nil
 }
 
 func NewFileEnvLookup(file string, parent config.EnvironmentLookup) (*FileEnvLookup, error) {
-	if file != "" {
-		if strings.HasSuffix(file, ".yml") || strings.HasSuffix(file, ".yaml") || strings.HasSuffix(file, ".json") {
-			return parseMultiLineEnv(file, parent)
+
+	v, err := ParseEnvFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	variables := map[string]string{}
+	for key, value := range v {
+		switch value := value.(type) {
+		case string:
+			variables[key] = value
 		}
-		return parseCustomEnvFile(file, parent)
 	}
 
 	return &FileEnvLookup{
 		parent:    parent,
-		variables: map[string]string{},
+		variables: variables,
 	}, nil
 }
 
