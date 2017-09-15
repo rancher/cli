@@ -230,8 +230,15 @@ func NewListOpts() *ListOpts {
 	}
 }
 
+func (rancherClient *RancherBaseClientImpl) SetCustomHeaders(headers map[string]string) {
+	rancherClient.customHeaders = headers
+}
+
 func (rancherClient *RancherBaseClientImpl) setupRequest(req *http.Request) {
 	req.SetBasicAuth(rancherClient.Opts.AccessKey, rancherClient.Opts.SecretKey)
+	for k, v := range rancherClient.customHeaders {
+		req.Header.Set(k, v)
+	}
 }
 
 func (rancherClient *RancherBaseClientImpl) newHttpClient() *http.Client {
