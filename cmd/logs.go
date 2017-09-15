@@ -18,7 +18,7 @@ import (
 	"github.com/docker/libcompose/cli/logger"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rancher/cli/monitor"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/rancher/rancher-docker-api-proxy"
 	"github.com/urfave/cli"
 )

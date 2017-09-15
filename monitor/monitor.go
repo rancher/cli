@@ -10,7 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/patrickmn/go-cache"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 type Event struct {
@@ -151,7 +151,7 @@ func (m *Monitor) watch(conn *websocket.Conn) error {
 			continue
 		}
 
-		logrus.Debugf("Event: %s %s %s", v.Name, v.ResourceType, v.ResourceID)
+		logrus.Debugf("Event: %s %s %s %v", v.Name, v.ResourceType, v.ResourceID, v.Data)
 		m.put(v.ResourceType, v.ResourceID, &v)
 	}
 }

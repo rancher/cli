@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"io/ioutil"
-	"os"
-
-	"github.com/pkg/errors"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/rancher/rancher-compose-executor/lookup"
 	"github.com/urfave/cli"
+	"io/ioutil"
+	"os"
 )
 
 func StackCommand() cli.Command {
@@ -107,7 +105,6 @@ func stackLs(ctx *cli.Context) error {
 		{"STATE", "State"},
 		{"CATALOG", "Catalog"},
 		{"SERVICES", "ServiceCount"},
-		{"SYSTEM", "Stack.System"},
 		{"DETAIL", "Stack.TransitioningMessage"},
 	}, ctx)
 
@@ -164,26 +161,12 @@ func stackCreate(ctx *cli.Context) error {
 	var lastErr error
 	for _, name := range names {
 		stack := &client.Stack{
-			Name:          name,
-			System:        ctx.Bool("system"),
-			StartOnCreate: ctx.Bool("start"),
+			Name: name,
 		}
 
 		if !ctx.Bool("empty") {
-			var err error
-			stack.DockerCompose, err = getFile(ctx.String("docker-compose"))
-			if err != nil {
-				return err
-			}
-			if stack.DockerCompose == "" {
-				return errors.New("docker-compose.yml files is required")
-			}
-
-			stack.RancherCompose, err = getFile(ctx.String("rancher-compose"))
-			if err != nil {
-				return errors.Wrap(err, "reading "+ctx.String("rancher-compose"))
-			}
-
+			//var err error
+			// todo: revisit
 			//stack.Answers, err = parseAnswers(ctx)
 			//if err != nil {
 			//return errors.Wrap(err, "reading answers")

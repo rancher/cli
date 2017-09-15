@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -76,7 +76,7 @@ func getLabels(host *client.Host) string {
 
 		buffer.WriteString(key)
 		buffer.WriteString("=")
-		buffer.WriteString(value.(string))
+		buffer.WriteString(value)
 		it++
 	}
 	return buffer.String()

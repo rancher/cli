@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -282,12 +282,12 @@ func hostCreateRun(ctx *cli.Context, c *client.RancherClient, machineSchema clie
 	var lastErr error
 	for _, name := range names {
 		args["hostname"] = name
-		var machine client.Machine
-		if err := c.Create("host", args, &machine); err != nil {
+		var host client.Host
+		if err := c.Create("host", args, &host); err != nil {
 			lastErr = err
 			logrus.Error(err)
 		} else {
-			w.Add(machine.Id)
+			w.Add(host.Id)
 		}
 	}
 

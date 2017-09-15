@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -90,7 +90,7 @@ func selectContainer(c *client.RancherClient, args []string) ([]string, string, 
 		return nil, "", "", err
 	}
 
-	if _, ok := resource.Links["hosts"]; ok {
+	if _, ok := resource.Links["host"]; ok {
 		hostID, containerID, err := getHostnameAndContainerID(c, resource.Id)
 		if err != nil {
 			return nil, "", "", err
@@ -170,16 +170,15 @@ func getHostnameAndContainerID(c *client.RancherClient, containerID string) (str
 		return "", "", err
 	}
 
-	var hosts client.HostCollection
-	if err := c.GetLink(container.Resource, "hosts", &hosts); err != nil {
+	var host client.Host
+	if err := c.GetLink(container.Resource, "host", &host); err != nil {
 		return "", "", err
 	}
-
-	if len(hosts.Data) != 1 {
+	if host.Id == "" {
 		return "", "", fmt.Errorf("Failed to find host for container %s", container.Name)
 	}
 
-	return hosts.Data[0].Id, container.ExternalId, nil
+	return host.Id, container.ExternalId, nil
 }
 
 func runDockerHelp(subcommand string) error {

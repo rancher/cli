@@ -3,8 +3,13 @@ package main
 import (
 	"os"
 
+	"regexp"
+	"strings"
+
 	"github.com/Sirupsen/logrus"
+	"github.com/pkg/errors"
 	"github.com/rancher/cli/cmd"
+	"github.com/rancher/cli/rancher_prompt"
 	"github.com/urfave/cli"
 )
 
@@ -132,6 +137,8 @@ func mainErr() error {
 		cmd.HostCommand(),
 		cmd.LogsCommand(),
 		cmd.PsCommand(),
+		cmd.PullCommand(),
+		cmd.PromptCommand(),
 		cmd.RestartCommand(),
 		cmd.RmCommand(),
 		cmd.RunCommand(),
@@ -146,6 +153,42 @@ func mainErr() error {
 		cmd.InspectCommand(),
 		cmd.WaitCommand(),
 	}
+	for _, com := range app.Commands {
+		rancherPrompt.Commands[com.Name] = com
+		rancherPrompt.Commands[com.ShortName] = com
+	}
+	rancherPrompt.Flags = app.Flags
+	parsed, err := parseArgs(os.Args)
+	if err != nil {
+		logrus.Error(err)
+		os.Exit(1)
+	}
 
-	return app.Run(os.Args)
+	return app.Run(parsed)
+}
+
+var singleAlphaLetterRegxp = regexp.MustCompile("[a-zA-Z]")
+
+func parseArgs(args []string) ([]string, error) {
+	result := []string{}
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") && len(arg) > 1 {
+			for i, c := range arg[1:] {
+				if string(c) == "=" {
+					if i < 1 {
+						return nil, errors.New("invalid input with '-' and '=' flag")
+					}
+					result[len(result)-1] = result[len(result)-1] + arg[i+1:]
+					break
+				} else if singleAlphaLetterRegxp.MatchString(string(c)) {
+					result = append(result, "-"+string(c))
+				} else {
+					return nil, errors.Errorf("invalid input %v in flag", string(c))
+				}
+			}
+		} else {
+			result = append(result, arg)
+		}
+	}
+	return result, nil
 }

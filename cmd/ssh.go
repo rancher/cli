@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,7 +10,10 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rancher/go-rancher/v2"
+	"archive/zip"
+
+	"github.com/pkg/errors"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -20,7 +21,7 @@ func SSHCommand() cli.Command {
 	return cli.Command{
 		Name:            "ssh",
 		Usage:           "SSH into host",
-		Description:     "\nFor any hosts created through Rancher using docker-machine, you can SSH into the host. This is not supported for any custom hosts. If the host is not in the current $RANCHER_ENVIRONMENT, use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher ssh 1h1\n\t$ rancher --env 1a5 ssh 1h5\n",
+		Description:     "\nFor any hosts created through Rancher using docker-machine, you can SSH into the host. This is not supported for any custom hosts. If the host is not in the current $RANCHER_ENVIRONMENT, use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher ssh root@1h1\n\t$ rancher --env 1a5 ssh ubuntu@1h5\n",
 		ArgsUsage:       "[HOSTID HOSTNAME...]",
 		Action:          hostSSH,
 		Flags:           []cli.Flag{},
@@ -68,6 +69,8 @@ func hostSSH(ctx *cli.Context) error {
 		return err
 	}
 
+	user := getDefaultSSHKey(*host)
+
 	key, err := getSSHKey(hostname, *host, config.AccessKey, config.SecretKey)
 	if err != nil {
 		return err
@@ -77,15 +80,22 @@ func hostSSH(ctx *cli.Context) error {
 		return fmt.Errorf("Failed to find IP for %s", hostname)
 	}
 
-	return processExitCode(callSSH(key, host.AgentIpAddress, ctx.Args()))
+	return processExitCode(callSSH(key, host.AgentIpAddress, ctx.Args(), user))
 }
 
-func callSSH(content []byte, ip string, args []string) error {
+func callSSH(content []byte, ip string, args []string, user string) error {
 	for i, val := range args {
 		if !strings.HasPrefix(val, "-") && len(val) > 0 {
 			parts := strings.SplitN(val, "@", 2)
-			parts[len(parts)-1] = ip
-			args[i] = strings.Join(parts, "@")
+			if len(parts) == 2 {
+				parts[len(parts)-1] = ip
+				args[i] = strings.Join(parts, "@")
+			} else if len(parts) == 1 {
+				if user == "" {
+					return errors.New("Need to provide a ssh username")
+				}
+				args[i] = fmt.Sprintf("%s@%s", user, ip)
+			}
 			break
 		}
 	}
@@ -127,6 +137,7 @@ func getSSHKey(hostname string, host client.Host, accessKey, secretKey string) (
 		return nil, err
 	}
 	req.SetBasicAuth(accessKey, secretKey)
+	req.Header.Add("Accept-Encoding", "zip")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -143,20 +154,33 @@ func getSSHKey(hostname string, host client.Host, accessKey, secretKey string) (
 		return nil, fmt.Errorf("%s", tarGz)
 	}
 
-	gzipIn, err := gzip.NewReader(bytes.NewBuffer(tarGz))
+	zipReader, err := zip.NewReader(bytes.NewReader(tarGz), resp.ContentLength)
 	if err != nil {
 		return nil, err
 	}
-	tar := tar.NewReader(gzipIn)
 
-	for {
-		header, err := tar.Next()
-		if err != nil {
-			return nil, err
-		}
-
-		if path.Base(header.Name) == "id_rsa" {
-			return ioutil.ReadAll(tar)
+	for _, file := range zipReader.File {
+		if path.Base(file.Name) == "id_rsa" {
+			r, err := file.Open()
+			if err != nil {
+				return nil, err
+			}
+			defer r.Close()
+			return ioutil.ReadAll(r)
 		}
 	}
+	return nil, errors.New("can't find private key file")
+}
+
+func getDefaultSSHKey(host client.Host) string {
+	if host.Amazonec2Config != nil {
+		return host.Amazonec2Config.SshUser
+	}
+	if host.DigitaloceanConfig != nil {
+		return host.DigitaloceanConfig.SshUser
+	}
+	if host.Amazonec2Config != nil {
+		return host.Amazonec2Config.SshUser
+	}
+	return ""
 }

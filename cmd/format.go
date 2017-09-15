@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strings"
-
-	"github.com/rancher/go-rancher/v2"
 )
 
 func FormatEndpoint(data interface{}) string {
@@ -35,19 +32,21 @@ func FormatEndpoint(data interface{}) string {
 }
 
 func FormatIPAddresses(data interface{}) string {
-	ips, ok := data.([]client.IpAddress)
-	if !ok {
-		return ""
-	}
-
-	ipStrings := []string{}
-	for _, ip := range ips {
-		if ip.Address != "" {
-			ipStrings = append(ipStrings, ip.Address)
-		}
-	}
-
-	return strings.Join(ipStrings, ", ")
+	//todo: revisit
+	return ""
+	//ips, ok := data.([]client.IpAddress)
+	//if !ok {
+	//	return ""
+	//}
+	//
+	//ipStrings := []string{}
+	//for _, ip := range ips {
+	//	if ip.Address != "" {
+	//		ipStrings = append(ipStrings, ip.Address)
+	//	}
+	//}
+	//
+	//return strings.Join(ipStrings, ", ")
 }
 
 func FormatJSON(data interface{}) (string, error) {

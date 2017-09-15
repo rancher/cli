@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"text/template"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/urfave/cli"
@@ -32,7 +32,7 @@ func GetRawClient(ctx *cli.Context) (*client.RancherClient, error) {
 		return nil, err
 	}
 	return client.NewRancherClient(&client.ClientOpts{
-		Url:       url + "/v2-beta",
+		Url:       url + "/v3",
 		AccessKey: config.AccessKey,
 		SecretKey: config.SecretKey,
 	})
@@ -93,7 +93,11 @@ func GetClient(ctx *cli.Context) (*client.RancherClient, error) {
 }
 
 func GetEnvironment(def string, c *client.RancherClient) (*client.Project, error) {
-	resp, err := c.Project.List(nil)
+	resp, err := c.Project.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"all": true,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +113,7 @@ func GetEnvironment(def string, c *client.RancherClient) (*client.Project, error
 	if def == "" {
 		names := []string{}
 		for _, p := range resp.Data {
-			names = append(names, fmt.Sprintf("%s(%s)", p.Name, p.Id))
+			names = append(names, fmt.Sprintf("%s(%s), cluster ID: (%s)", p.Name, p.Id, p.ClusterId))
 		}
 
 		idx := selectFromList("Environments:", names)
@@ -174,6 +178,24 @@ func RandomName() string {
 	return strings.Replace(namesgenerator.GetRandomName(0), "_", "-", -1)
 }
 
+func getContainerByName(c *client.RancherClient, name string) (client.ResourceCollection, error) {
+	var result client.ResourceCollection
+	stack, containerName, err := ParseName(c, name)
+	containers, err := c.Container.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"stackId": stack.Id,
+			"name":    containerName,
+		},
+	})
+	if err != nil {
+		return result, err
+	}
+	for _, container := range containers.Data {
+		result.Data = append(result.Data, container.Resource)
+	}
+	return result, nil
+}
+
 func getServiceByName(c *client.RancherClient, name string) (client.ResourceCollection, error) {
 	var result client.ResourceCollection
 	stack, serviceName, err := ParseName(c, name)
@@ -219,9 +241,10 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 		if len(collection.Data) > 1 {
 			ids := []string{}
 			for _, data := range collection.Data {
-				ids = append(ids, data.Id)
+				ids = append(ids, fmt.Sprintf("%s (%s)", data.Id, name))
 			}
-			return nil, fmt.Errorf("Multiple resources of type %s found for name %s: %v", schemaType, name, ids)
+			index := selectFromList("Resources: ", ids)
+			return &collection.Data[index], nil
 		}
 
 		if len(collection.Data) == 0 {
@@ -232,6 +255,8 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 				collection, err = getHostByHostname(c, name)
 			case "service":
 				collection, err = getServiceByName(c, name)
+			case "container":
+				collection, err = getContainerByName(c, name)
 			}
 			if err != nil {
 				return nil, err
