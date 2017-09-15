@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 

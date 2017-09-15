@@ -7,7 +7,7 @@ const (
 type Template struct {
 	Resource
 
-	Actions map[string]interface{} `json:"actions,omitempty" yaml:"actions,omitempty"`
+	Actions map[string]string `json:"actions,omitempty" yaml:"actions,omitempty"`
 
 	CatalogId string `json:"catalogId,omitempty" yaml:"catalog_id,omitempty"`
 
@@ -29,11 +29,11 @@ type Template struct {
 
 	IsSystem string `json:"isSystem,omitempty" yaml:"is_system,omitempty"`
 
-	Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 
 	License string `json:"license,omitempty" yaml:"license,omitempty"`
 
-	Links map[string]interface{} `json:"links,omitempty" yaml:"links,omitempty"`
+	Links map[string]string `json:"links,omitempty" yaml:"links,omitempty"`
 
 	Maintainer string `json:"maintainer,omitempty" yaml:"maintainer,omitempty"`
 
@@ -47,7 +47,7 @@ type Template struct {
 
 	UpgradeFrom string `json:"upgradeFrom,omitempty" yaml:"upgrade_from,omitempty"`
 
-	VersionLinks map[string]interface{} `json:"versionLinks,omitempty" yaml:"version_links,omitempty"`
+	VersionLinks map[string]string `json:"versionLinks,omitempty" yaml:"version_links,omitempty"`
 
 	Versions []string `json:"versions,omitempty" yaml:"versions,omitempty"`
 }

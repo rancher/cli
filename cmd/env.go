@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/pkg/errors"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
-	"gopkg.in/yaml.v2"
 )
 
 func EnvCommand() cli.Command {
@@ -30,7 +28,7 @@ func EnvCommand() cli.Command {
 		Action:    defaultAction(envLs),
 		Flags:     envLsFlags,
 		Subcommands: []cli.Command{
-			cli.Command{
+			{
 				Name:        "ls",
 				Usage:       "List environments",
 				Description: "\nWith an account API key, all environments in Rancher will be listed. If you are using an environment API key, it will only list the environment of the API key. \n\nExample:\n\t$ rancher env ls\n",
@@ -38,7 +36,7 @@ func EnvCommand() cli.Command {
 				Action:      envLs,
 				Flags:       envLsFlags,
 			},
-			cli.Command{
+			{
 				Name:  "create",
 				Usage: "Create an environment",
 				Description: `
@@ -57,41 +55,13 @@ To add an orchestration framework do TODO
 				Action:    envCreate,
 				Flags: []cli.Flag{
 					cli.StringFlag{
-						Name:  "template,t",
-						Usage: "Environment template to create from",
-						Value: "Cattle",
+						Name:  "cluster,c",
+						Usage: "Cluster name to create the environment",
+						Value: "Default",
 					},
 				},
 			},
-			cli.Command{
-				Name:      "templates",
-				ShortName: "template",
-				Usage:     "Interact with environment templates",
-				Action:    defaultAction(envTemplateLs),
-				Flags:     envLsFlags,
-				Subcommands: []cli.Command{
-					cli.Command{
-						Name:      "export",
-						Usage:     "Export an environment template to STDOUT",
-						ArgsUsage: "[TEMPLATEID TEMPLATENAME...]",
-						Action:    envTemplateExport,
-						Flags:     []cli.Flag{},
-					},
-					cli.Command{
-						Name:      "import",
-						Usage:     "Import an environment template to from file",
-						ArgsUsage: "[FILE FILE...]",
-						Action:    envTemplateImport,
-						Flags: []cli.Flag{
-							cli.BoolFlag{
-								Name:  "public",
-								Usage: "Make template public",
-							},
-						},
-					},
-				},
-			},
-			cli.Command{
+			{
 				Name:        "rm",
 				Usage:       "Remove environment(s)",
 				Description: "\nExample:\n\t$ rancher env rm 1a5\n\t$ rancher env rm newEnv\n",
@@ -99,7 +69,7 @@ To add an orchestration framework do TODO
 				Action:      envRm,
 				Flags:       []cli.Flag{},
 			},
-			cli.Command{
+			{
 				Name:  "deactivate",
 				Usage: "Deactivate environment(s)",
 				Description: `
@@ -113,7 +83,7 @@ Example:
 				Action:    envDeactivate,
 				Flags:     []cli.Flag{},
 			},
-			cli.Command{
+			{
 				Name:  "activate",
 				Usage: "Activate environment(s)",
 				Description: `
@@ -127,6 +97,20 @@ Example:
 				Action:    envActivate,
 				Flags:     []cli.Flag{},
 			},
+			{
+				Name:  "switch",
+				Usage: "Switch environment(s)",
+				Description: `
+Switch current environment to others,
+
+Example:
+	$ rancher env switch 1a5
+	$ rancher env switch Default
+`,
+				ArgsUsage: "[ID NAME...]",
+				Action:    envSwitch,
+				Flags:     []cli.Flag{},
+			},
 		},
 	}
 }
@@ -134,17 +118,20 @@ Example:
 type EnvData struct {
 	ID          string
 	Environment *client.Project
+	Current     string
+	Name        string
 }
 
-type TemplateData struct {
-	ID              string
-	ProjectTemplate *client.ProjectTemplate
-}
-
-func NewEnvData(project client.Project) *EnvData {
+func NewEnvData(project client.Project, current bool, name string) *EnvData {
+	marked := ""
+	if current {
+		marked = "   *"
+	}
 	return &EnvData{
 		ID:          project.Id,
 		Environment: &project,
+		Current:     marked,
+		Name:        name,
 	}
 }
 
@@ -169,18 +156,22 @@ func envCreate(ctx *cli.Context) error {
 	if ctx.NArg() > 0 {
 		name = ctx.Args()[0]
 	}
-
-	data := map[string]interface{}{
-		"name": name,
+	clusters, err := c.Cluster.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"name":         ctx.String("cluster"),
+			"removed_null": true,
+		},
+	})
+	if err != nil {
+		return err
 	}
 
-	template := ctx.String("template")
-	if template != "" {
-		template, err := Lookup(c, template, "projectTemplate")
-		if err != nil {
-			return err
-		}
-		data["projectTemplateId"] = template.Id
+	if len(clusters.Data) == 0 {
+		return errors.Errorf("can't find cluster with name %v", ctx.String("cluster"))
+	}
+	data := map[string]interface{}{
+		"name":      name,
+		"clusterId": clusters.Data[0].Id,
 	}
 
 	var newEnv client.Project
@@ -197,23 +188,46 @@ func envLs(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	config, err := lookupConfig(ctx)
+	if err != nil {
+		return err
+	}
+	currentEnvID := config.Environment
 
 	writer := NewTableWriter([][]string{
 		{"ID", "ID"},
-		{"NAME", "Environment.Name"},
-		{"ORCHESTRATION", "Environment.Orchestration"},
+		{"CLUSTER/NAME", "Name"},
 		{"STATE", "Environment.State"},
 		{"CREATED", "Environment.Created"},
+		{"CURRENT", "Current"},
 	}, ctx)
 	defer writer.Close()
 
-	collection, err := c.Project.List(defaultListOpts(ctx))
+	listOpts := defaultListOpts(ctx)
+	listOpts.Filters["all"] = true
+	collection, err := c.Project.List(listOpts)
 	if err != nil {
 		return err
 	}
 
 	for _, item := range collection.Data {
-		writer.Write(NewEnvData(item))
+		current := false
+		if item.Id == currentEnvID {
+			current = true
+		}
+		clusterName := ""
+		if item.ClusterId != "" {
+			cluster, err := c.Cluster.ById(item.ClusterId)
+			if err != nil {
+				return err
+			}
+			clusterName = cluster.Name
+		}
+		name := item.Name
+		if clusterName != "" {
+			name = fmt.Sprintf("%s/%s", clusterName, name)
+		}
+		writer.Write(NewEnvData(item, current, name))
 	}
 
 	return writer.Err()
@@ -249,119 +263,48 @@ func envActivate(ctx *cli.Context) error {
 	})
 }
 
-func envTemplateLs(ctx *cli.Context) error {
+func envSwitch(ctx *cli.Context) error {
 	c, err := GetRawClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	writer := NewTableWriter([][]string{
-		{"ID", "ID"},
-		{"NAME", "ProjectTemplate.Name"},
-		{"DESC", "ProjectTemplate.Description"},
-	}, ctx)
-	defer writer.Close()
-
-	collection, err := c.ProjectTemplate.List(defaultListOpts(ctx))
+	if ctx.NArg() == 0 {
+		return cli.ShowCommandHelp(ctx, "env")
+	}
+	envID := ""
+	name := ctx.Args()[0]
+	if env, err := c.Project.ById(name); err == nil && env != nil && env.Id == name {
+		envID = name
+	} else {
+		if envs, err := c.Project.List(&client.ListOpts{
+			Filters: map[string]interface{}{
+				"name": name,
+			},
+		}); err == nil {
+			if len(envs.Data) == 1 {
+				envID = envs.Data[0].Id
+			} else if len(envs.Data) > 1 {
+				names := []string{}
+				for _, item := range envs.Data {
+					names = append(names, fmt.Sprintf("%s(%s/%s)", item.Name, item.ClusterId, item.Id))
+				}
+				idx := selectFromList("Found multiple environments in different clusters:", names)
+				envID = envs.Data[idx].Id
+			}
+		}
+	}
+	if envID == "" {
+		return cli.NewExitError("Error: can't find associated environment", 1)
+	}
+	config, err := lookupConfig(ctx)
 	if err != nil {
 		return err
 	}
-
-	for _, item := range collection.Data {
-		writer.Write(TemplateData{
-			ID:              item.Id,
-			ProjectTemplate: &item,
-		})
-	}
-
-	return writer.Err()
-}
-
-func envTemplateImport(ctx *cli.Context) error {
-	c, err := GetRawClient(ctx)
+	config.Environment = envID
+	err = config.Write()
 	if err != nil {
 		return err
 	}
-
-	w, err := NewWaiter(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range ctx.Args() {
-		template := client.ProjectTemplate{
-			IsPublic: ctx.Bool("public"),
-		}
-		content, err := ioutil.ReadFile(file)
-		if err != nil {
-			return err
-		}
-
-		if err := yaml.Unmarshal(content, &template); err != nil {
-			return err
-		}
-
-		created, err := c.ProjectTemplate.Create(&template)
-		if err != nil {
-			return err
-		}
-
-		w.Add(created.Id)
-	}
-
-	return w.Wait()
-}
-
-func envTemplateExport(ctx *cli.Context) error {
-	c, err := GetRawClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, name := range ctx.Args() {
-		r, err := Lookup(c, name, "projectTemplate")
-		if err != nil {
-			return err
-		}
-
-		template, err := c.ProjectTemplate.ById(r.Id)
-		if err != nil {
-			return err
-		}
-
-		stacks := []map[string]interface{}{}
-		for _, s := range template.Stacks {
-			data := map[string]interface{}{
-				"name": s.Name,
-			}
-			if s.TemplateId != "" {
-				data["template_id"] = s.TemplateId
-			}
-			if s.TemplateVersionId != "" {
-				data["template_version_id"] = s.TemplateVersionId
-			}
-			if len(s.Answers) > 0 {
-				data["answers"] = s.Answers
-			}
-			stacks = append(stacks, data)
-		}
-
-		data := map[string]interface{}{
-			"name":        template.Name,
-			"description": template.Description,
-			"stacks":      stacks,
-		}
-
-		content, err := yaml.Marshal(&data)
-		if err != nil {
-			return err
-		}
-
-		_, err = os.Stdout.Write(content)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return envLs(ctx)
 }

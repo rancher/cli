@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -40,12 +40,8 @@ func restartResources(ctx *cli.Context) error {
 		if err != nil {
 			return "", err
 		}
-		err = c.Action(resource.Type, action, resource, &client.ServiceRestart{
-			RollingRestartStrategy: client.RollingRestartStrategy{
-				BatchSize:      int64(ctx.Int("batch-size")),
-				IntervalMillis: int64(ctx.Int("interval")),
-			},
-		}, resource)
+		//todo: revisit restart policy
+		err = c.Action(resource.Type, action, resource, nil, resource)
 		return resource.Id, err
 	})
 }

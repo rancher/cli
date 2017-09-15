@@ -7,15 +7,15 @@ const (
 type TemplateVersion struct {
 	Resource
 
-	Actions map[string]interface{} `json:"actions,omitempty" yaml:"actions,omitempty"`
+	Actions map[string]string `json:"actions,omitempty" yaml:"actions,omitempty"`
 
-	Bindings map[string]interface{} `json:"bindings,omitempty" yaml:"bindings,omitempty"`
+	Bindings map[string]string `json:"bindings,omitempty" yaml:"bindings,omitempty"`
 
-	Files map[string]interface{} `json:"files,omitempty" yaml:"files,omitempty"`
+	Files map[string]string `json:"files,omitempty" yaml:"files,omitempty"`
 
-	Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 
-	Links map[string]interface{} `json:"links,omitempty" yaml:"links,omitempty"`
+	Links map[string]string `json:"links,omitempty" yaml:"links,omitempty"`
 
 	MaximumRancherVersion string `json:"maximumRancherVersion,omitempty" yaml:"maximum_rancher_version,omitempty"`
 
@@ -29,7 +29,7 @@ type TemplateVersion struct {
 
 	UpgradeFrom string `json:"upgradeFrom,omitempty" yaml:"upgrade_from,omitempty"`
 
-	UpgradeVersionLinks map[string]interface{} `json:"upgradeVersionLinks,omitempty" yaml:"upgrade_version_links,omitempty"`
+	UpgradeVersionLinks map[string]string `json:"upgradeVersionLinks,omitempty" yaml:"upgrade_version_links,omitempty"`
 
 	Version string `json:"version,omitempty" yaml:"version,omitempty"`
 }

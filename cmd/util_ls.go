@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 

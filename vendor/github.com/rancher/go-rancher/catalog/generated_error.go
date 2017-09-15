@@ -7,9 +7,9 @@ const (
 type Error struct {
 	Resource
 
-	Actions map[string]interface{} `json:"actions,omitempty" yaml:"actions,omitempty"`
+	Actions map[string]string `json:"actions,omitempty" yaml:"actions,omitempty"`
 
-	Links map[string]interface{} `json:"links,omitempty" yaml:"links,omitempty"`
+	Links map[string]string `json:"links,omitempty" yaml:"links,omitempty"`
 
 	Message string `json:"message,omitempty" yaml:"message,omitempty"`
 

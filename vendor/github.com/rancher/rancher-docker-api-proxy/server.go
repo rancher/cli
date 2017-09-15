@@ -10,9 +10,9 @@ import (
 	"sync"
 
 	"github.com/Sirupsen/logrus"
-
+	"github.com/gorilla/websocket"
 	"github.com/rancher/go-rancher/hostaccess"
-	rancher "github.com/rancher/go-rancher/v2"
+	rancher "github.com/rancher/go-rancher/v3"
 )
 
 type IoOps interface {
@@ -110,11 +110,15 @@ func (p *Proxy) handle(host *rancher.Host, client net.Conn) {
 	}
 }
 
+func (p *Proxy) openConnection(host *rancher.Host) (*websocket.Conn, error) {
+	hostAccessClient := hostaccess.RancherWebsocketClient(*p.client)
+	return hostAccessClient.GetHostAccess(host.Resource, "dockersocket", nil)
+}
+
 func (p *Proxy) handleError(host *rancher.Host, conn net.Conn) error {
 	defer conn.Close()
 
-	hostAccessClient := hostaccess.RancherWebsocketClient(*p.client)
-	websocket, err := hostAccessClient.GetHostAccess(host.Resource, "dockersocket", nil)
+	websocket, err := p.openConnection(host)
 	if err != nil {
 		return err
 	}
@@ -189,6 +193,17 @@ func (p *Proxy) getHost() (*rancher.Host, error) {
 		hosts, err = p.client.Host.List(&rancher.ListOpts{
 			Filters: map[string]interface{}{
 				"name": p.host,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(hosts.Data) == 0 {
+		hosts, err = p.client.Host.List(&rancher.ListOpts{
+			Filters: map[string]interface{}{
+				"hostname": p.host,
 			},
 		})
 		if err != nil {

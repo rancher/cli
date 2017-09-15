@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -50,7 +50,7 @@ func GetStackMap(c *client.RancherClient) map[string]client.Stack {
 }
 
 type PsData struct {
-	Service       client.Service
+	Service       interface{}
 	Name          string
 	LaunchConfig  interface{}
 	Stack         client.Stack
@@ -86,6 +86,11 @@ func servicePs(ctx *cli.Context) error {
 		return errors.Wrap(err, "service list failed")
 	}
 
+	collectionContainers, err := c.Container.List(defaultListOpts(ctx))
+	if err != nil {
+		return errors.Wrap(err, "container list failed")
+	}
+
 	writer := NewTableWriter([][]string{
 		{"ID", "Service.Id"},
 		{"TYPE", "Service.Type"},
@@ -93,8 +98,7 @@ func servicePs(ctx *cli.Context) error {
 		{"IMAGE", "LaunchConfig.ImageUuid"},
 		{"STATE", "CombinedState"},
 		{"SCALE", "{{len .Service.InstanceIds}}/{{.Service.Scale}}"},
-		{"SYSTEM", "Service.System"},
-		{"ENDPOINTS", "{{endpoint .Service.PublicEndpoints}}"},
+		{"ENDPOINTS", "{{range .Service.PublicEndpoints}}{{.AgentIpAddress}}:{{.PublicPort}}:{{.PrivatePort}}/{{.Protocol}} {{end}}"},
 		{"DETAIL", "Service.TransitioningMessage"},
 	}, ctx)
 
@@ -104,6 +108,7 @@ func servicePs(ctx *cli.Context) error {
 		if item.LaunchConfig != nil {
 			item.LaunchConfig.ImageUuid = strings.TrimPrefix(item.LaunchConfig.ImageUuid, "docker:")
 		}
+		item.Type = "service"
 
 		combined := item.HealthState
 		if item.State != "active" || combined == "" {
@@ -129,6 +134,34 @@ func servicePs(ctx *cli.Context) error {
 				Name: fmt.Sprintf("%s/%s/%s", stackMap[item.StackId].Name, item.Name,
 					sidekick.Name),
 				LaunchConfig:  sidekick,
+				Stack:         stackMap[item.StackId],
+				CombinedState: combined,
+			})
+		}
+	}
+
+	for _, item := range collectionContainers.Data {
+		if len(item.ServiceIds) == 0 && item.StackId != "" {
+			launchConfig := client.LaunchConfig{}
+			launchConfig.ImageUuid = item.Image
+
+			service := client.Service{}
+			service.Id = item.Id
+			service.Type = "standalone"
+			service.InstanceIds = []string{item.Id}
+			service.Scale = 1
+			service.PublicEndpoints = item.PublicEndpoints
+			service.TransitioningMessage = item.TransitioningMessage
+
+			combined := item.HealthState
+			if item.State != "active" || combined == "" {
+				combined = item.State
+			}
+			writer.Write(PsData{
+				ID:            item.Id,
+				Service:       service,
+				Name:          fmt.Sprintf("%s/%s", stackMap[item.StackId].Name, item.Name),
+				LaunchConfig:  launchConfig,
 				Stack:         stackMap[item.StackId],
 				CombinedState: combined,
 			})
@@ -193,7 +226,7 @@ func containerPs(ctx *cli.Context, containers []client.Container) error {
 		{"STATE", "CombinedState"},
 		{"HOST", "Container.HostId"},
 		{"IP", "Container.PrimaryIpAddress"},
-		{"DOCKER", "DockerID"},
+		{"DOCKER_ID", "DockerID"},
 		{"DETAIL", "Container.TransitioningMessage"},
 		//TODO: {"PORTS", "{{ports .Container.Ports}}"},
 	}, ctx)

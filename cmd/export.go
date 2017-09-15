@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -111,10 +111,7 @@ func exportService(ctx *cli.Context) error {
 			return err
 		}
 
-		if err := addToTar(archive, stack.Name, "docker-compose.yml", config.DockerComposeConfig); err != nil {
-			return err
-		}
-		if err := addToTar(archive, stack.Name, "rancher-compose.yml", config.RancherComposeConfig); err != nil {
+		if err := addToTar(archive, stack.Name, "compose.yml", config.DockerComposeConfig); err != nil {
 			return err
 		}
 		if len(config.Actions) > 0 {

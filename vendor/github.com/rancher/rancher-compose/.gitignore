@@ -1,0 +1,17 @@
+*.pyc
+*.swp
+
+.idea
+
+/.dapper
+/.gpath
+/.trash-cache
+/bin
+/build
+/dist
+/gopath
+/tests/integration/.tox
+/tests/integration/.venv
+/tests/integration/MANIFEST
+
+__pycache__

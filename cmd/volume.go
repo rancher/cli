@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -135,7 +135,7 @@ func volumeCreate(ctx *cli.Context) error {
 	newVol := &client.Volume{
 		Name:       ctx.Args()[0],
 		Driver:     ctx.String("driver"),
-		DriverOpts: map[string]interface{}{},
+		DriverOpts: map[string]string{},
 	}
 
 	for _, arg := range ctx.StringSlice("opt") {

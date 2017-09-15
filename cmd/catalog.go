@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/rancher/go-rancher/catalog"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -67,15 +67,6 @@ func CatalogCommand() cli.Command {
 					},
 				},
 			},
-			/*
-				cli.Command{
-					Name:   "upgrade",
-					Usage:  "Upgrade catalog template",
-					Action: errorWrapper(envUpdate),
-					ArgsUsage: "[ID or NAME]"
-					Flags:  []cli.Flag{},
-				},
-			*/
 		},
 	}
 }
@@ -84,50 +75,6 @@ type CatalogData struct {
 	ID       string
 	Template catalog.Template
 	Category string
-}
-
-func getEnvFilter(proj *client.Project, ctx *cli.Context) string {
-	envFilter := proj.Orchestration
-	if envFilter == "cattle" {
-		envFilter = ""
-	}
-	if ctx.Bool("system") {
-		envFilter = "infra"
-	}
-	return envFilter
-}
-
-func isInCSV(value, csv string) bool {
-	for _, part := range strings.Split(csv, ",") {
-		if value == part {
-			return true
-		}
-	}
-	return false
-}
-
-func isOrchestrationSupported(ctx *cli.Context, proj *client.Project, labels map[string]interface{}) bool {
-	// Only check for system templates
-	if !ctx.Bool("system") {
-		return true
-	}
-
-	if supported, ok := labels[orchestrationSupported]; ok {
-		supportedString := fmt.Sprint(supported)
-		if supportedString != "" && !isInCSV(proj.Orchestration, supportedString) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func isSupported(ctx *cli.Context, proj *client.Project, item catalog.Template) bool {
-	envFilter := getEnvFilter(proj, ctx)
-	if item.TemplateBase != envFilter {
-		return false
-	}
-	return isOrchestrationSupported(ctx, proj, item.Labels)
 }
 
 func catalogLs(ctx *cli.Context) error {
@@ -153,7 +100,7 @@ func catalogLs(ctx *cli.Context) error {
 }
 
 func forEachTemplate(ctx *cli.Context, f func(item catalog.Template) error) error {
-	_, c, proj, cc, err := setupCatalogContext(ctx)
+	_, c, _, cc, err := setupCatalogContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -169,9 +116,6 @@ func forEachTemplate(ctx *cli.Context, f func(item catalog.Template) error) erro
 	}
 
 	for _, item := range collection.Data {
-		if !isSupported(ctx, proj, item) {
-			continue
-		}
 		if err := f(item); err != nil {
 			return err
 		}
@@ -234,7 +178,7 @@ func catalogInstall(ctx *cli.Context) error {
 		return errors.New("Exactly one argument is required")
 	}
 
-	_, c, proj, cc, err := setupCatalogContext(ctx)
+	_, c, _, cc, err := setupCatalogContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -269,34 +213,15 @@ func catalogInstall(ctx *cli.Context) error {
 
 	externalID := fmt.Sprintf("catalog://%s", templateVersion.Id)
 	id := ""
-	switch proj.Orchestration {
-	case "cattle":
-		stack, err := c.Stack.Create(&client.Stack{
-			Name:           stackName,
-			DockerCompose:  toString(templateVersion.Files["docker-compose.yml"]),
-			RancherCompose: toString(templateVersion.Files["rancher-compose.yml"]),
-			Environment:    answers,
-			ExternalId:     externalID,
-			System:         ctx.Bool("system"),
-			StartOnCreate:  true,
-		})
-		if err != nil {
-			return err
-		}
-		id = stack.Id
-	case "kubernetes":
-		stack, err := c.KubernetesStack.Create(&client.KubernetesStack{
-			Name:        stackName,
-			Templates:   templateVersion.Files,
-			ExternalId:  externalID,
-			Environment: answers,
-			System:      ctx.Bool("system"),
-		})
-		if err != nil {
-			return err
-		}
-		id = stack.Id
+	stack, err := c.Stack.Create(&client.Stack{
+		Name:       stackName,
+		Templates:  templateVersion.Files,
+		ExternalId: externalID,
+	})
+	if err != nil {
+		return err
 	}
+	id = stack.Id
 
 	return WaitFor(ctx, id)
 }
@@ -392,11 +317,11 @@ func GetCatalogClient(ctx *cli.Context) (*catalog.RancherClient, error) {
 		return nil, err
 	}
 
-	idx := strings.LastIndex(config.URL, "/v2-beta")
+	idx := strings.LastIndex(config.URL, "/v3")
 	if idx == -1 {
 		idx = strings.LastIndex(config.URL, "/v1")
 		if idx == -1 {
-			return nil, fmt.Errorf("Invalid URL %s, must contain /v2-beta", config.URL)
+			return nil, fmt.Errorf("Invalid URL %s, must contain /v3", config.URL)
 		}
 	}
 

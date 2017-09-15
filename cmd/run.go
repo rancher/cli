@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 
 	"fmt"
 	"os"
@@ -302,29 +302,173 @@ func serviceRun(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	launchConfig := &client.LaunchConfig{
+
+	if ctx.IsSet("scale") {
+		launchConfig := &client.LaunchConfig{
+			//BlkioDeviceOptions:
+			BlkioWeight: ctx.Int64("blkio-weight"),
+			CapAdd:      ctx.StringSlice("cap-add"),
+			CapDrop:     ctx.StringSlice("cap-drop"),
+			//CpuSet: ctx.String(""),
+			CgroupParent:   ctx.String("cgroup-parent"),
+			CpuSetMems:     ctx.String("cpuset-mems"),
+			CpuPeriod:      ctx.Int64("cpu-period"),
+			CpuQuota:       ctx.Int64("cpu-quota"),
+			CpuShares:      ctx.Int64("cpu-shares"),
+			Devices:        ctx.StringSlice("device"),
+			Dns:            ctx.StringSlice("dns"),
+			DnsOpt:         ctx.StringSlice("dns-opt"),
+			DnsSearch:      ctx.StringSlice("dns-search"),
+			EntryPoint:     ctx.StringSlice("entrypoint"),
+			Expose:         ctx.StringSlice("expose"),
+			GroupAdd:       ctx.StringSlice("group-add"),
+			HealthCmd:      ctx.StringSlice("health-cmd"),
+			HealthTimeout:  ctx.Int64("health-timeout"),
+			HealthInterval: ctx.Int64("health-interval"),
+			HealthRetries:  ctx.Int64("health-retries"),
+			Hostname:       ctx.String("hostname"),
+			ImageUuid:      "docker:" + ctx.Args()[0],
+			Ip:             ctx.String("ip"),
+			Ip6:            ctx.String("ip6"),
+			IpcMode:        ctx.String("ipc"),
+			Isolation:      ctx.String("isolation"),
+			KernelMemory:   ctx.Int64("kernel-memory"),
+			Labels:         map[string]string{},
+			Environment:    map[string]string{},
+			//LogConfig:
+			Memory:            ctx.Int64("memory"),
+			MemoryReservation: ctx.Int64("memory-reservation"),
+			MemorySwap:        ctx.Int64("memory-swap"),
+			MemorySwappiness:  ctx.Int64("memory-swappiness"),
+			//NetworkIds: ctx.StringSlice("networkids"),
+			NetAlias:        ctx.StringSlice("net-alias"),
+			NetworkMode:     ctx.String("net"),
+			OomKillDisable:  ctx.Bool("oom-kill-disable"),
+			OomScoreAdj:     ctx.Int64("oom-score-adj"),
+			PidMode:         ctx.String("pid"),
+			PidsLimit:       ctx.Int64("pids-limit"),
+			Ports:           ctx.StringSlice("publish"),
+			Privileged:      ctx.Bool("privileged"),
+			PublishAllPorts: ctx.Bool("publish-all"),
+			ReadOnly:        ctx.Bool("read-only"),
+			//todo: add RunInit
+			//RunInit:         ctx.Bool("init"),
+			SecurityOpt:  ctx.StringSlice("security-opt"),
+			ShmSize:      ctx.Int64("shm-size"),
+			StdinOpen:    ctx.Bool("interactive"),
+			StopSignal:   ctx.String("stop-signal"),
+			Tty:          ctx.Bool("tty"),
+			User:         ctx.String("user"),
+			Uts:          ctx.String("uts"),
+			VolumeDriver: ctx.String("volume-driver"),
+			WorkingDir:   ctx.String("workdir"),
+			DataVolumes:  ctx.StringSlice("volume"),
+		}
+
+		if ctx.String("log-driver") != "" || len(ctx.StringSlice("log-opt")) > 0 {
+			launchConfig.LogConfig = &client.LogConfig{
+				Driver: ctx.String("log-driver"),
+				Config: map[string]string{},
+			}
+			for _, opt := range ctx.StringSlice("log-opt") {
+				parts := strings.SplitN(opt, "=", 2)
+				if len(parts) > 1 {
+					launchConfig.LogConfig.Config[parts[0]] = parts[1]
+				} else {
+					launchConfig.LogConfig.Config[parts[0]] = ""
+				}
+			}
+		}
+
+		for _, label := range ctx.StringSlice("label") {
+			parts := strings.SplitN(label, "=", 2)
+			value := ""
+			if len(parts) > 1 {
+				value = parts[1]
+			}
+			launchConfig.Labels[parts[0]] = value
+		}
+
+		for _, env := range ctx.StringSlice("env") {
+			parts := strings.SplitN(env, "=", 2)
+			value := ""
+
+			if len(parts) > 1 {
+				value = parts[1]
+
+				if parts[0] == "" {
+					errMsg := fmt.Sprintf("invalid argument \"%s\" for e: invalid environment variable: %s\nSee 'rancher run --help'.", env, env)
+					return cli.NewExitError(errMsg, 1)
+				}
+			} else if len(parts) == 1 {
+				value = os.Getenv(parts[0])
+			}
+			launchConfig.Environment[parts[0]] = value
+		}
+
+		if ctx.Bool("schedule-global") {
+			launchConfig.Labels["io.rancher.scheduler.global"] = "true"
+		}
+
+		if ctx.Bool("pull") {
+			launchConfig.Labels["io.rancher.container.pull_image"] = "always"
+		}
+
+		args := ctx.Args()[1:]
+
+		if len(args) > 0 {
+			launchConfig.Command = args
+		}
+
+		stack, name, err := ParseName(c, ctx.String("name"))
+		if err != nil {
+			return err
+		}
+		service := &client.Service{
+			Name:         name,
+			StackId:      stack.Id,
+			LaunchConfig: launchConfig,
+			Scale:        int64(ctx.Int("scale")),
+		}
+
+		service, err = c.Service.Create(service)
+		if err != nil {
+			return err
+		}
+
+		return WaitFor(ctx, service.Id)
+	}
+	container := &client.Container{
 		//BlkioDeviceOptions:
 		BlkioWeight: ctx.Int64("blkio-weight"),
 		CapAdd:      ctx.StringSlice("cap-add"),
 		CapDrop:     ctx.StringSlice("cap-drop"),
 		//CpuSet: ctx.String(""),
-		CgroupParent: ctx.String("cgroup-parent"),
-		CpuSetMems:   ctx.String("cpuset-mems"),
-		CpuPeriod:    ctx.Int64("cpu-period"),
-		CpuQuota:     ctx.Int64("cpu-quota"),
-		CpuShares:    ctx.Int64("cpu-shares"),
-		Devices:      ctx.StringSlice("device"),
-		Dns:          ctx.StringSlice("dns"),
-		DnsOpt:       ctx.StringSlice("dns-opt"),
-		DnsSearch:    ctx.StringSlice("dns-search"),
-		EntryPoint:   ctx.StringSlice("entrypoint"),
-		Expose:       ctx.StringSlice("expose"),
-		GroupAdd:     ctx.StringSlice("group-add"),
-		Hostname:     ctx.String("hostname"),
-		ImageUuid:    "docker:" + ctx.Args()[0],
-		KernelMemory: ctx.Int64("kernel-memory"),
-		Labels:       map[string]interface{}{},
-		Environment:  map[string]interface{}{},
+		CgroupParent:   ctx.String("cgroup-parent"),
+		CpuSetMems:     ctx.String("cpuset-mems"),
+		CpuPeriod:      ctx.Int64("cpu-period"),
+		CpuQuota:       ctx.Int64("cpu-quota"),
+		CpuShares:      ctx.Int64("cpu-shares"),
+		Devices:        ctx.StringSlice("device"),
+		Dns:            ctx.StringSlice("dns"),
+		DnsOpt:         ctx.StringSlice("dns-opt"),
+		DnsSearch:      ctx.StringSlice("dns-search"),
+		EntryPoint:     ctx.StringSlice("entrypoint"),
+		Expose:         ctx.StringSlice("expose"),
+		GroupAdd:       ctx.StringSlice("group-add"),
+		HealthCmd:      ctx.StringSlice("health-cmd"),
+		HealthTimeout:  ctx.Int64("health-timeout"),
+		HealthInterval: ctx.Int64("health-interval"),
+		HealthRetries:  ctx.Int64("health-retries"),
+		Hostname:       ctx.String("hostname"),
+		ImageUuid:      "docker:" + ctx.Args()[0],
+		Ip:             ctx.String("ip"),
+		Ip6:            ctx.String("ip6"),
+		IpcMode:        ctx.String("ipc"),
+		Isolation:      ctx.String("isolation"),
+		KernelMemory:   ctx.Int64("kernel-memory"),
+		Labels:         map[string]string{},
+		Environment:    map[string]string{},
 		//LogConfig:
 		Memory:            ctx.Int64("memory"),
 		MemoryReservation: ctx.Int64("memory-reservation"),
@@ -340,30 +484,35 @@ func serviceRun(ctx *cli.Context) error {
 		Privileged:      ctx.Bool("privileged"),
 		PublishAllPorts: ctx.Bool("publish-all"),
 		ReadOnly:        ctx.Bool("read-only"),
-		RunInit:         ctx.Bool("init"),
-		SecurityOpt:     ctx.StringSlice("security-opt"),
-		ShmSize:         ctx.Int64("shm-size"),
-		StdinOpen:       ctx.Bool("interactive"),
-		StopSignal:      ctx.String("stop-signal"),
-		Tty:             ctx.Bool("tty"),
-		User:            ctx.String("user"),
-		Uts:             ctx.String("uts"),
-		VolumeDriver:    ctx.String("volume-driver"),
-		WorkingDir:      ctx.String("workdir"),
-		DataVolumes:     ctx.StringSlice("volume"),
+		//todo: add RunInit
+		//RunInit:         ctx.Bool("init"),
+		SecurityOpt:  ctx.StringSlice("security-opt"),
+		ShmSize:      ctx.Int64("shm-size"),
+		StdinOpen:    ctx.Bool("interactive"),
+		StopSignal:   ctx.String("stop-signal"),
+		Tty:          ctx.Bool("tty"),
+		User:         ctx.String("user"),
+		Uts:          ctx.String("uts"),
+		VolumeDriver: ctx.String("volume-driver"),
+		WorkingDir:   ctx.String("workdir"),
+		DataVolumes:  ctx.StringSlice("volume"),
+	}
+	if ctx.IsSet("it") {
+		container.StdinOpen = true
+		container.Tty = true
 	}
 
 	if ctx.String("log-driver") != "" || len(ctx.StringSlice("log-opt")) > 0 {
-		launchConfig.LogConfig = &client.LogConfig{
+		container.LogConfig = &client.LogConfig{
 			Driver: ctx.String("log-driver"),
-			Config: map[string]interface{}{},
+			Config: map[string]string{},
 		}
 		for _, opt := range ctx.StringSlice("log-opt") {
 			parts := strings.SplitN(opt, "=", 2)
 			if len(parts) > 1 {
-				launchConfig.LogConfig.Config[parts[0]] = parts[1]
+				container.LogConfig.Config[parts[0]] = parts[1]
 			} else {
-				launchConfig.LogConfig.Config[parts[0]] = ""
+				container.LogConfig.Config[parts[0]] = ""
 			}
 		}
 	}
@@ -374,7 +523,7 @@ func serviceRun(ctx *cli.Context) error {
 		if len(parts) > 1 {
 			value = parts[1]
 		}
-		launchConfig.Labels[parts[0]] = value
+		container.Labels[parts[0]] = value
 	}
 
 	for _, env := range ctx.StringSlice("env") {
@@ -391,40 +540,27 @@ func serviceRun(ctx *cli.Context) error {
 		} else if len(parts) == 1 {
 			value = os.Getenv(parts[0])
 		}
-		launchConfig.Environment[parts[0]] = value
-	}
-
-	if ctx.Bool("schedule-global") {
-		launchConfig.Labels["io.rancher.scheduler.global"] = "true"
+		container.Environment[parts[0]] = value
 	}
 
 	if ctx.Bool("pull") {
-		launchConfig.Labels["io.rancher.container.pull_image"] = "always"
+		container.Labels["io.rancher.container.pull_image"] = "always"
 	}
 
 	args := ctx.Args()[1:]
 
 	if len(args) > 0 {
-		launchConfig.Command = args
+		container.Command = args
 	}
 
-	stack, name, err := ParseName(c, ctx.String("name"))
+	_, name, err := ParseName(c, ctx.String("name"))
 	if err != nil {
 		return err
 	}
-
-	service := &client.Service{
-		Name:          name,
-		StackId:       stack.Id,
-		LaunchConfig:  launchConfig,
-		StartOnCreate: true,
-		Scale:         int64(ctx.Int("scale")),
-	}
-
-	service, err = c.Service.Create(service)
+	container.Name = name
+	cont, err := c.Container.Create(container)
 	if err != nil {
 		return err
 	}
-
-	return WaitFor(ctx, service.Id)
+	return WaitFor(ctx, cont.Id)
 }
