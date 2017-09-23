@@ -17,6 +17,8 @@ type Project struct {
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
+	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
+
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	Members []ProjectMember `json:"members,omitempty" yaml:"members,omitempty"`

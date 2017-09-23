@@ -71,6 +71,10 @@ func mainErr() error {
 			EnvVar: "RANCHER_CLIENT_CONFIG",
 		},
 		cli.StringFlag{
+			Name:  "cluster",
+			Usage: "Specify cluster used for kubectl",
+		},
+		cli.StringFlag{
 			Name:   "environment,env",
 			Usage:  "Environment name or ID",
 			EnvVar: "RANCHER_ENVIRONMENT",
@@ -128,6 +132,7 @@ func mainErr() error {
 	}
 	app.Commands = []cli.Command{
 		cmd.CatalogCommand(),
+		cmd.ClusterCommand(),
 		cmd.ConfigCommand(),
 		cmd.DockerCommand(),
 		cmd.EnvCommand(),
@@ -135,6 +140,7 @@ func mainErr() error {
 		cmd.ExecCommand(),
 		cmd.ExportCommand(),
 		cmd.HostCommand(),
+		cmd.KubectlCommand(),
 		cmd.LogsCommand(),
 		cmd.PsCommand(),
 		cmd.PullCommand(),

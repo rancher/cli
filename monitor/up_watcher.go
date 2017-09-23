@@ -48,7 +48,7 @@ func NewUpWatcher(c *client.RancherClient) *UpWatcher {
 	}
 }
 
-func (m *UpWatcher) Start(stackName string) error {
+func (m *UpWatcher) Start(stackID string) error {
 	schema, ok := m.c.GetSchemas().CheckSchema("subscribe")
 	if !ok {
 		return fmt.Errorf("Not authorized to subscribe")
@@ -84,15 +84,11 @@ func (m *UpWatcher) Start(stackName string) error {
 
 	logrus.Debugf("Connected to: %s", u.String())
 
-	return m.watch(conn, stackName)
+	return m.watch(conn, stackID)
 }
 
-func (m *UpWatcher) watch(conn *websocket.Conn, stackName string) error {
-	stackID := ""
+func (m *UpWatcher) watch(conn *websocket.Conn, stackID string) error {
 	serviceIds := map[string]struct{}{}
-	lastStackMsg := ""
-	lastServiceMsg := ""
-	lastContainerMsg := ""
 	for {
 		v := Event{}
 		_, r, err := conn.NextReader()
@@ -109,49 +105,34 @@ func (m *UpWatcher) watch(conn *websocket.Conn, stackName string) error {
 			stackData := &client.Stack{}
 			if err := unmarshalling(v.Data["resource"], stackData); err != nil {
 				logrus.Errorf("failed to unmarshalling err: %v", err)
+				continue
 			}
-			if stackData.Name == stackName {
+			if stackData.Id == stackID {
 				stackID = stackData.Id
 				for _, serviceID := range stackData.ServiceIds {
 					serviceIds[serviceID] = struct{}{}
 				}
 				switch stackData.Transitioning {
-				case "yes":
-					msg := fmt.Sprintf("Stack [%v]: %s", stackData.Name, stackData.TransitioningMessage)
-					if msg != lastStackMsg {
-						logrus.Info(msg)
-					}
-					lastStackMsg = msg
+				case "error":
+					return errors.Errorf("Failed to launch stack %s. Error message: %s", stackID, stackData.TransitioningMessage)
 				}
 			}
-		} else if v.ResourceType == "scalingGroup" {
-			serviceData := &client.Service{}
-			if err := unmarshalling(v.Data["resource"], serviceData); err != nil {
+		} else if v.ResourceType == "serviceLog" {
+			serviceLogData := &client.ServiceLog{}
+			if err := unmarshalling(v.Data["resource"], serviceLogData); err != nil {
 				logrus.Errorf("failed to unmarshalling err: %v", err)
+				continue
 			}
-			if serviceData.StackId == stackID {
-				switch serviceData.Transitioning {
-				case "yes":
-					msg := fmt.Sprintf("Service [%v]: %s", serviceData.Name, serviceData.TransitioningMessage)
-					if msg != lastServiceMsg {
-						logrus.Info(msg)
+			if service, err := m.c.Service.ById(serviceLogData.ServiceId); err == nil {
+				if service.StackId == stackID {
+					msg := fmt.Sprintf("%s ServiceLog: %s", serviceLogData.Created, serviceLogData.Description)
+					switch serviceLogData.Level {
+					case "info":
+						logrus.Infof(msg)
+					case "error":
+						logrus.Error(err)
+						return err
 					}
-					lastServiceMsg = msg
-				}
-			}
-		} else if v.ResourceType == "container" {
-			containerData := &client.Container{}
-			if err := unmarshalling(v.Data["resource"], containerData); err != nil {
-				logrus.Errorf("failed to unmarshalling err: %v", err)
-			}
-			if containerData.StackId == stackID {
-				switch containerData.Transitioning {
-				case "yes":
-					msg := fmt.Sprintf("Container [%v]: %s", containerData.Name, containerData.TransitioningMessage)
-					if msg != lastContainerMsg {
-						logrus.Info(msg)
-					}
-					lastContainerMsg = msg
 				}
 			}
 		}

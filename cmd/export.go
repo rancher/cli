@@ -111,7 +111,7 @@ func exportService(ctx *cli.Context) error {
 			return err
 		}
 
-		if err := addToTar(archive, stack.Name, "compose.yml", config.DockerComposeConfig); err != nil {
+		if err := addToTar(archive, stack.Name, "compose.yml", config.Templates["compose.yml"]); err != nil {
 			return err
 		}
 		if len(config.Actions) > 0 {

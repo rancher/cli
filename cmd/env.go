@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
+	"strings"
 )
 
 func EnvCommand() cli.Command {
@@ -40,16 +41,10 @@ func EnvCommand() cli.Command {
 				Name:  "create",
 				Usage: "Create an environment",
 				Description: `
-By default, an environment with cattle orchestration framework will be created. This command only works with Account API keys.
-
 Example:
 
 	$ rancher env create newEnv
 
-To add an orchestration framework do TODO
-	$ rancher env create -t kubernetes newK8sEnv
-	$ rancher env create -t mesos newMesosEnv
-	$ rancher env create -t swarm newSwarmEnv
 `,
 				ArgsUsage: "[NEWENVNAME...]",
 				Action:    envCreate,
@@ -57,7 +52,6 @@ To add an orchestration framework do TODO
 					cli.StringFlag{
 						Name:  "cluster,c",
 						Usage: "Cluster name to create the environment",
-						Value: "Default",
 					},
 				},
 			},
@@ -158,7 +152,6 @@ func envCreate(ctx *cli.Context) error {
 	}
 	clusters, err := c.Cluster.List(&client.ListOpts{
 		Filters: map[string]interface{}{
-			"name":         ctx.String("cluster"),
 			"removed_null": true,
 		},
 	})
@@ -167,11 +160,29 @@ func envCreate(ctx *cli.Context) error {
 	}
 
 	if len(clusters.Data) == 0 {
-		return errors.Errorf("can't find cluster with name %v", ctx.String("cluster"))
+		return errors.New("there is no cluster in current setup")
+	}
+	clusterNames := []string{}
+	selectedClusterID := ""
+	if ctx.String("cluster") != "" {
+		for _, cluster := range clusters.Data {
+			if cluster.Name == ctx.String("cluster") {
+				selectedClusterID = cluster.Id
+			}
+		}
+		if selectedClusterID == "" {
+			return errors.Errorf("failed to find cluster associated with the specified cluster name %v", ctx.String("cluster"))
+		}
+	} else {
+		for _, cluster := range clusters.Data {
+			clusterNames = append(clusterNames, fmt.Sprintf("%s (%s)", cluster.Name, cluster.Id))
+		}
+		index := selectFromList("Clusters: ", clusterNames)
+		selectedClusterID = clusters.Data[index].Id
 	}
 	data := map[string]interface{}{
 		"name":      name,
-		"clusterId": clusters.Data[0].Id,
+		"clusterId": selectedClusterID,
 	}
 
 	var newEnv client.Project
@@ -272,39 +283,27 @@ func envSwitch(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
 		return cli.ShowCommandHelp(ctx, "env")
 	}
-	envID := ""
 	name := ctx.Args()[0]
-	if env, err := c.Project.ById(name); err == nil && env != nil && env.Id == name {
-		envID = name
-	} else {
-		if envs, err := c.Project.List(&client.ListOpts{
-			Filters: map[string]interface{}{
-				"name": name,
-			},
-		}); err == nil {
-			if len(envs.Data) == 1 {
-				envID = envs.Data[0].Id
-			} else if len(envs.Data) > 1 {
-				names := []string{}
-				for _, item := range envs.Data {
-					names = append(names, fmt.Sprintf("%s(%s/%s)", item.Name, item.ClusterId, item.Id))
-				}
-				idx := selectFromList("Found multiple environments in different clusters:", names)
-				envID = envs.Data[idx].Id
-			}
-		}
-	}
-	if envID == "" {
-		return cli.NewExitError("Error: can't find associated environment", 1)
+	resource, err := Lookup(c, name, "project")
+	if err != nil {
+		return err
 	}
 	config, err := lookupConfig(ctx)
 	if err != nil {
 		return err
 	}
-	config.Environment = envID
+	config.Environment = resource.Id
 	err = config.Write()
 	if err != nil {
 		return err
 	}
 	return envLs(ctx)
+}
+
+func parseClusterAndProject(name string) (string, string) {
+	parts := strings.SplitN(name, "/", 2)
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return "", name
 }

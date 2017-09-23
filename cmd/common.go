@@ -2,18 +2,21 @@ package cmd
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
 	"text/template"
+	"time"
 
+	"github.com/fatih/color"
 	"github.com/rancher/go-rancher/v3"
 
 	"github.com/docker/docker/pkg/namesgenerator"
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -113,7 +116,11 @@ func GetEnvironment(def string, c *client.RancherClient) (*client.Project, error
 	if def == "" {
 		names := []string{}
 		for _, p := range resp.Data {
-			names = append(names, fmt.Sprintf("%s(%s), cluster ID: (%s)", p.Name, p.Id, p.ClusterId))
+			cluster, err := c.Cluster.ById(p.ClusterId)
+			if err != nil {
+				return nil, err
+			}
+			names = append(names, fmt.Sprintf("%s(%s), cluster Name: %s (%s)", p.Name, p.Id, cluster.Name, cluster.Id))
 		}
 
 		idx := selectFromList("Environments:", names)
@@ -196,6 +203,52 @@ func getContainerByName(c *client.RancherClient, name string) (client.ResourceCo
 	return result, nil
 }
 
+func getProjectByname(c *client.RancherClient, name string) (client.ResourceCollection, error) {
+	var result client.ResourceCollection
+	clusterName, projectName := parseClusterAndProject(name)
+	if clusterName != "" {
+		clusters, err := c.Cluster.List(&client.ListOpts{
+			Filters: map[string]interface{}{
+				"name":         clusterName,
+				"removed_null": "true",
+			},
+		})
+		if err != nil {
+			return result, err
+		}
+		if len(clusters.Data) == 0 {
+			return result, errors.Errorf("failed to find cluster with name %s", clusterName)
+		}
+		projects, err := c.Project.List(&client.ListOpts{
+			Filters: map[string]interface{}{
+				"clusterId":    clusters.Data[0].Id,
+				"name":         projectName,
+				"removed_null": "true",
+			},
+		})
+		if err != nil {
+			return result, err
+		}
+		for _, project := range projects.Data {
+			result.Data = append(result.Data, project.Resource)
+		}
+		return result, nil
+	}
+	projects, err := c.Project.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"name":         projectName,
+			"removed_null": "true",
+		},
+	})
+	if err != nil {
+		return result, err
+	}
+	for _, project := range projects.Data {
+		result.Data = append(result.Data, project.Resource)
+	}
+	return result, nil
+}
+
 func getServiceByName(c *client.RancherClient, name string) (client.ResourceCollection, error) {
 	var result client.ResourceCollection
 	stack, serviceName, err := ParseName(c, name)
@@ -222,17 +275,20 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 
 	for _, schemaType := range types {
 		var resource client.Resource
-		if err := c.ById(schemaType, name, &resource); !client.IsNotFound(err) && err != nil {
-			return nil, err
-		} else if err == nil && resource.Id == name { // The ID check is because of an oddity in the id obfuscation
-			return &resource, nil
+		// this is a hack for projects, it returns 403
+		if !strings.Contains(name, "/") {
+			if err := c.ById(schemaType, name, &resource); !client.IsNotFound(err) && err != nil {
+				return nil, err
+			} else if err == nil && resource.Id == name { // The ID check is because of an oddity in the id obfuscation
+				return &resource, nil
+			}
 		}
 
 		var collection client.ResourceCollection
 		if err := c.List(schemaType, &client.ListOpts{
 			Filters: map[string]interface{}{
 				"name":         name,
-				"removed_null": 1,
+				"removed_null": "1",
 			},
 		}, &collection); err != nil {
 			return nil, err
@@ -241,7 +297,31 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 		if len(collection.Data) > 1 {
 			ids := []string{}
 			for _, data := range collection.Data {
-				ids = append(ids, fmt.Sprintf("%s (%s)", data.Id, name))
+				switch schemaType {
+				case "project":
+					project, err := c.Project.ById(data.Id)
+					if err != nil {
+						return nil, err
+					}
+					cluster, err := c.Cluster.ById(project.ClusterId)
+					if err != nil {
+						return nil, err
+					}
+					ids = append(ids, fmt.Sprintf("cluster %s, %s (%s)", cluster.Name, data.Id, name))
+				case "container":
+					container, err := c.Container.ById(data.Id)
+					if err != nil {
+						return nil, err
+					}
+					host, err := c.Host.ById(container.HostId)
+					if err != nil {
+						return nil, err
+					}
+					ids = append(ids, fmt.Sprintf("host %s, %s (%s)", host.Hostname, data.Id, name))
+				default:
+					ids = append(ids, fmt.Sprintf("%s (%s)", data.Id, name))
+				}
+
 			}
 			index := selectFromList("Resources: ", ids)
 			return &collection.Data[index], nil
@@ -257,6 +337,8 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 				collection, err = getServiceByName(c, name)
 			case "container":
 				collection, err = getContainerByName(c, name)
+			case "project":
+				collection, err = getProjectByname(c, name)
 			}
 			if err != nil {
 				return nil, err
@@ -265,11 +347,6 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 
 		if len(collection.Data) == 0 {
 			continue
-		}
-
-		if byName != nil {
-			return nil, fmt.Errorf("Multiple resources named %s: %s:%s, %s:%s", name, collection.Data[0].Type,
-				collection.Data[0].Id, byName.Type, byName.Id)
 		}
 
 		byName = &collection.Data[0]
@@ -341,4 +418,11 @@ func processExitCode(err error) error {
 	}
 
 	return err
+}
+
+func getRandomColor() color.Attribute {
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	index := r1.Intn(8)
+	return colors[index]
 }
