@@ -7,6 +7,8 @@ const (
 type NetworkInfo struct {
 	Resource
 
+	Default bool `json:"default,omitempty" yaml:"default,omitempty"`
+
 	DefaultPolicyAction string `json:"defaultPolicyAction,omitempty" yaml:"default_policy_action,omitempty"`
 
 	EnvironmentUuid string `json:"environmentUuid,omitempty" yaml:"environment_uuid,omitempty"`

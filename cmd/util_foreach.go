@@ -23,7 +23,6 @@ func forEachResourceWithClient(c *client.RancherClient, ctx *cli.Context, types 
 	}
 
 	var lastErr error
-	fmt.Println(ctx.Args())
 	for _, id := range ctx.Args() {
 		resource, err := Lookup(c, id, types...)
 		if err != nil {

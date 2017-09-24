@@ -13,6 +13,10 @@ type InstanceInfo struct {
 
 	CreateIndex int64 `json:"createIndex,omitempty" yaml:"create_index,omitempty"`
 
+	DeploymentUnitId string `json:"deploymentUnitId,omitempty" yaml:"deployment_unit_id,omitempty"`
+
+	Desired bool `json:"desired,omitempty" yaml:"desired,omitempty"`
+
 	Dns []string `json:"dns,omitempty" yaml:"dns,omitempty"`
 
 	DnsSearch []string `json:"dnsSearch,omitempty" yaml:"dns_search,omitempty"`

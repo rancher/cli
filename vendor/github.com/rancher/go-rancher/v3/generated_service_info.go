@@ -31,7 +31,7 @@ type ServiceInfo struct {
 
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 
-	LbConfig LbConfig `json:"lbConfig,omitempty" yaml:"lb_config,omitempty"`
+	LbConfig *LbConfig `json:"lbConfig,omitempty" yaml:"lb_config,omitempty"`
 
 	Links []Link `json:"links,omitempty" yaml:"links,omitempty"`
 
