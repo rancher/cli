@@ -30,7 +30,7 @@ func ClusterCommand() cli.Command {
 				Usage:       "List clusters",
 				Description: "\nList all clusters in the current rancher setup\n",
 				ArgsUsage:   "None",
-				Action:      envLs,
+				Action:      clusterLs,
 				Flags:       clusterLsFlags,
 			},
 			{
