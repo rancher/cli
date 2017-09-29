@@ -21,8 +21,11 @@ import (
 )
 
 var (
-	errNoEnv = errors.New("Failed to find the current environment")
-	errNoURL = errors.New("RANCHER_URL environment or --url is not set, run `config`")
+	errNoEnv         = errors.New("Failed to find the current environment")
+	errNoURL         = errors.New("RANCHER_URL environment or --url is not set, run `config`")
+	namespaceLabel   = "io.kubernetes.pod.namespace"
+	podNameLabel     = "io.kubernetes.pod.name"
+	podContainerName = "io.kubernetes.container.name"
 )
 
 func GetRawClient(ctx *cli.Context) (*client.RancherClient, error) {
@@ -237,6 +240,7 @@ func getProjectByname(c *client.RancherClient, name string) (client.ResourceColl
 	projects, err := c.Project.List(&client.ListOpts{
 		Filters: map[string]interface{}{
 			"name":         projectName,
+			"all":          "true",
 			"removed_null": "true",
 		},
 	})
@@ -288,6 +292,7 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 		if err := c.List(schemaType, &client.ListOpts{
 			Filters: map[string]interface{}{
 				"name":         name,
+				"all":          "true",
 				"removed_null": "1",
 			},
 		}, &collection); err != nil {

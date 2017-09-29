@@ -130,8 +130,8 @@ func (m *UpWatcher) watch(conn *websocket.Conn, stackID string) error {
 					case "info":
 						logrus.Infof(msg)
 					case "error":
-						logrus.Error(err)
-						return err
+						logrus.Error(msg)
+						return errors.New("Error in service log. Exiting")
 					}
 				}
 			}

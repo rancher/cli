@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"os/signal"
 
+	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
 )
 
@@ -44,25 +44,43 @@ func doKubectl(ctx *cli.Context) error {
 	if len(args) > 0 && args[0] == "--help-kubectl" {
 		return runKubectlHelp("")
 	}
+	filePath, err := generateKubeconfigFile(c, ctx)
+	if err != nil {
+		if filePath != "" {
+			os.RemoveAll(filePath)
+		}
+		return err
+	}
+	defer os.RemoveAll(filePath)
 
+	commandArgs := append([]string{"--kubeconfig", filePath}, ctx.Args()...)
+	command := exec.Command("kubectl", commandArgs...)
+	command.Env = os.Environ()
+	command.Stdin = os.Stdin
+	command.Stdout = os.Stdout
+	command.Stderr = os.Stderr
+	return command.Run()
+}
+
+func generateKubeconfigFile(c *client.RancherClient, ctx *cli.Context) (string, error) {
 	clusterID := ""
 	clusterName := ctx.GlobalString("cluster")
 	if clusterName != "" {
 		cluster, err := Lookup(c, clusterName, "cluster")
 		if err != nil {
-			return err
+			return "", err
 		}
 		clusterID = cluster.Id
 	}
 
 	config, err := lookupConfig(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	env, err := c.Project.ById(config.Environment)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if clusterID == "" {
@@ -71,7 +89,7 @@ func doKubectl(ctx *cli.Context) error {
 
 	baseURL, err := baseURL(config.URL)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	serverAddress := fmt.Sprintf("%s/k8s/clusters/%s", baseURL, clusterID)
@@ -100,28 +118,19 @@ users:
 
 	tempfile, err := ioutil.TempFile("", "kube-config")
 	if err != nil {
-		return err
+		return "", err
 	}
-	defer os.Remove(tempfile.Name())
 
 	_, err = tempfile.Write([]byte(kubeConfig))
 	if err != nil {
-		return err
+		return tempfile.Name(), err
 	}
 
 	if err := tempfile.Close(); err != nil {
-		return err
+		return tempfile.Name(), err
 	}
 
-	filePath := tempfile.Name()
-	commandArgs := append([]string{"--kubeconfig", filePath}, ctx.Args()...)
-	command := exec.Command("kubectl", commandArgs...)
-	command.Env = os.Environ()
-	command.Stdin = os.Stdin
-	command.Stdout = os.Stdout
-	command.Stderr = os.Stderr
-	signal.Ignore(os.Interrupt)
-	return command.Run()
+	return tempfile.Name(), nil
 }
 
 func runKubectlHelp(subcommand string) error {
