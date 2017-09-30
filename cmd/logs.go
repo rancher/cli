@@ -9,8 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
+	"errors"
+	"strconv"
 
+	"bufio"
+	"bytes"
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	dclient "github.com/docker/docker/client"
@@ -21,6 +24,10 @@ import (
 	"github.com/rancher/go-rancher/v3"
 	"github.com/rancher/rancher-docker-api-proxy"
 	"github.com/urfave/cli"
+	"golang.org/x/net/context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	restclient "k8s.io/client-go/rest"
+	kubeutil "k8s.io/kubernetes/pkg/kubectl/util"
 )
 
 var loggerFactory = logger.NewColorLoggerFactory()
@@ -176,8 +183,6 @@ func serviceLogs(c *client.RancherClient, ctx *cli.Context) error {
 }
 
 func logsCommand(ctx *cli.Context) error {
-	wg := sync.WaitGroup{}
-
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
@@ -191,21 +196,98 @@ func logsCommand(ctx *cli.Context) error {
 		return fmt.Errorf("Please pass a container name")
 	}
 
-	instances, err := resolveContainers(c, ctx.Args())
+	containers, err := resolveContainers(c, ctx.Args())
 	if err != nil {
 		return err
 	}
 
+	if len(containers) == 0 {
+		return errors.New("No container found")
+	}
+
+	podName := containers[0].Labels[podNameLabel]
+	if podName != "" {
+		wg := sync.WaitGroup{}
+		for _, container := range containers {
+			wg.Add(1)
+			go func(labels map[string]string) {
+				podName = labels[podNameLabel]
+				podContainerName := labels[podContainerName]
+				namespace := labels[namespaceLabel]
+				err := logKube(ctx, c, container, podName, namespace, podContainerName)
+				if err != nil {
+					logrus.Error(err)
+				}
+				wg.Done()
+			}(container.Labels)
+		}
+		wg.Wait()
+		return nil
+	}
+	return logDocker(c, ctx, containers)
+}
+
+func logKube(ctx *cli.Context, c *client.RancherClient, container client.Container, podName, namespace, podContainerName string) error {
+	conf, err := constructRestConfig(ctx, c)
+	if err != nil {
+		return err
+	}
+	restClient, err := restclient.RESTClientFor(conf)
+	if err != nil {
+		return err
+	}
+	follow := ctx.Bool("follow")
+	tailLines := ctx.Int("tail")
+	sinceTime := ""
+	if ctx.String("since") != "" {
+		t, err := kubeutil.ParseRFC3339(ctx.String("since"), metav1.Now)
+		if err != nil {
+			return err
+		}
+		sinceTime = t.String()
+	}
+	timeStamp := ctx.Bool("timestamps")
+	req := restClient.Get().
+		Resource("pods").
+		Name(podName).
+		Namespace(namespace).
+		SubResource("log").
+		Param("container", podContainerName)
+	if follow {
+		req.Param("follow", strconv.FormatBool(follow))
+	}
+	if tailLines != 0 {
+		req.Param("tailLines", strconv.Itoa(tailLines))
+	}
+	if timeStamp {
+		req.Param("timestamps", strconv.FormatBool(timeStamp))
+	}
+	if sinceTime != "" {
+		req.Param("sinceTime", sinceTime)
+	}
+	readerCloser, err := req.Stream()
+	if err != nil {
+		return err
+	}
+	defer readerCloser.Close()
+
+	l := loggerFactory.CreateContainerLogger(podContainerName)
+	_, err = io.Copy(writerWithLineBreakFunc(l.Out), readerCloser)
+	return err
+}
+
+func logDocker(c *client.RancherClient, ctx *cli.Context, containers []client.Container) error {
+	wg := sync.WaitGroup{}
 	listenSocks := map[string]*dclient.Client{}
-	for _, i := range instances {
+	for _, i := range containers {
 		if i.ExternalId == "" || i.HostId == "" {
 			continue
 		}
 
 		if dockerClient, ok := listenSocks[i.HostId]; ok {
 			wg.Add(1)
-			go func(dockerClient *dclient.Client, i client.Instance) {
-				doLog(len(instances) <= 1, ctx, i, dockerClient)
+			go func(dockerClient *dclient.Client, i client.Container) {
+				doLog(len(containers) <= 1, ctx, i, dockerClient)
 				wg.Done()
 			}(dockerClient, i)
 			continue
@@ -256,8 +338,8 @@ func logsCommand(ctx *cli.Context) error {
 		listenSocks[i.HostId] = dockerClient
 
 		wg.Add(1)
-		go func(dockerClient *dclient.Client, i client.Instance) {
-			doLog(len(instances) <= 1, ctx, i, dockerClient)
+		go func(dockerClient *dclient.Client, i client.Container) {
+			doLog(len(containers) <= 1, ctx, i, dockerClient)
 			wg.Done()
 		}(dockerClient, i)
 	}
@@ -266,7 +348,7 @@ func logsCommand(ctx *cli.Context) error {
 	return nil
 }
 
-func doLog(single bool, ctx *cli.Context, instance client.Instance, dockerClient *dclient.Client) error {
+func doLog(single bool, ctx *cli.Context, instance client.Container, dockerClient *dclient.Client) error {
 	c, err := dockerClient.ContainerInspect(context.Background(), instance.ExternalId)
 	if err != nil {
 		return err
@@ -305,6 +387,17 @@ func (f writerFunc) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+type writerWithLineBreakFunc func(p []byte)
+
+func (f writerWithLineBreakFunc) Write(p []byte) (n int, err error) {
+	reader := bytes.NewReader(p)
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		f(append(scanner.Bytes(), []byte("\n")...))
+	}
+	return len(p), nil
+}
+
 func resolveServices(c *client.RancherClient, names []string) (map[string]bool, error) {
 	services := map[string]bool{}
 	for _, name := range names {
@@ -317,8 +410,8 @@ func resolveServices(c *client.RancherClient, names []string) (map[string]bool, 
 	return services, nil
 }
 
-func resolveContainers(c *client.RancherClient, names []string) ([]client.Instance, error) {
-	result := []client.Instance{}
+func resolveContainers(c *client.RancherClient, names []string) ([]client.Container, error) {
+	result := []client.Container{}
 
 	for _, name := range names {
 		resource, err := Lookup(c, name, "container", "service")
@@ -326,7 +419,7 @@ func resolveContainers(c *client.RancherClient, names []string) ([]client.Instan
 			return nil, err
 		}
 		if resource.Type == "container" {
-			i, err := c.Instance.ById(resource.Id)
+			i, err := c.Container.ById(resource.Id)
 			if err != nil {
 				return nil, err
 			}
@@ -347,12 +440,12 @@ func resolveContainers(c *client.RancherClient, names []string) ([]client.Instan
 			}
 			result = append(result, instances...)
 		} else {
-			instances := client.InstanceCollection{}
-			err := c.GetLink(*resource, "instances", &instances)
+			containers := client.ContainerCollection{}
+			err := c.GetLink(*resource, "instances", &containers)
 			if err != nil {
 				return nil, err
 			}
-			for _, instance := range instances.Data {
+			for _, instance := range containers.Data {
 				result = append(result, instance)
 			}
 		}

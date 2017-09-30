@@ -8,21 +8,29 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/rancher/go-rancher/v3"
 	"github.com/urfave/cli"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 func ExecCommand() cli.Command {
 	return cli.Command{
-		Name:            "exec",
-		Usage:           "Run a command on a container",
-		Description:     "\nThe command will find the container on the host and use `docker exec` to access the container. Any options that `docker exec` uses can be passed as an option for `rancher exec`.\n\nExample:\n\t$ rancher exec -i -t 1i1\n",
-		Action:          execCommand,
-		SkipFlagParsing: true,
+		Name:        "exec",
+		Usage:       "Run a command on a container",
+		Description: "\nThe command will find the container on the host and use `docker exec` to access the container. Any options that `docker exec` uses can be passed as an option for `rancher exec`.\n\nExample:\n\t$ rancher exec -it 1i1 bash\n",
+		Action:      execCommand,
 		Flags: []cli.Flag{
 			cli.BoolFlag{
-				Name:  "help-docker",
-				Usage: "Display the 'docker exec --help'",
+				Name:  "interactive,i",
+				Usage: "Keep STDIN open even if not attached",
+			},
+			cli.BoolFlag{
+				Name:  "tty,t",
+				Usage: "Allocate a pseudo-TTY",
 			},
 		},
 	}
@@ -38,33 +46,43 @@ func execCommandInternal(ctx *cli.Context) error {
 		return cli.ShowCommandHelp(ctx, "exec")
 	}
 
-	if len(args) > 0 && args[0] == "--help-docker" {
-		return runDockerHelp("exec")
-	}
-
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	args, hostID, _, err := selectContainer(c, ctx.Args())
+	args, hostID, containerID, err := selectContainer(c, ctx.Args())
 	if err != nil {
 		return err
 	}
 
-	// this is a massive hack. Need to fix the real issue
-	args = append([]string{"-i"}, args...)
-	return runDockerCommand(hostID, c, "exec", args)
-}
-
-func isHelp(args []string) bool {
-	for _, i := range args {
-		if i == "--help" || i == "-h" {
-			return true
-		}
+	containers, err := c.Container.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"externalId":   containerID,
+			"removed_null": "true",
+		},
+	})
+	if err != nil {
+		return err
 	}
+	if len(containers.Data) == 0 {
+		return errors.Errorf("Can't find the container with ID %s", containerID)
+	}
+	container := containers.Data[0]
 
-	return false
+	podName := container.Labels[podNameLabel]
+	namespace := container.Labels[namespaceLabel]
+	containerName := container.Labels[podContainerName]
+	if podName != "" {
+		return execCommandKube(c, ctx, podName, namespace, containerName)
+	}
+	if ctx.Bool("interactive") {
+		args = append([]string{"-i"}, args...)
+	}
+	if ctx.Bool("tty") {
+		args = append([]string{"-t"}, args...)
+	}
+	return runDockerCommand(hostID, c, "exec", args)
 }
 
 func selectContainer(c *client.RancherClient, args []string) ([]string, string, string, error) {
@@ -179,6 +197,69 @@ func getHostnameAndContainerID(c *client.RancherClient, containerID string) (str
 	}
 
 	return host.Id, container.ExternalId, nil
+}
+
+func execCommandKube(c *client.RancherClient, ctx *cli.Context, podName, namespace, containerName string) error {
+	conf, err := constructRestConfig(ctx, c)
+	if err != nil {
+		return err
+	}
+	clientset, err := kubernetes.NewForConfig(conf)
+	if err != nil {
+		return err
+	}
+	pod, err := clientset.CoreV1Client.Pods(namespace).Get(podName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	restClient, err := restclient.RESTClientFor(conf)
+	if err != nil {
+		return err
+	}
+	t := setupTTY(ctx)
+	stderr := "true"
+	var sizeQueue remotecommand.TerminalSizeQueue
+	if t.Raw {
+		stderr = "false"
+		sizeQueue = t.MonitorSize(t.GetSize())
+	}
+	commands := ctx.Args()
+	if len(commands) < 2 {
+		fmt.Println("error: no command is provided. example:\n\t$ rancher exec -it 1i1 bash")
+		return nil
+	}
+	fn := func() error {
+		req := restClient.Post().
+			Resource("pods").
+			Name(pod.Name).
+			Namespace(pod.Namespace).
+			SubResource("exec").
+			Param("container", containerName).
+			Param("stdin", strconv.FormatBool(ctx.Bool("interactive"))).
+			Param("stdout", "true").
+			Param("stderr", stderr).
+			Param("tty", strconv.FormatBool(ctx.Bool("tty")))
+		for _, command := range commands[1:] {
+			req.Param("command", command)
+		}
+		exec, err := remotecommand.NewExecutor(conf, "POST", req.URL())
+		if err != nil {
+			return err
+		}
+		streamOpts := remotecommand.StreamOptions{
+			Tty:               t.Raw,
+			Stdout:            t.Out,
+			TerminalSizeQueue: sizeQueue,
+		}
+		if ctx.Bool("interactive") {
+			streamOpts.Stdin = t.In
+		}
+		if !t.Raw {
+			streamOpts.Stderr = os.Stderr
+		}
+		return exec.Stream(streamOpts)
+	}
+	return t.Safe(fn)
 }
 
 func runDockerHelp(subcommand string) error {
