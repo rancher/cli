@@ -44,6 +44,7 @@ type ServiceConfigV1 struct {
 	DNSSearch           yaml.Stringorslice       `yaml:"dns_search,omitempty"`
 	Dockerfile          string                   `yaml:"dockerfile,omitempty"`
 	DomainName          string                   `yaml:"domainname,omitempty"`
+	DrainTimeoutMs      yaml.StringorInt         `yaml:"drain_timeout_ms,omitempty"`
 	Entrypoint          yaml.Command             `yaml:"entrypoint,flow,omitempty"`
 	EnvFile             yaml.Stringorslice       `yaml:"env_file,omitempty"`
 	Environment         yaml.MaporEqualSlice     `yaml:"environment,omitempty"`
@@ -147,6 +148,7 @@ type ServiceConfig struct {
 	DNSOpt              []string                 `yaml:"dns_opt,omitempty"`
 	DNSSearch           yaml.Stringorslice       `yaml:"dns_search,omitempty"`
 	DomainName          string                   `yaml:"domainname,omitempty"`
+	DrainTimeoutMs      yaml.StringorInt         `yaml:"drain_timeout_ms,omitempty"`
 	Entrypoint          yaml.Command             `yaml:"entrypoint,flow,omitempty"`
 	EnvFile             yaml.Stringorslice       `yaml:"env_file,omitempty"`
 	Environment         yaml.MaporEqualSlice     `yaml:"environment,omitempty"`

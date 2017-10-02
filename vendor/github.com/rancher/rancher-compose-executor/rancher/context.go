@@ -26,6 +26,7 @@ type Context struct {
 	Uploader     Uploader
 	PullCached   bool
 	Pull         bool
+	Prune        bool
 	Args         []string
 
 	Upgrade        bool

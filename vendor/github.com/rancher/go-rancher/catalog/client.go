@@ -7,9 +7,10 @@ import (
 )
 
 type RancherBaseClientImpl struct {
-	Opts    *ClientOpts
-	Schemas *Schemas
-	Types   map[string]Schema
+	Opts          *ClientOpts
+	Schemas       *Schemas
+	Types         map[string]Schema
+	customHeaders map[string]string
 }
 
 type RancherBaseClient interface {
@@ -26,6 +27,7 @@ type RancherBaseClient interface {
 	GetOpts() *ClientOpts
 	GetSchemas() *Schemas
 	GetTypes() map[string]Schema
+	SetCustomHeaders(headers map[string]string)
 
 	doGet(string, *ListOpts, interface{}) error
 	doList(string, *ListOpts, interface{}) error

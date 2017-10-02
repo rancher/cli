@@ -37,6 +37,10 @@ type SecondaryLaunchConfig struct {
 
 	CpuQuota int64 `json:"cpuQuota,omitempty" yaml:"cpu_quota,omitempty"`
 
+	CpuRealtimePeriod int64 `json:"cpuRealtimePeriod,omitempty" yaml:"cpu_realtime_period,omitempty"`
+
+	CpuRealtimeRuntime int64 `json:"cpuRealtimeRuntime,omitempty" yaml:"cpu_realtime_runtime,omitempty"`
+
 	CpuSet string `json:"cpuSet,omitempty" yaml:"cpu_set,omitempty"`
 
 	CpuSetMems string `json:"cpuSetMems,omitempty" yaml:"cpu_set_mems,omitempty"`
@@ -74,6 +78,8 @@ type SecondaryLaunchConfig struct {
 	DnsSearch []string `json:"dnsSearch,omitempty" yaml:"dns_search,omitempty"`
 
 	DomainName string `json:"domainName,omitempty" yaml:"domain_name,omitempty"`
+
+	DrainTimeoutMs int64 `json:"drainTimeoutMs,omitempty" yaml:"drain_timeout_ms,omitempty"`
 
 	EntryPoint []string `json:"entryPoint,omitempty" yaml:"entry_point,omitempty"`
 
