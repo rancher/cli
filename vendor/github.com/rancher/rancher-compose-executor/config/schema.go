@@ -51,6 +51,7 @@ var schemaDataV1 = `{
         "dns_search": {"$ref": "#/definitions/string_or_list"},
         "dockerfile": {"type": "string"},
         "domainname": {"type": "string"},
+        "drain_timeout_ms": {"type": ["number", "string"]},
         "entrypoint": {
           "oneOf": [
             {"type": "string"},
@@ -299,6 +300,7 @@ var servicesSchemaDataV2 = `{
         "dns_opt": {"$ref": "#/definitions/list_or_dict"},
         "dns_search": {"$ref": "#/definitions/string_or_list"},
         "domainname": {"type": "string"},
+        "drain_timeout_ms": {"type": ["number", "string"]},
         "entrypoint": {
           "oneOf": [
             {"type": "string"},

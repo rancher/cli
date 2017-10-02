@@ -5,7 +5,7 @@ const (
 )
 
 type Question struct {
-	Resource
+	Resource `yaml:"-"`
 
 	Default string `json:"default,omitempty" yaml:"default,omitempty"`
 

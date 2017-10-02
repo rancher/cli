@@ -118,6 +118,7 @@ func createLaunchConfig(r *RancherService, name string, serviceConfig *config.Se
 	result.Userdata = serviceConfig.Userdata
 	result.MemoryMb = int64(serviceConfig.Memory)
 	result.Disks = serviceConfig.Disks
+	result.DrainTimeoutMs = int64(serviceConfig.DrainTimeoutMs)
 
 	if strings.EqualFold(result.Kind, "virtual_machine") || strings.EqualFold(result.Kind, "virtualmachine") {
 		result.Kind = "virtualMachine"
