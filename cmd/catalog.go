@@ -9,6 +9,7 @@ import (
 
 	"github.com/rancher/go-rancher/catalog"
 	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/rancher-compose-executor/utils"
 	"github.com/urfave/cli"
 )
 
@@ -106,7 +107,7 @@ func isInCSV(value, csv string) bool {
 	return false
 }
 
-func isOrchestrationSupported(ctx *cli.Context, proj *client.Project, labels map[string]interface{}) bool {
+func isOrchestrationSupported(ctx *cli.Context, proj *client.Project, labels map[string]string) bool {
 	// Only check for system templates
 	if !ctx.Bool("system") {
 		return true
@@ -287,7 +288,7 @@ func catalogInstall(ctx *cli.Context) error {
 	case "kubernetes":
 		stack, err := c.KubernetesStack.Create(&client.KubernetesStack{
 			Name:        stackName,
-			Templates:   templateVersion.Files,
+			Templates:   utils.ToMapInterface(templateVersion.Files),
 			ExternalId:  externalID,
 			Environment: answers,
 			System:      ctx.Bool("system"),
