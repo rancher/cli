@@ -350,6 +350,7 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 		}
 
 		byName = &collection.Data[0]
+		break
 	}
 
 	if byName == nil {

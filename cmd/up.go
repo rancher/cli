@@ -39,6 +39,10 @@ func UpCommand() cli.Command {
 				Usage: "Do not block and log",
 			},
 			cli.BoolFlag{
+				Name:  "w",
+				Usage: "wait for all the service to be up(block forever if there is no service)",
+			},
+			cli.BoolFlag{
 				Name:  "rollback, r",
 				Usage: "Rollback to the previous deployed version",
 			},
@@ -130,6 +134,14 @@ func rancherUp(ctx *cli.Context) error {
 			}
 		}
 	}
+
+	if ctx.Bool("w") {
+		_, err := watchServiceIds(stackID, rancherClient)
+		if err != nil {
+			return err
+		}
+	}
+
 	fmt.Println(stackID)
 	return nil
 }

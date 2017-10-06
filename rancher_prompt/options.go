@@ -65,7 +65,7 @@ func getGlobalFlag() []prompt.Suggest {
 		parts := strings.Split(name, ",")
 		for _, part := range parts {
 			prefix := "--"
-			if len(parts) == 1 {
+			if len(part) == 1 {
 				prefix = "-"
 			}
 			suggests = append(suggests, prompt.Suggest{
@@ -85,7 +85,7 @@ func getFlagsSuggests(command cli.Command) []prompt.Suggest {
 		parts := strings.Split(name, ",")
 		for _, part := range parts {
 			prefix := "--"
-			if len(parts) == 1 {
+			if len(part) == 1 {
 				prefix = "-"
 			}
 			suggests = append(suggests, prompt.Suggest{
@@ -105,6 +105,9 @@ func getUsageForFlag(flag cli.Flag) string {
 		return v.Usage
 	}
 	if v, ok := flag.(cli.IntFlag); ok {
+		return v.Usage
+	}
+	if v, ok := flag.(cli.Int64Flag); ok {
 		return v.Usage
 	}
 	if v, ok := flag.(cli.IntSliceFlag); ok {
