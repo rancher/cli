@@ -46,6 +46,11 @@ Run `docker run --rm -it rancher/cli [ARGS]`  You can pass in credentials by bin
 
 To build `rancher/cli` just run `make`.  To use a custom Docker repository do `REPO=custom make` and it will producte `custom/cli` image.
 
+### Auto Complete
+PROG=rancher source <(rancher complete bash) # setup autocomplete in bash.
+
+PROG=rancher source <(rancher complete zsh) # setup autocomplete in zsh.
+
 ## Contact
 
 For bugs, questions, comments, corrections, suggestions, etc., open an issue in

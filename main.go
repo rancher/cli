@@ -59,6 +59,7 @@ func mainErr() error {
 	}
 	app.Version = VERSION
 	app.Author = "Rancher Labs, Inc."
+	app.EnableBashCompletion = true
 	app.Email = ""
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
@@ -134,6 +135,7 @@ func mainErr() error {
 		cmd.CatalogCommand(),
 		cmd.ClusterCommand(),
 		cmd.ConfigCommand(),
+		cmd.CompleteCommand(),
 		cmd.DockerCommand(),
 		cmd.EnvCommand(),
 		cmd.EventsCommand(),
