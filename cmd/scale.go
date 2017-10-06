@@ -43,7 +43,7 @@ func serviceScale(ctx *cli.Context) error {
 			scale = i
 		}
 
-		resource, err := Lookup(c, parts[0], "service")
+		resource, err := Lookup(c, parts[0], "service", "container")
 		if err != nil {
 			return err
 		}
@@ -62,11 +62,29 @@ func serviceScale(ctx *cli.Context) error {
 	for _, toScale := range servicesToScale {
 		w.Add(toScale.name)
 
-		err := c.Update("service", toScale.resource, map[string]interface{}{
-			"scale": toScale.scale,
-		}, toScale.resource)
-		if err != nil {
-			return err
+		if toScale.resource.Type == "service" {
+			err := c.Update("service", toScale.resource, map[string]interface{}{
+				"scale": toScale.scale,
+			}, toScale.resource)
+			if err != nil {
+				return err
+			}
+		} else if toScale.resource.Type == "container" {
+			// convert it into service
+			container, err := c.Container.ById(toScale.resource.Id)
+			if err != nil {
+				return err
+			}
+			service, err := c.Container.ActionConverttoservice(container)
+			if err != nil {
+				return err
+			}
+			err = c.Update("service", &service.Resource, map[string]interface{}{
+				"scale": toScale.scale,
+			}, &service.Resource)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
