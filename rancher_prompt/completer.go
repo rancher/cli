@@ -1,18 +1,14 @@
+// +build !windows
+
 package rancherPrompt
 
 import (
 	"strings"
 
 	"github.com/c-bata/go-prompt"
-	"github.com/urfave/cli"
 )
 
 // thanks for the idea from github.com/c-bata/kube-prompt
-
-var (
-	Commands = map[string]cli.Command{}
-	Flags    = []cli.Flag{}
-)
 
 func Completer(d prompt.Document) []prompt.Suggest {
 	if d.TextBeforeCursor() == "" {
