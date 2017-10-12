@@ -1,12 +1,6 @@
 package cmd
 
-import (
-	"fmt"
-
-	"github.com/c-bata/go-prompt"
-	"github.com/rancher/cli/rancher_prompt"
-	"github.com/urfave/cli"
-)
+import "github.com/urfave/cli"
 
 func PromptCommand() cli.Command {
 	return cli.Command{
@@ -19,16 +13,5 @@ func PromptCommand() cli.Command {
 }
 
 func promptAction(ctx *cli.Context) error {
-	fmt.Print("rancher cli auto-completion mode")
-	defer fmt.Println("Goodbye!")
-	p := prompt.New(
-		rancherPrompt.Executor,
-		rancherPrompt.Completer,
-		prompt.OptionTitle("rancher-prompt: interactive rancher client"),
-		prompt.OptionPrefix("rancher$ "),
-		prompt.OptionInputTextColor(prompt.Yellow),
-		prompt.OptionMaxSuggestion(20),
-	)
-	p.Run()
-	return nil
+	return promptWrapper(ctx)
 }

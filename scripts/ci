@@ -3,6 +3,7 @@ set -e
 
 cd $(dirname $0)
 
+export CROSS=1
 ./build
 ./test
 ./validate
