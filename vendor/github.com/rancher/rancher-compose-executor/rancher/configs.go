@@ -2,6 +2,7 @@ package rancher
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -202,7 +203,7 @@ func setupSecrets(r *RancherService, name string, result *client.LaunchConfig, s
 			Name:     secret.Target,
 			Uid:      secret.Uid,
 			Gid:      secret.Gid,
-			Mode:     secret.Mode,
+			Mode:     strconv.Itoa(int(secret.Mode)),
 		})
 	}
 	return nil

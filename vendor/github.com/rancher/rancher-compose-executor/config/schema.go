@@ -437,7 +437,7 @@ var servicesSchemaDataV2 = `{
                   "target": {"type": "string"},
                   "uid": {"type": "string"},
                   "gid": {"type": "string"},
-                  "mode": {"type": "number"}
+                  "mode": {"type": ["number", "string"]}
                 }
               }
             ]
