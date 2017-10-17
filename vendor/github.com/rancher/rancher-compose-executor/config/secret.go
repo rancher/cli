@@ -1,15 +1,18 @@
 package config
 
-import "github.com/docker/libcompose/utils"
+import (
+	"github.com/docker/libcompose/utils"
+	"github.com/rancher/rancher-compose-executor/yaml"
+)
 
 type SecretReferences []SecretReference
 
 type SecretReference struct {
-	Source string `yaml:"source,omitempty"`
-	Target string `yaml:"target,omitempty"`
-	Uid    string `yaml:"uid,omitempty"`
-	Gid    string `yaml:"gid,omitempty"`
-	Mode   string `yaml:"mode,omitempty"`
+	Source string                `yaml:"source,omitempty"`
+	Target string                `yaml:"target,omitempty"`
+	Uid    string                `yaml:"uid,omitempty"`
+	Gid    string                `yaml:"gid,omitempty"`
+	Mode   yaml.StringorOctalInt `yaml:"mode,omitempty"`
 }
 
 func (s *SecretReferences) UnmarshalYAML(unmarshal func(interface{}) error) error {
