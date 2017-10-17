@@ -37,30 +37,28 @@ func (s *StringorInt) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // StringorOctalInt reprents a string or an integer or an octal integer
-type StringorOctalInt int64
+type StringorOctalInt string
 
 // UnmarshalYAML implements the Unmarshaller interface.
 func (s *StringorOctalInt) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var intType int64
 	if err := unmarshal(&intType); err == nil {
 		if intType <= 0777 {
-			intType, err = strconv.ParseInt(strconv.FormatInt(intType, 8), 10, 64)
-			if err != nil {
-				return err
-			}
+			*s = StringorOctalInt(strconv.FormatInt(intType, 8))
+		} else {
+			*s = StringorOctalInt(strconv.FormatInt(intType, 10))
 		}
 
-		*s = StringorOctalInt(intType)
 		return nil
 	}
 
 	var stringType string
 	if err := unmarshal(&stringType); err == nil {
-		intType, err := strconv.ParseInt(stringType, 10, 64)
+		intValue, err := strconv.ParseInt(stringType, 8, 64)
 		if err != nil {
 			return err
 		}
-		*s = StringorOctalInt(intType)
+		*s = StringorOctalInt(strconv.FormatInt(intValue, 8))
 		return nil
 	}
 
