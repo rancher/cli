@@ -1,6 +1,9 @@
 package rancher
 
-import "github.com/rancher/rancher-compose-executor/project"
+import (
+	"github.com/Sirupsen/logrus"
+	"github.com/rancher/rancher-compose-executor/project"
+)
 
 func pruneServices(context *Context, project *project.Project) error {
 	if context.Stack == nil {
@@ -17,6 +20,7 @@ func pruneServices(context *Context, project *project.Project) error {
 			if err != nil {
 				return err
 			}
+			logrus.Infof("Deleting service %s", service.Name)
 		}
 	}
 
