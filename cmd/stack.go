@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
+	"regexp"
 )
 
 func StackCommand() cli.Command {
@@ -150,6 +151,8 @@ func parseAnswers(ctx *cli.Context) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Regex for foo=bar
+	r, _ := regexp.Compile(`^\s*(.+?)\s*=\s*(.+?)\s*$`)
 
 	scanner := bufio.NewScanner(bytes.NewBuffer([]byte(answersFile)))
 	for scanner.Scan() {
@@ -157,16 +160,16 @@ func parseAnswers(ctx *cli.Context) (map[string]interface{}, error) {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+		// Check to see if line format is valid
+		if !r.MatchString(line) {
+			return nil, errors.New("Invalid data format of answers file. Expected key=value or # for comment line")
+		}
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) == 1 {
 			answers[parts[0]] = ""
 		} else {
 			answers[parts[0]] = parts[1]
 		}
-	}
-	// if we scanned the file for key/value pairs but found none, something is wrong
-	if len(answers) < 1 {
-		return nil, errors.New("No valid data found in answers file")
 	}
 
 	return answers, scanner.Err()
