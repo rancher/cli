@@ -120,12 +120,9 @@ func GetEnvironment(def string, c *client.RancherClient) (*client.Project, error
 }
 
 func LookupEnvironment(c *client.RancherClient, name string) (*client.Project, error) {
-	env, err := Lookup(c, name, "account")
+	env, err := Lookup(c, name, "project")
 	if err != nil {
 		return nil, err
-	}
-	if env.Type != "project" {
-		return nil, fmt.Errorf("Failed to find environment: %s", name)
 	}
 	return c.Project.ById(env.Id)
 }
@@ -207,12 +204,18 @@ func Lookup(c *client.RancherClient, name string, types ...string) (*client.Reso
 		}
 
 		var collection client.ResourceCollection
-		if err := c.List(schemaType, &client.ListOpts{
+
+		listOpts := &client.ListOpts{
 			Filters: map[string]interface{}{
 				"name":         name,
 				"removed_null": 1,
 			},
-		}, &collection); err != nil {
+		}
+		if schemaType == "project" {
+			listOpts.Filters["all"] = true
+		}
+
+		if err := c.List(schemaType, listOpts, &collection); err != nil {
 			return nil, err
 		}
 
