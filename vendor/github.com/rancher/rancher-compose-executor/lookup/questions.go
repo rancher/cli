@@ -35,8 +35,6 @@ func NewQuestionLookup(file string, parent config.EnvironmentLookup) (*QuestionL
 		return nil, err
 	}
 
-	ret.askQuestions()
-
 	return ret, nil
 }
 
@@ -54,15 +52,6 @@ func (q *QuestionLookup) parse(file string) error {
 	}
 
 	return nil
-}
-
-func (q *QuestionLookup) askQuestions() {
-	for key, question := range q.questions {
-		answer := ask(question)
-		if answer != "" {
-			q.variables[key] = answer
-		}
-	}
 }
 
 func ParseQuestions(contents []byte) (map[string]model.Question, error) {

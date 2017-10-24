@@ -2,7 +2,6 @@ package rancher
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -203,7 +202,7 @@ func (r *RancherService) resolveServiceAndStackId(name string) (string, string, 
 	}
 
 	if len(stacks.Data) == 0 {
-		return "", "", fmt.Errorf("Failed to find stack: %s", parts[0])
+		return "", "", nil
 	}
 
 	return parts[1], stacks.Data[0].Id, nil
@@ -215,6 +214,10 @@ func (r *RancherService) FindExisting(name string) (*client.Service, error) {
 	name, stackId, err := r.resolveServiceAndStackId(name)
 	if err != nil {
 		return nil, err
+	}
+
+	if stackId == "" {
+		return nil, nil
 	}
 
 	services, err := r.context.Client.Service.List(&client.ListOpts{
