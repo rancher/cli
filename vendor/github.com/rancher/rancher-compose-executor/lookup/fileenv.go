@@ -104,8 +104,7 @@ func ParseEnvFile(file string) (map[string]interface{}, error) {
 	return map[string]interface{}{}, nil
 }
 
-func NewFileEnvLookup(file string, parent config.EnvironmentLookup) (*FileEnvLookup, error) {
-
+func NewFileEnvLookup(file string, qLookup *QuestionLookup) (*FileEnvLookup, error) {
 	v, err := ParseEnvFile(file)
 	if err != nil {
 		return nil, err
@@ -116,6 +115,23 @@ func NewFileEnvLookup(file string, parent config.EnvironmentLookup) (*FileEnvLoo
 		switch value := value.(type) {
 		case string:
 			variables[key] = value
+		}
+	}
+
+	parent := qLookup.parent
+	qVariables := qLookup.variables
+	questions := qLookup.questions
+
+	combMap := map[string]string{}
+	combMap = utils.MapUnion(variables, qVariables)
+
+	for key, question := range questions {
+		if _, ok := combMap[key]; ok {
+			continue
+		}
+		answer := ask(question)
+		if answer != "" {
+			variables[key] = answer
 		}
 	}
 
