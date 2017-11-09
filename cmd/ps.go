@@ -26,7 +26,11 @@ func PsCommand() cli.Command {
 			cli.BoolFlag{
 				Name:  "quiet,q",
 				Usage: "Only display IDs",
-			},
+      },
+      cli.BoolFlag{
+        Name:  "json,j",
+        Usage: "Use json format as context",
+      },
 			cli.StringFlag{
 				Name:  "format",
 				Usage: "'json' or Custom format: '{{.Service.Id}} {{.Service.Name}} {{.Service.LaunchConfig.ImageUuid}}'",

@@ -15,6 +15,10 @@ func HostCommand() cli.Command {
 			Name:  "quiet,q",
 			Usage: "Only display IDs",
 		},
+		cli.BoolFlag{
+			Name:  "json,j",
+			Usage: "Use json format as context",
+		},
 		cli.StringFlag{
 			Name:  "format",
 			Usage: "'json' or Custom format: '{{.ID}} {{.Host.Hostname}}'",

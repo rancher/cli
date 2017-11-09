@@ -10,6 +10,7 @@ import (
 
 type TableWriter struct {
 	quite         bool
+	json          bool
 	HeaderFormat  string
 	ValueFormat   string
 	err           error
@@ -27,6 +28,8 @@ func NewTableWriter(values [][]string, ctx *cli.Context) *TableWriter {
 		t.HeaderFormat = ""
 		t.ValueFormat = "{{.ID}}\n"
 	}
+
+	t.json = ctx.Bool("json")
 
 	customFormat := ctx.String("format")
 	if customFormat == "json" {
@@ -72,7 +75,21 @@ func (t *TableWriter) Write(obj interface{}) {
 		}
 		_, t.err = t.Writer.Write(append(content, byte('\n')))
 	} else {
-		t.err = printTemplate(t.Writer, t.ValueFormat, obj)
+		if t.json {
+      jsonContent, err := json.Marshal(obj)
+      t.err = err
+      if t.err != nil {
+        return
+      }
+
+			var jsonObj interface{}
+			if t.err = json.Unmarshal(jsonContent, &jsonObj); t.err != nil {
+				return
+			}
+			t.err = printTemplate(t.Writer, t.ValueFormat, jsonObj)
+		} else {
+			t.err = printTemplate(t.Writer, t.ValueFormat, obj)
+		}
 	}
 }
 

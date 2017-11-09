@@ -19,6 +19,10 @@ func EventsCommand() cli.Command {
 		ArgsUsage:   "None",
 		Action:      events,
 		Flags: []cli.Flag{
+      cli.BoolFlag{
+        Name:  "json,j",
+        Usage: "Use json format as context",
+      },
 			cli.StringFlag{
 				Name:  "format",
 				Usage: "'json' or Custom format: '{{.Name}} {{.Data.resource.kind}}'",

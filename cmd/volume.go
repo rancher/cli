@@ -15,6 +15,10 @@ func VolumeCommand() cli.Command {
 		cli.BoolFlag{
 			Name:  "quiet,q",
 			Usage: "Only display IDs",
+    },
+    cli.BoolFlag{
+			Name:  "json,j",
+			Usage: "Use json format as context",
 		},
 		cli.StringFlag{
 			Name:  "format",

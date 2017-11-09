@@ -28,7 +28,11 @@ Example:
 			cli.BoolFlag{
 				Name:  "links",
 				Usage: "Include URLs to actions and links in resource output",
-			},
+      },
+      cli.BoolFlag{
+        Name:  "json,j",
+        Usage: "Use json format as context",
+      },
 			cli.StringFlag{
 				Name:  "format",
 				Usage: "'json' or Custom format: '{{.kind}}'",
