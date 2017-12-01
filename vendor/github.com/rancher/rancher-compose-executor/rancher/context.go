@@ -28,6 +28,7 @@ type Context struct {
 	Pull         bool
 	Prune        bool
 	Args         []string
+	Description  string
 
 	Upgrade        bool
 	ForceUpgrade   bool
@@ -85,6 +86,13 @@ func (c *Context) open() error {
 	stack, err := c.LoadStack()
 	if err != nil {
 		return err
+	}
+	if c.Description != "" && stack.Description != c.Description {
+		if _, err := c.Client.Stack.Update(stack, map[string]interface{}{
+			"description": c.Description,
+		}); err != nil {
+			return err
+		}
 	}
 	proj, err := c.Client.Project.ById(stack.AccountId)
 	if err != nil {
@@ -146,7 +154,8 @@ func (c *Context) LoadStack() (*client.Stack, error) {
 
 	logrus.Infof("Creating stack %s", projectName)
 	stack, err := c.Client.Stack.Create(&client.Stack{
-		Name: projectName,
+		Name:        projectName,
+		Description: c.Description,
 	})
 	if err != nil {
 		return nil, err
