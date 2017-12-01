@@ -64,6 +64,7 @@ func (p *RancherProjectFactory) Create(c *cli.Context) (*project.Project, error)
 	context.ConfirmUpgrade = c.Bool("confirm-upgrade")
 	context.Pull = c.Bool("pull")
 	context.Prune = c.Bool("prune")
+	context.Description = c.String("description")
 
 	return rancher.NewProject(context)
 }
@@ -158,6 +159,10 @@ func UpCommand(factory ProjectFactory) cli.Command {
 				Name:  "interval",
 				Usage: "Update interval in milliseconds",
 				Value: 1000,
+			},
+			cli.StringFlag{
+				Name:  "description",
+				Usage: "Specify the description of the stack",
 			},
 		},
 	}
