@@ -178,6 +178,9 @@ frontend %s
 				Priority:    int64(portRule.Priority),
 				BackendName: portRule.BackendName,
 				Selector:    portRule.Selector,
+				Region:      portRule.Region,
+				Environment: portRule.Environment,
+				Weight:      int64(portRule.Weight),
 			}
 
 			if portRule.Service != "" {

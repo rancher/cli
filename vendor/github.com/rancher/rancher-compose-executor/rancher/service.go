@@ -329,10 +329,17 @@ func (r *RancherService) getServiceLinks() ([]client.ServiceLink, error) {
 
 	result := []client.ServiceLink{}
 	for link, id := range links {
-		result = append(result, client.ServiceLink{
-			Name:      link.Alias,
-			ServiceId: id,
-		})
+		if rUtils.IsRegionService(link.ServiceName) {
+			result = append(result, client.ServiceLink{
+				Name:    link.Alias,
+				Service: link.ServiceName,
+			})
+		} else {
+			result = append(result, client.ServiceLink{
+				Name:      link.Alias,
+				ServiceId: id,
+			})
+		}
 	}
 
 	return result, nil
@@ -352,20 +359,27 @@ func (r *RancherService) getLinks() (map[Link]string, error) {
 		name = strings.TrimSpace(name)
 		alias = strings.TrimSpace(alias)
 
-		linkedService, err := r.FindExisting(name)
-		if err != nil {
-			return nil, err
-		}
-
-		if linkedService == nil {
-			if _, ok := r.context.Project.ServiceConfigs.Get(name); !ok {
-				logrus.Warnf("Failed to find service %s to link to", name)
-			}
-		} else {
+		if rUtils.IsRegionService(name) {
 			result[Link{
 				ServiceName: name,
 				Alias:       alias,
-			}] = linkedService.Id
+			}] = name
+		} else {
+			linkedService, err := r.FindExisting(name)
+			if err != nil {
+				return nil, err
+			}
+
+			if linkedService == nil {
+				if _, ok := r.context.Project.ServiceConfigs.Get(name); !ok {
+					logrus.Warnf("Failed to find service %s to link to", name)
+				}
+			} else {
+				result[Link{
+					ServiceName: name,
+					Alias:       alias,
+				}] = linkedService.Id
+			}
 		}
 	}
 

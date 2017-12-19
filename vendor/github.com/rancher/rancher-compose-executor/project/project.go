@@ -15,6 +15,7 @@ import (
 	"github.com/rancher/rancher-compose-executor/project/events"
 	"github.com/rancher/rancher-compose-executor/project/options"
 	"github.com/rancher/rancher-compose-executor/template"
+	rUtils "github.com/rancher/rancher-compose-executor/utils"
 )
 
 type wrapperAction func(*serviceWrapper, map[string]*serviceWrapper)
@@ -293,6 +294,10 @@ func (p *Project) startService(wrappers map[string]*serviceWrapper, history []st
 	history = append(history, wrapper.name)
 
 	for _, dep := range wrapper.service.DependentServices() {
+		if rUtils.IsRegionService(dep.Target) {
+			wrapper.IgnoreDep(dep.Target)
+			continue
+		}
 		target := wrappers[dep.Target]
 		if target == nil {
 			log.Debugf("Failed to find %s", dep.Target)
