@@ -102,3 +102,11 @@ func TrimSplit(str, sep string, count int) []string {
 
 	return result
 }
+
+func IsRegionService(name string) bool {
+	splitSvcName := strings.Split(name, "/")
+	if len(splitSvcName) == 3 || len(splitSvcName) == 4 {
+		return true
+	}
+	return false
+}

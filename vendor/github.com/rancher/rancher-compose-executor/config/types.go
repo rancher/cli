@@ -236,6 +236,9 @@ type PortRule struct {
 	Priority    int    `json:"priority" yaml:"priority"`
 	BackendName string `json:"backend_name" yaml:"backend_name"`
 	Selector    string `json:"selector" yaml:"selector"`
+	Region      string `json:"region" yaml:"region"`
+	Environment string `json:"environment" yaml:"environment"`
+	Weight      int    `json:"weight" yaml:"weight"`
 }
 
 type LBStickinessPolicy struct {
