@@ -5,9 +5,11 @@ const (
 )
 
 type ServiceLink struct {
-	Resource
+	Resource `yaml:"-"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	Service string `json:"service,omitempty" yaml:"service,omitempty"`
 
 	ServiceId string `json:"serviceId,omitempty" yaml:"service_id,omitempty"`
 
