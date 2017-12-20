@@ -5,9 +5,11 @@ const (
 )
 
 type PortRule struct {
-	Resource
+	Resource `yaml:"-"`
 
 	BackendName string `json:"backendName,omitempty" yaml:"backend_name,omitempty"`
+
+	Environment string `json:"environment,omitempty" yaml:"environment,omitempty"`
 
 	Hostname string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 
@@ -17,6 +19,8 @@ type PortRule struct {
 
 	Protocol string `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 
+	Region string `json:"region,omitempty" yaml:"region,omitempty"`
+
 	Selector string `json:"selector,omitempty" yaml:"selector,omitempty"`
 
 	ServiceId string `json:"serviceId,omitempty" yaml:"service_id,omitempty"`
@@ -24,6 +28,8 @@ type PortRule struct {
 	SourcePort int64 `json:"sourcePort,omitempty" yaml:"source_port,omitempty"`
 
 	TargetPort int64 `json:"targetPort,omitempty" yaml:"target_port,omitempty"`
+
+	Weight int64 `json:"weight,omitempty" yaml:"weight,omitempty"`
 }
 
 type PortRuleCollection struct {
