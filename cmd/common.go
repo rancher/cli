@@ -320,3 +320,19 @@ func processExitCode(err error) error {
 
 	return err
 }
+
+func toString(s interface{}) string {
+	if s == nil {
+		return ""
+	}
+	return fmt.Sprint(s)
+}
+
+func isInCSV(value, csv string) bool {
+	for _, part := range strings.Split(csv, ",") {
+		if value == part {
+			return true
+		}
+	}
+	return false
+}

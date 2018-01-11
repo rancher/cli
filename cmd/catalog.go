@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/rancher/go-rancher/catalog"
@@ -15,6 +15,7 @@ import (
 
 const (
 	orchestrationSupported = "io.rancher.orchestration.supported"
+	catalogProto           = "catalog://"
 )
 
 func CatalogCommand() cli.Command {
@@ -48,11 +49,19 @@ func CatalogCommand() cli.Command {
 				Flags:       catalogLsFlags,
 			},
 			cli.Command{
+				Name:        "show",
+				Usage:       "Show catalog template versions",
+				Description: "\nShow all catalog template versions in the current $RANCHER_ENVIRONMENT. Use `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher --env k8slab catalog show <TEMPLATE_ID>\n",
+				ArgsUsage:   "[TEMPLATE_ID]...",
+				Action:      catalogShow,
+				Flags:       catalogLsFlags,
+			},
+			cli.Command{
 				Name:        "install",
 				Usage:       "Install catalog template",
-				Description: "\nInstall a catalog template in the current $RANCHER_ENVIRONMENT. \nUse `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher --env k8slab catalog install <CATALOG_ID>\n",
+				Description: "\nInstall a catalog template in the current $RANCHER_ENVIRONMENT. \nUse `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher --env k8slab catalog install <TEMPLATE_VERSION_ID>\n",
 				Action:      catalogInstall,
-				ArgsUsage:   "[ID]...",
+				ArgsUsage:   "[TEMPLATE_VERSION_ID]...",
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "answers,a",
@@ -68,54 +77,127 @@ func CatalogCommand() cli.Command {
 					},
 				},
 			},
-			/*
-				cli.Command{
-					Name:   "upgrade",
-					Usage:  "Upgrade catalog template",
-					Action: errorWrapper(envUpdate),
-					ArgsUsage: "[ID or NAME]"
-					Flags:  []cli.Flag{},
+			cli.Command{
+				Name:        "upgrade",
+				Usage:       "Upgrade stack with new catalog template version",
+				Description: "\nUpgrade stack with new catalog template version in the current $RANCHER_ENVIRONMENT. \nUse `--env <envID>` or `--env <envName>` to select a different environment.\n\nExample:\n\t$ rancher --env k8slab catalog upgrade <TEMPLATE_VERSION_ID> --stack id\n",
+				Action:      catalogUpgrade,
+				ArgsUsage:   "[TEMPLATE_VERSION_ID]...",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "answers,a",
+						Usage: "Answer file",
+					},
+					cli.StringFlag{
+						Name:  "stack,s",
+						Usage: "Stack id to upgrade",
+					},
+					cli.BoolFlag{
+						Name:  "confirm",
+						Usage: "Wait for upgrade and confirm it",
+					},
 				},
-			*/
+			},
 		},
 	}
 }
 
+func catalogLs(ctx *cli.Context) error {
+	operator, err := NewCatalogOperator(ctx)
+	if err != nil {
+		return err
+	}
+
+	return operator.Ls()
+}
+
+func catalogShow(ctx *cli.Context) error {
+	operator, err := NewCatalogOperator(ctx)
+	if err != nil {
+		return err
+	}
+
+	return operator.Show()
+}
+
+func catalogInstall(ctx *cli.Context) error {
+	operator, err := NewCatalogOperator(ctx)
+	if err != nil {
+		return err
+	}
+
+	return operator.Install()
+}
+
+func catalogUpgrade(ctx *cli.Context) error {
+	operator, err := NewCatalogOperator(ctx)
+	if err != nil {
+		return err
+	}
+
+	return operator.Upgrade()
+}
+
+func normalizeTemplateID(id string) (string, error) {
+	result := strings.Replace(id, catalogProto, "", 1)
+
+	if len(strings.Split(result, ":")) != 2 {
+		return "", fmt.Errorf("Bad template id format [%s]", result)
+	}
+
+	return result, nil
+}
+
+func normalizeTemplateVersionID(id string) (string, error) {
+	result := strings.Replace(id, catalogProto, "", 1)
+
+	if len(strings.Split(result, ":")) != 3 {
+		return "", fmt.Errorf("Bad templateVersion id format [%s]", result)
+	}
+
+	return result, nil
+}
+
+type CatalogOperator struct {
+	cclient  *catalog.RancherClient
+	client   *client.RancherClient
+	project  *client.Project
+	config   Config
+	context  *cli.Context
+	listOpts *catalog.ListOpts
+}
+
 type CatalogData struct {
 	ID       string
-	Template catalog.Template
+	Template *catalog.Template
 	Category string
 }
 
-func getEnvFilter(proj *client.Project, ctx *cli.Context) string {
-	envFilter := proj.Orchestration
+type CatalogVersionData struct {
+	ID              string
+	TemplateVersion *catalog.TemplateVersion
+}
+
+func (c *CatalogOperator) getEnvFilter() string {
+	envFilter := c.project.Orchestration
 	if envFilter == "cattle" {
 		envFilter = ""
 	}
-	if ctx.Bool("system") {
+	if c.context.Bool("system") {
 		envFilter = "infra"
 	}
 	return envFilter
 }
 
-func isInCSV(value, csv string) bool {
-	for _, part := range strings.Split(csv, ",") {
-		if value == part {
-			return true
-		}
-	}
-	return false
-}
-
-func isOrchestrationSupported(ctx *cli.Context, proj *client.Project, labels map[string]string) bool {
+func (c *CatalogOperator) isOrchestrationSupported(labels map[string]string) bool {
 	// Only check for system templates
-	if !ctx.Bool("system") {
+	if !c.context.Bool("system") {
 		return true
 	}
 
 	if supported, ok := labels[orchestrationSupported]; ok {
 		supportedString := fmt.Sprint(supported)
-		if supportedString != "" && !isInCSV(proj.Orchestration, supportedString) {
+		if supportedString != "" && !isInCSV(c.project.Orchestration, supportedString) {
 			return false
 		}
 	}
@@ -123,25 +205,27 @@ func isOrchestrationSupported(ctx *cli.Context, proj *client.Project, labels map
 	return true
 }
 
-func isSupported(ctx *cli.Context, proj *client.Project, item catalog.Template) bool {
-	envFilter := getEnvFilter(proj, ctx)
+func (c *CatalogOperator) isSupported(item *catalog.Template) bool {
+	envFilter := c.getEnvFilter()
 	if item.TemplateBase != envFilter {
 		return false
 	}
-	return isOrchestrationSupported(ctx, proj, item.Labels)
+	return c.isOrchestrationSupported(item.Labels)
 }
 
-func catalogLs(ctx *cli.Context) error {
+func (c *CatalogOperator) Ls() error {
 	writer := NewTableWriter([][]string{
+		{"ID", "ID"},
 		{"NAME", "Template.Name"},
 		{"CATEGORY", "Category"},
-		{"ID", "ID"},
-	}, ctx)
+		{"VERSION", "Template.DefaultVersion"},
+		{"VERSION ID", "Template.DefaultTemplateVersionId"},
+	}, c.context)
 	defer writer.Close()
 
-	err := forEachTemplate(ctx, func(item catalog.Template) error {
+	err := c.forEachTemplate(func(item *catalog.Template) error {
 		writer.Write(CatalogData{
-			ID:       templateID(item),
+			ID:       item.Id,
 			Template: item,
 			Category: strings.Join(item.Categories, ","),
 		})
@@ -153,132 +237,73 @@ func catalogLs(ctx *cli.Context) error {
 	return writer.Err()
 }
 
-func forEachTemplate(ctx *cli.Context, f func(item catalog.Template) error) error {
-	_, c, proj, cc, err := setupCatalogContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	opts, err := getListTemplatesOpts(ctx, c)
-	if err != nil {
-		return err
-	}
-
-	collection, err := cc.Template.List(opts)
-	if err != nil {
-		return err
-	}
-
-	for _, item := range collection.Data {
-		if !isSupported(ctx, proj, item) {
-			continue
-		}
-		if err := f(item); err != nil {
-			return err
-		}
-	}
-
-	return err
-}
-
-func getListTemplatesOpts(ctx *cli.Context, c *client.RancherClient) (*catalog.ListOpts, error) {
-	opts := &catalog.ListOpts{
-		Filters: map[string]interface{}{},
-	}
-	setting, err := c.Setting.ById("rancher.server.version")
-	if err != nil {
-		return nil, err
-	}
-
-	if setting != nil && setting.Value != "" {
-		opts.Filters["rancherVersion"] = setting.Value
-	}
-
-	opts.Filters["category_ne"] = "infra"
-	return opts, nil
-}
-
-func setupCatalogContext(ctx *cli.Context) (Config, *client.RancherClient, *client.Project, *catalog.RancherClient, error) {
-	config, err := lookupConfig(ctx)
-	if err != nil {
-		return config, nil, nil, nil, err
-	}
-
-	c, err := GetClient(ctx)
-	if err != nil {
-		return config, nil, nil, nil, err
-	}
-
-	proj, err := GetEnvironment(config.Environment, c)
-	if err != nil {
-		return config, nil, nil, nil, err
-	}
-
-	cc, err := GetCatalogClient(ctx)
-	if err != nil {
-		return config, nil, nil, nil, err
-	}
-
-	return config, c, proj, cc, nil
-}
-
-func templateNameAndVersion(name string) (string, string) {
-	parts := strings.Split(name, ":")
-	if len(parts) == 2 {
-		return parts[0], parts[1]
-	}
-	return parts[0], ""
-}
-
-func catalogInstall(ctx *cli.Context) error {
-	if len(ctx.Args()) != 1 {
+func (c *CatalogOperator) Show() error {
+	if len(c.context.Args()) != 1 {
 		return errors.New("Exactly one argument is required")
 	}
 
-	_, c, proj, cc, err := setupCatalogContext(ctx)
+	templateID := c.context.Args()[0]
+
+	template, err := c.GetTemplateByID(templateID)
 	if err != nil {
 		return err
 	}
 
-	templateReference := ctx.Args()[0]
-	name, version := templateNameAndVersion(templateReference)
+	writer := NewTableWriter([][]string{
+		{"ID", "ID"},
+		{"VERSION", "TemplateVersion.Version"},
+	}, c.context)
+	defer writer.Close()
 
-	template, err := getTemplate(ctx, name)
+	err = c.forEachTemplateVersion(template, func(item *catalog.TemplateVersion) error {
+		writer.Write(CatalogVersionData{
+			ID:              item.Id,
+			TemplateVersion: item,
+		})
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
-	templateVersion, err := getTemplateVersion(ctx, cc, template, name, version)
+	return writer.Err()
+}
+
+func (c *CatalogOperator) Install() error {
+	if len(c.context.Args()) != 1 {
+		return errors.New("Exactly one argument is required")
+	}
+
+	templateVersionID := c.context.Args()[0]
+	templateVersion, err := c.GetTemplateVersionByID(templateVersionID)
 	if err != nil {
 		return err
 	}
 
-	answers, err := parseAnswers(ctx)
-	if err != nil {
-		return err
-	}
+	answers, err := c.AskQuestions(templateVersion)
 
-	answers, err = askQuestions(answers, templateVersion)
-	if err != nil {
-		return err
-	}
-
-	stackName := ctx.String("name")
+	stackName := c.context.String("name")
 	if stackName == "" {
-		stackName = strings.Title(strings.Split(name, "/")[1])
+		stackName = strings.Title(strings.Split(templateVersion.Id, ":")[1])
 	}
 
-	externalID := fmt.Sprintf("catalog://%s", templateVersion.Id)
+	externalID := fmt.Sprintf("%s%s", catalogProto, templateVersion.Id)
 	id := ""
-	switch proj.Orchestration {
+	switch c.project.Orchestration {
 	case "cattle":
-		stack, err := c.Stack.Create(&client.Stack{
+		var composeFile string
+		if templateVersion.Files["docker-compose.yml"] == "" {
+			composeFile = toString(templateVersion.Files["docker-compose.yml.tpl"])
+		} else {
+			composeFile = toString(templateVersion.Files["docker-compose.yml"])
+		}
+		stack, err := c.client.Stack.Create(&client.Stack{
 			Name:           stackName,
-			DockerCompose:  toString(templateVersion.Files["docker-compose.yml"]),
+			DockerCompose:  composeFile,
 			RancherCompose: toString(templateVersion.Files["rancher-compose.yml"]),
 			Environment:    answers,
 			ExternalId:     externalID,
-			System:         ctx.Bool("system"),
+			System:         c.context.Bool("system"),
 			StartOnCreate:  true,
 		})
 		if err != nil {
@@ -286,12 +311,12 @@ func catalogInstall(ctx *cli.Context) error {
 		}
 		id = stack.Id
 	case "kubernetes":
-		stack, err := c.KubernetesStack.Create(&client.KubernetesStack{
+		stack, err := c.client.KubernetesStack.Create(&client.KubernetesStack{
 			Name:        stackName,
 			Templates:   utils.ToMapInterface(templateVersion.Files),
 			ExternalId:  externalID,
 			Environment: answers,
-			System:      ctx.Bool("system"),
+			System:      c.context.Bool("system"),
 		})
 		if err != nil {
 			return err
@@ -299,112 +324,374 @@ func catalogInstall(ctx *cli.Context) error {
 		id = stack.Id
 	}
 
-	return WaitFor(ctx, id)
+	return WaitFor(c.context, id)
 }
 
-func toString(s interface{}) string {
-	if s == nil {
-		return ""
+func (c *CatalogOperator) Upgrade() error {
+	if len(c.context.Args()) != 1 {
+		return errors.New("Exactly one arguments is required")
 	}
-	return fmt.Sprint(s)
-}
 
-func getTemplateVersion(ctx *cli.Context, cc *catalog.RancherClient, template catalog.Template, name, version string) (catalog.TemplateVersion, error) {
-	templateVersion := catalog.TemplateVersion{}
-	config, err := lookupConfig(ctx)
+	if len(c.context.String("stack")) == 0 {
+		return errors.New("Stack id is required")
+	}
+
+	if c.context.Bool("confirm") {
+		c.context.GlobalSet("wait", "true")
+	}
+
+	templateVersionID := c.context.Args()[0]
+	templateVersion, err := c.GetTemplateVersionByID(templateVersionID)
 	if err != nil {
-		return templateVersion, err
+		return err
 	}
 
-	if version == "" {
-		version = template.DefaultVersion
+	var answers map[string]interface{}
+	if c.context.String("answers") != "" {
+		answers, err = c.AskQuestions(templateVersion)
 	}
 
-	link, ok := template.VersionLinks[version]
-	if !ok {
-		fmt.Printf("%#v\n", template)
-		return templateVersion, fmt.Errorf("Failed to find the version %s for template %s", version, name)
-	}
+	stackID := c.context.String("stack")
+	externalID := fmt.Sprintf("%s%s", catalogProto, templateVersion.Id)
+	switch c.project.Orchestration {
+	case "cattle":
+		var composeFile string
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", fmt.Sprint(link), nil)
-	req.SetBasicAuth(config.AccessKey, config.SecretKey)
-	resp, err := client.Do(req)
-	if err != nil {
-		return templateVersion, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return templateVersion, fmt.Errorf("Bad response %d looking up %s", resp.StatusCode, link)
-
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(&templateVersion)
-	return templateVersion, err
-}
-
-func getTemplate(ctx *cli.Context, name string) (catalog.Template, error) {
-	found := false
-	foundTemplate := catalog.Template{}
-	err := forEachTemplate(ctx, func(item catalog.Template) error {
-		if found {
-			return nil
+		stack, err := c.GetStackByID(stackID)
+		if err != nil {
+			return err
+		}
+		if !c.CheckTemplateVersionUpgrade(stack.ExternalId, templateVersion.Id) {
+			return fmt.Errorf("Stack %s is not upgradable by template version %s", stack.Id, templateVersion.Id)
 		}
 
-		templateName, _ := templateNameAndVersion(templateID(item))
-		if templateName == name {
-			found = true
-			foundTemplate = item
+		if templateVersion.Files["docker-compose.yml"] == "" {
+			composeFile = toString(templateVersion.Files["docker-compose.yml.tpl"])
+		} else {
+			composeFile = toString(templateVersion.Files["docker-compose.yml"])
+		}
+		stackup := &client.StackUpgrade{
+			DockerCompose:  composeFile,
+			RancherCompose: toString(templateVersion.Files["rancher-compose.yml"]),
+			Environment:    answers,
+			ExternalId:     externalID,
 		}
 
-		return nil
-	})
-	if !found && err == nil {
-		err = fmt.Errorf("Failed to find template %s", name)
+		stack, err = c.client.Stack.ActionUpgrade(stack, stackup)
+		if err != nil {
+			return err
+		}
+		if c.context.Bool("confirm") {
+			fmt.Printf("Upgrading stack %s to template version %s", stack.Id, templateVersion.Id)
+			c.context.GlobalSet("wait-state", "upgraded")
+			WaitFor(c.context, stack.Id)
+			c.context.GlobalSet("wait-state", "active")
+			stack, _ := c.GetStackByID(stack.Id)
+			stack, err = c.client.Stack.ActionFinishupgrade(stack)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Finishing upgrade of stack %s to template version %s", stack.Id, templateVersion.Id)
+		}
+	case "kubernetes":
+		stack, err := c.GetKubernetesStackByID(stackID)
+		if err != nil {
+			return err
+		}
+		if !c.CheckTemplateVersionUpgrade(stack.ExternalId, templateVersion.Id) {
+			return fmt.Errorf("Stack %s is not upgradable by template version %s", stack.Id, templateVersion.Id)
+		}
+
+		stackup := &client.KubernetesStackUpgrade{
+			Templates:   utils.ToMapInterface(templateVersion.Files),
+			ExternalId:  externalID,
+			Environment: answers,
+		}
+
+		stack, err = c.client.KubernetesStack.ActionUpgrade(stack, stackup)
+		if err != nil {
+			return err
+		}
 	}
-	return foundTemplate, err
+
+	return WaitFor(c.context, stackID)
 }
 
-func templateID(template catalog.Template) string {
-	parts := strings.SplitN(template.Id, ":", 2)
-	if len(parts) != 2 {
-		return template.Name
+func (c *CatalogOperator) forEachTemplateVersion(template *catalog.Template, f func(template *catalog.TemplateVersion) error) error {
+	var err error
+	var templateVersion *catalog.TemplateVersion
+
+	links := make(map[int]string)
+	indexes := make([]int, 0, len(template.VersionLinks))
+	for _, link := range template.VersionLinks {
+		splitedlink := strings.Split(link, ":")
+		index, _ := strconv.Atoi(splitedlink[len(splitedlink)-1])
+		links[index] = link
+		indexes = append(indexes, index)
 	}
 
-	first := parts[0]
-	second := parts[1]
-	version := template.DefaultVersion
-
-	parts = strings.SplitN(parts[1], "*", 2)
-	if len(parts) == 2 {
-		second = parts[1]
+	sort.Ints(indexes)
+	for _, index := range indexes {
+		templateVersion, err = c.GetTemplateVersionByLink(links[index])
+		if err != nil {
+			return err
+		}
+		if err := f(templateVersion); err != nil {
+			return err
+		}
 	}
 
-	if version == "" {
-		return fmt.Sprintf("%s/%s", first, second)
-	}
-	return fmt.Sprintf("%s/%s:%s", first, second, version)
+	return err
 }
 
-func GetCatalogClient(ctx *cli.Context) (*catalog.RancherClient, error) {
-	config, err := lookupConfig(ctx)
+func (c *CatalogOperator) forEachTemplate(f func(item *catalog.Template) error) error {
+	collection, err := c.cclient.Template.List(c.listOpts)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range collection.Data {
+		if !c.isSupported(&item) {
+			continue
+		}
+		if err := f(&item); err != nil {
+			return err
+		}
+	}
+
+	return err
+}
+
+func (c *CatalogOperator) AskQuestions(tver *catalog.TemplateVersion) (map[string]interface{}, error) {
+	answers, err := parseAnswers(c.context)
 	if err != nil {
 		return nil, err
 	}
 
-	idx := strings.LastIndex(config.URL, "/v2-beta")
-	if idx == -1 {
-		idx = strings.LastIndex(config.URL, "/v1")
-		if idx == -1 {
-			return nil, fmt.Errorf("Invalid URL %s, must contain /v2-beta", config.URL)
-		}
+	answers, err = askQuestions(answers, *tver)
+	if err != nil {
+		return nil, err
 	}
 
-	url := config.URL[:idx] + "/v1-catalog/schemas"
-	return catalog.NewRancherClient(&catalog.ClientOpts{
-		AccessKey: config.AccessKey,
-		SecretKey: config.SecretKey,
-		Url:       url,
+	return answers, nil
+}
+
+func (c *CatalogOperator) GetTemplateByID(id string) (*catalog.Template, error) {
+	normID, err := normalizeTemplateID(id)
+	if err != nil {
+		return nil, err
+	}
+	template, err := c.cclient.Template.ById(normID)
+	if err != nil {
+		return nil, err
+	}
+	if template == nil || len(template.VersionLinks) == 0 {
+		return nil, fmt.Errorf("Template %s not found", id)
+	}
+	if !c.isSupported(template) {
+		return nil, fmt.Errorf("Template %s not supported by env %s", id, c.project.Orchestration)
+	}
+
+	return template, nil
+}
+
+func (c *CatalogOperator) GetStackByID(id string) (*client.Stack, error) {
+	stack, err := c.client.Stack.ById(id)
+	if err != nil {
+		return nil, err
+	}
+	if stack == nil {
+		return nil, fmt.Errorf("Stack %s not found", id)
+	}
+
+	return stack, nil
+}
+
+func (c *CatalogOperator) GetKubernetesStackByID(id string) (*client.KubernetesStack, error) {
+	stack, err := c.client.KubernetesStack.ById(id)
+	if err != nil {
+		return nil, err
+	}
+	if stack == nil {
+		return nil, fmt.Errorf("KubernetesStack %s not found", id)
+	}
+
+	return stack, nil
+}
+
+func (c *CatalogOperator) GetTemplateVersion(version, url string) (*catalog.TemplateVersion, error) {
+	templateVersion := &catalog.TemplateVersion{}
+
+	resource := catalog.Resource{}
+	resource.Links = make(map[string]string)
+	resource.Links[version] = url
+
+	err := c.cclient.RancherBaseClient.GetLink(resource, version, templateVersion)
+
+	if templateVersion == nil || templateVersion.Type != "templateVersion" {
+		return nil, fmt.Errorf("Template version not found [%s]", url)
+	}
+
+	return templateVersion, err
+}
+
+func (c *CatalogOperator) GetTemplateVersionByTemplate(template *catalog.Template, version string) (*catalog.TemplateVersion, error) {
+	if version == "" {
+		version = template.DefaultVersion
+	}
+	url := template.VersionLinks[version]
+
+	return c.GetTemplateVersion(version, url)
+}
+
+func (c *CatalogOperator) GetTemplateVersionByLink(url string) (*catalog.TemplateVersion, error) {
+	version := "byLink"
+
+	return c.GetTemplateVersion(version, url)
+}
+
+func (c *CatalogOperator) GetTemplateVersionByID(id string) (*catalog.TemplateVersion, error) {
+	normID, err := normalizeTemplateVersionID(id)
+	if err != nil {
+		return nil, err
+	}
+	version := "byId"
+
+	schemas := c.cclient.RancherBaseClient.GetSchemas()
+	schema, ok := schemas.CheckSchema("template")
+	if !ok {
+		return nil, fmt.Errorf("Template version schema not found")
+	}
+	url := schema.Links["collection"] + "/" + normID
+
+	return c.GetTemplateVersion(version, url)
+}
+
+func (c *CatalogOperator) GetTemplateVersionUpgradesByID(id string) []string {
+	tver, _ := c.GetTemplateVersionByID(id)
+	return c.GetTemplateVersionUpgrades(tver)
+}
+
+func (c *CatalogOperator) GetTemplateVersionUpgrades(tver *catalog.TemplateVersion) []string {
+	if len(tver.UpgradeVersionLinks) > 0 {
+		upgrades := make([]string, 0, len(tver.UpgradeVersionLinks))
+		for _, upgrade := range tver.UpgradeVersionLinks {
+			upgradeID := strings.Split(upgrade, "/")
+			upgrades = append(upgrades, upgradeID[len(upgradeID)-1])
+		}
+
+		sort.Strings(upgrades)
+
+		return upgrades
+	}
+	return nil
+}
+
+func (c *CatalogOperator) CheckTemplateVersionUpgrade(externalid, newid string) bool {
+	upgrades := c.GetTemplateVersionUpgradesByID(externalid)
+	for _, upgrade := range upgrades {
+		if upgrade == newid {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *CatalogOperator) getCatalogClient() error {
+	var err error
+
+	c.cclient, err = catalog.NewRancherClient(&catalog.ClientOpts{
+		AccessKey: c.config.AccessKey,
+		SecretKey: c.config.SecretKey,
+		Url:       c.config.URL,
 	})
+	if err != nil {
+		return fmt.Errorf("Failed to get rancher catalog client %s %s", c.config.URL, err)
+	}
+
+	return err
+}
+
+func (c *CatalogOperator) getConfig() error {
+	var err error
+
+	c.config, err = lookupConfig(c.context)
+	if err != nil {
+		return fmt.Errorf("Failed to get rancher config %s", err)
+	}
+
+	return err
+}
+
+func (c *CatalogOperator) getClient() error {
+	var err error
+
+	c.client, err = GetClient(c.context)
+	if err != nil {
+		return fmt.Errorf("Failed to get rancher client %s", err)
+	}
+
+	return err
+}
+
+func (c *CatalogOperator) getProject() error {
+	var err error
+
+	c.project, err = GetEnvironment(c.config.Environment, c.client)
+	if err != nil {
+		return fmt.Errorf("Failed to get rancher environment %s %s", c.config.Environment, err)
+	}
+
+	return err
+}
+
+func (c *CatalogOperator) getListOpts() error {
+	opts := catalog.NewListOpts()
+
+	setting, err := c.client.Setting.ById("rancher.server.version")
+	if err != nil {
+		return err
+	}
+
+	if setting != nil && setting.Value != "" {
+		opts.Filters["rancherVersion"] = setting.Value
+	}
+
+	opts.Filters["category_ne"] = "infra"
+
+	c.listOpts = opts
+	return nil
+}
+
+func NewCatalogOperator(ctx *cli.Context) (*CatalogOperator, error) {
+	c := &CatalogOperator{
+		context: ctx,
+	}
+
+	err := c.getConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.getCatalogClient()
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.getProject()
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.getListOpts()
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }

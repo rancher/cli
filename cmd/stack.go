@@ -3,6 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/rancher/go-rancher/v2"
@@ -88,6 +89,7 @@ type StackData struct {
 	Stack        client.Stack
 	State        string
 	ServiceCount int
+	Upgrades     string
 }
 
 func stackLs(ctx *cli.Context) error {
@@ -101,6 +103,11 @@ func stackLs(ctx *cli.Context) error {
 		return err
 	}
 
+	operator, err := NewCatalogOperator(ctx)
+	if err != nil {
+		return err
+	}
+
 	writer := NewTableWriter([][]string{
 		{"ID", "ID"},
 		{"NAME", "Stack.Name"},
@@ -109,6 +116,7 @@ func stackLs(ctx *cli.Context) error {
 		{"SERVICES", "ServiceCount"},
 		{"SYSTEM", "Stack.System"},
 		{"DETAIL", "Stack.TransitioningMessage"},
+		{"AVAILABLE UPGRADES", "Upgrades"},
 	}, ctx)
 
 	defer writer.Close()
@@ -118,12 +126,18 @@ func stackLs(ctx *cli.Context) error {
 		if item.State != "active" || combined == "" {
 			combined = item.State
 		}
+
+		var upgrades []string
+		if item.ExternalId != "" {
+			upgrades = operator.GetTemplateVersionUpgradesByID(item.ExternalId)
+		}
 		writer.Write(&StackData{
 			ID:           item.Id,
 			Stack:        item,
 			State:        combined,
 			Catalog:      item.ExternalId,
 			ServiceCount: len(item.ServiceIds),
+			Upgrades:     strings.Join(upgrades, ","),
 		})
 	}
 
