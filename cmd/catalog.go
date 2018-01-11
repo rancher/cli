@@ -272,9 +272,15 @@ func catalogInstall(ctx *cli.Context) error {
 	id := ""
 	switch proj.Orchestration {
 	case "cattle":
+		var composeFile string
+		if templateVersion.Files["docker-compose.yml"] == "" {
+			composeFile = toString(templateVersion.Files["docker-compose.yml.tpl"])
+		} else {
+			composeFile = toString(templateVersion.Files["docker-compose.yml"])
+		}
 		stack, err := c.Stack.Create(&client.Stack{
 			Name:           stackName,
-			DockerCompose:  toString(templateVersion.Files["docker-compose.yml"]),
+			DockerCompose:  composeFile,
 			RancherCompose: toString(templateVersion.Files["rancher-compose.yml"]),
 			Environment:    answers,
 			ExternalId:     externalID,
