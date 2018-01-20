@@ -9,8 +9,11 @@ RUN apk add --no-cache curl \
     && tar -xz -C / -f /$DOWNLOAD_FILE \
     && mv /docker/docker /usr/bin \
     && rm -rf /$DOWNLOAD_FILE /docker \
-    && apk del curl
+    && apk del curl \
+    && docker --version
+    
 
+RUN rancher --version
 COPY rancher /usr/bin/
 WORKDIR /mnt
 ENTRYPOINT ["rancher"]
