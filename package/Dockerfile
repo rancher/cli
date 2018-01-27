@@ -13,8 +13,8 @@ RUN apk add --no-cache curl \
     && docker --version
     
 
-RUN rancher --version
 COPY rancher /usr/bin/
+RUN rancher --version
 WORKDIR /mnt
 ENTRYPOINT ["rancher"]
 CMD  ["--help"]
