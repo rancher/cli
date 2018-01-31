@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/monitor"
-	"github.com/rancher/go-rancher/v3"
+
 	"github.com/rancher/rancher-compose-executor/project/options"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -74,7 +75,7 @@ type Waiter struct {
 	timeout   int
 	state     string
 	resources []string
-	client    *client.RancherClient
+	client    *cliclient.MasterClient
 	monitor   *monitor.Monitor
 }
 
@@ -113,9 +114,10 @@ func (w *Waiter) done(resourceType, id string) (bool, error) {
 		return w.checkDone(resourceType, id, data)
 	}
 
-	if err := w.client.ById(resourceType, id, &data); err != nil {
-		return false, err
-	}
+	// FIXME Add this back?
+	//if err := w.client.ById(resourceType, id, &data); err != nil {
+	//	return false, err
+	//}
 
 	return w.checkDone(resourceType, id, data)
 }
@@ -147,22 +149,22 @@ func (w *Waiter) Wait() error {
 	watching := map[ResourceID]bool{}
 	w.monitor = monitor.New(w.client)
 	sub := w.monitor.Subscribe()
-	go func() { logrus.Fatal(w.monitor.Start()) }()
+	//go func() { logrus.Fatal(w.monitor.Start()) }()
 
-	for _, resource := range w.resources {
-		r, err := Lookup(w.client, resource, waitTypes...)
-		if err != nil {
-			return err
-		}
-
-		ok, err := w.done(r.Type, r.Id)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			watching[NewResourceID(r.Type, r.Id)] = true
-		}
-	}
+	//for _, resource := range w.resources {
+	//	r, err := Lookup(w.client, resource, waitTypes...)
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	ok, err := w.done(r.Type, r.ID)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	if !ok {
+	//		watching[NewResourceID(r.Type, r.ID)] = true
+	//	}
+	//}
 
 	timeout := time.After(time.Duration(w.timeout) * time.Second)
 	every := time.Tick(10 * time.Second)

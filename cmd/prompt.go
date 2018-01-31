@@ -3,8 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/c-bata/go-prompt"
 	"github.com/rancher/cli/rancher_prompt"
+
+	"github.com/c-bata/go-prompt"
 	"github.com/urfave/cli"
 )
 

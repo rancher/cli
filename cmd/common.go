@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -11,352 +14,92 @@ import (
 	"syscall"
 	"text/template"
 	"time"
+	"unicode"
 
-	"github.com/fatih/color"
-	"github.com/rancher/go-rancher/v3"
+	"github.com/rancher/cli/cliclient"
+	"github.com/rancher/cli/config"
 
 	"github.com/docker/docker/pkg/namesgenerator"
+	"github.com/fatih/color"
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
 var (
-	errNoEnv = errors.New("Failed to find the current environment")
-	errNoURL = errors.New("RANCHER_URL environment or --url is not set, run `config`")
+	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
+	colors   = []color.Attribute{color.FgGreen, color.FgBlue, color.FgCyan, color.FgMagenta, color.FgRed, color.FgWhite, color.FgYellow}
 )
 
-func GetRawClient(ctx *cli.Context) (*client.RancherClient, error) {
-	config, err := lookupConfig(ctx)
-	if err != nil {
-		return nil, err
+func loadAndVerifyCert(path string) (string, error) {
+	caCert, err := ioutil.ReadFile(path)
+	if nil != err {
+		return "", err
 	}
-	url, err := baseURL(config.URL)
-	if err != nil {
-		return nil, err
+
+	block, _ := pem.Decode(caCert)
+
+	parsedCert, err := x509.ParseCertificate(block.Bytes)
+	if !parsedCert.IsCA {
+		return "", errors.New("CACerts is not valid")
 	}
-	return client.NewRancherClient(&client.ClientOpts{
-		Url:       url + "/v3",
-		AccessKey: config.AccessKey,
-		SecretKey: config.SecretKey,
-	})
+	return string(caCert), nil
 }
 
-func lookupConfig(ctx *cli.Context) (Config, error) {
+func loadConfig(path string) (config.Config, error) {
+	cf := config.Config{
+		Path:    path,
+		Servers: make(map[string]*config.ServerConfig),
+	}
+
+	content, err := ioutil.ReadFile(path)
+	if os.IsNotExist(err) {
+		return cf, nil
+	} else if nil != err {
+		return cf, err
+	}
+
+	err = json.Unmarshal(content, &cf)
+	cf.Path = path
+
+	return cf, err
+}
+
+func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 	path := ctx.GlobalString("config")
 	if path == "" {
 		path = os.ExpandEnv("${HOME}/.rancher/cli.json")
 	}
 
-	config, err := LoadConfig(path)
-	if err != nil {
-		return config, err
-	}
-
-	url := ctx.GlobalString("url")
-	accessKey := ctx.GlobalString("access-key")
-	secretKey := ctx.GlobalString("secret-key")
-	envName := ctx.GlobalString("environment")
-
-	if url != "" {
-		config.URL = url
-	}
-	if accessKey != "" {
-		config.AccessKey = accessKey
-	}
-	if secretKey != "" {
-		config.SecretKey = secretKey
-	}
-	if envName != "" {
-		config.Environment = envName
-	}
-
-	if config.URL == "" {
-		return config, errNoURL
-	}
-
-	return config, nil
-}
-
-func GetClient(ctx *cli.Context) (*client.RancherClient, error) {
-	config, err := lookupConfig(ctx)
-	if err != nil {
+	cf, err := loadConfig(path)
+	if nil != err {
 		return nil, err
 	}
 
-	url, err := config.EnvironmentURL()
-	if err != nil {
+	cs := cf.FocusedServer()
+	if cs == nil {
+		return nil, errors.New("no configuration found, run `login`")
+	}
+
+	return cs, nil
+}
+
+func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
+	cf, err := lookupConfig(ctx)
+	if nil != err {
 		return nil, err
 	}
 
-	return client.NewRancherClient(&client.ClientOpts{
-		Url:       url + "/schemas",
-		AccessKey: config.AccessKey,
-		SecretKey: config.SecretKey,
-	})
-}
-
-func GetEnvironment(def string, c *client.RancherClient) (*client.Project, error) {
-	resp, err := c.Project.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"all": true,
-		},
-	})
-	if err != nil {
+	mc, err := cliclient.NewMasterClient(cf)
+	if nil != err {
 		return nil, err
 	}
 
-	if len(resp.Data) == 0 {
-		return nil, errNoEnv
-	}
-
-	if len(resp.Data) == 1 {
-		return &resp.Data[0], nil
-	}
-
-	if def == "" {
-		names := []string{}
-		for _, p := range resp.Data {
-			cluster, err := c.Cluster.ById(p.ClusterId)
-			if err != nil {
-				return nil, err
-			}
-			names = append(names, fmt.Sprintf("%s(%s), cluster Name: %s (%s)", p.Name, p.Id, cluster.Name, cluster.Id))
-		}
-
-		idx := selectFromList("Environments:", names)
-		return &resp.Data[idx], nil
-	}
-
-	return LookupEnvironment(c, def)
-}
-
-func LookupEnvironment(c *client.RancherClient, name string) (*client.Project, error) {
-	env, err := Lookup(c, name, "account")
-	if err != nil {
-		return nil, err
-	}
-	if env.Type != "project" {
-		return nil, fmt.Errorf("Failed to find environment: %s", name)
-	}
-	return c.Project.ById(env.Id)
-}
-
-func GetOrCreateDefaultStack(c *client.RancherClient, name string) (*client.Stack, error) {
-	if name == "" {
-		name = "Default"
-	}
-
-	resp, err := c.Stack.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"name":         name,
-			"removed_null": 1,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(resp.Data) > 0 {
-		return &resp.Data[0], nil
-	}
-
-	return c.Stack.Create(&client.Stack{
-		Name: name,
-	})
-}
-
-func getHostByHostname(c *client.RancherClient, name string) (client.ResourceCollection, error) {
-	var result client.ResourceCollection
-	allHosts, err := c.Host.List(nil)
-	if err != nil {
-		return result, err
-	}
-
-	for _, host := range allHosts.Data {
-		if host.Hostname == name {
-			result.Data = append(result.Data, host.Resource)
-		}
-	}
-
-	return result, nil
+	return mc, nil
 }
 
 func RandomName() string {
 	return strings.Replace(namesgenerator.GetRandomName(0), "_", "-", -1)
-}
-
-func getContainerByName(c *client.RancherClient, name string) (client.ResourceCollection, error) {
-	var result client.ResourceCollection
-	stack, containerName, err := ParseName(c, name)
-	containers, err := c.Container.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"stackId": stack.Id,
-			"name":    containerName,
-		},
-	})
-	if err != nil {
-		return result, err
-	}
-	for _, container := range containers.Data {
-		result.Data = append(result.Data, container.Resource)
-	}
-	return result, nil
-}
-
-func getProjectByname(c *client.RancherClient, name string) (client.ResourceCollection, error) {
-	var result client.ResourceCollection
-	clusterName, projectName := parseClusterAndProject(name)
-	if clusterName != "" {
-		clusters, err := c.Cluster.List(&client.ListOpts{
-			Filters: map[string]interface{}{
-				"name":         clusterName,
-				"removed_null": "true",
-			},
-		})
-		if err != nil {
-			return result, err
-		}
-		if len(clusters.Data) == 0 {
-			return result, errors.Errorf("failed to find cluster with name %s", clusterName)
-		}
-		projects, err := c.Project.List(&client.ListOpts{
-			Filters: map[string]interface{}{
-				"clusterId":    clusters.Data[0].Id,
-				"name":         projectName,
-				"removed_null": "true",
-			},
-		})
-		if err != nil {
-			return result, err
-		}
-		for _, project := range projects.Data {
-			result.Data = append(result.Data, project.Resource)
-		}
-		return result, nil
-	}
-	projects, err := c.Project.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"name":         projectName,
-			"removed_null": "true",
-		},
-	})
-	if err != nil {
-		return result, err
-	}
-	for _, project := range projects.Data {
-		result.Data = append(result.Data, project.Resource)
-	}
-	return result, nil
-}
-
-func getServiceByName(c *client.RancherClient, name string) (client.ResourceCollection, error) {
-	var result client.ResourceCollection
-	stack, serviceName, err := ParseName(c, name)
-
-	services, err := c.Service.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"stackId": stack.Id,
-			"name":    serviceName,
-		},
-	})
-	if err != nil {
-		return result, err
-	}
-
-	for _, service := range services.Data {
-		result.Data = append(result.Data, service.Resource)
-	}
-
-	return result, nil
-}
-
-func Lookup(c *client.RancherClient, name string, types ...string) (*client.Resource, error) {
-	var byName *client.Resource
-
-	for _, schemaType := range types {
-		var resource client.Resource
-		// this is a hack for projects, it returns 403
-		if !strings.Contains(name, "/") {
-			if err := c.ById(schemaType, name, &resource); !client.IsNotFound(err) && err != nil {
-				return nil, err
-			} else if err == nil && resource.Id == name { // The ID check is because of an oddity in the id obfuscation
-				return &resource, nil
-			}
-		}
-
-		var collection client.ResourceCollection
-		if err := c.List(schemaType, &client.ListOpts{
-			Filters: map[string]interface{}{
-				"name":         name,
-				"removed_null": "1",
-			},
-		}, &collection); err != nil {
-			return nil, err
-		}
-
-		if len(collection.Data) > 1 {
-			ids := []string{}
-			for _, data := range collection.Data {
-				switch schemaType {
-				case "project":
-					project, err := c.Project.ById(data.Id)
-					if err != nil {
-						return nil, err
-					}
-					cluster, err := c.Cluster.ById(project.ClusterId)
-					if err != nil {
-						return nil, err
-					}
-					ids = append(ids, fmt.Sprintf("cluster %s, %s (%s)", cluster.Name, data.Id, name))
-				case "container":
-					container, err := c.Container.ById(data.Id)
-					if err != nil {
-						return nil, err
-					}
-					host, err := c.Host.ById(container.HostId)
-					if err != nil {
-						return nil, err
-					}
-					ids = append(ids, fmt.Sprintf("host %s, %s (%s)", host.Hostname, data.Id, name))
-				default:
-					ids = append(ids, fmt.Sprintf("%s (%s)", data.Id, name))
-				}
-
-			}
-			index := selectFromList("Resources: ", ids)
-			return &collection.Data[index], nil
-		}
-
-		if len(collection.Data) == 0 {
-			var err error
-			// Per type specific logic
-			switch schemaType {
-			case "host":
-				collection, err = getHostByHostname(c, name)
-			case "service":
-				collection, err = getServiceByName(c, name)
-			case "container":
-				collection, err = getContainerByName(c, name)
-			case "project":
-				collection, err = getProjectByname(c, name)
-			}
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if len(collection.Data) == 0 {
-			continue
-		}
-
-		byName = &collection.Data[0]
-	}
-
-	if byName == nil {
-		return nil, fmt.Errorf("Not found: %s", name)
-	}
-
-	return byName, nil
 }
 
 func appendTabDelim(buf *bytes.Buffer, value string) {
@@ -403,7 +146,7 @@ func printTemplate(out io.Writer, templateContent string, obj interface{}) error
 		"json":     FormatJSON,
 	}
 	tmpl, err := template.New("").Funcs(funcMap).Parse(templateContent)
-	if err != nil {
+	if nil != err {
 		return err
 	}
 
@@ -425,4 +168,50 @@ func getRandomColor() color.Attribute {
 	r1 := rand.New(s1)
 	index := r1.Intn(8)
 	return colors[index]
+}
+
+func SplitOnColon(s string) []string {
+	return strings.Split(s, ":")
+}
+
+func parseClusterAndProject(name string) (string, string) {
+	parts := strings.SplitN(name, "/", 2)
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return "", name
+}
+
+// Return a JSON blob of the file at path
+func readFileReturnJSON(path string) ([]byte, error) {
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		return []byte{}, err
+	}
+	// This is probably already JSON if true
+	if hasPrefix(file, []byte("{")) {
+		return file, nil
+	}
+	return yaml.YAMLToJSON(file)
+}
+
+// Return true if the first non-whitespace bytes in buf is prefix.
+func hasPrefix(buf []byte, prefix []byte) bool {
+	trim := bytes.TrimLeftFunc(buf, unicode.IsSpace)
+	return bytes.HasPrefix(trim, prefix)
+}
+
+func settingsToMap(client *cliclient.MasterClient) (map[string]string, error) {
+	configMap := make(map[string]string)
+
+	settings, err := client.ManagementClient.Setting.List(baseListOpts())
+	if nil != err {
+		return nil, err
+	}
+
+	for _, setting := range settings.Data {
+		configMap[setting.Name] = setting.Value
+	}
+
+	return configMap, nil
 }
