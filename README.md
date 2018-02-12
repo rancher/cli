@@ -1,7 +1,7 @@
 Rancher CLI
 ===========
 
-The Rancher Command Line Interface (CLI)is a unified tool to manage your Rancher server. With this tool, you can control your services, containers and hosts within a Rancher environment and automate them through scripts. 
+The Rancher Command Line Interface (CLI) is a unified tool to manage your Rancher server. With this tool, you can control your services, containers and hosts within a Rancher environment and automate them through scripts. 
 
 ## Version Compatibility
 Rancher CLI v0.2.0+ is only compatible with Rancher Server v1.2.0+. 
@@ -18,7 +18,7 @@ The access key and secret key should be an [account API key](http://docs.rancher
 
 You can run `rancher config` to set these environment variables for the CLI. 
 
-```
+```bash
 $ rancher --url http://<RANCHER_SERVER_URL> config
 URL [http://<RANCHER_SERVER_URL>]: 
 Access Key [http://<RANCHER_SERVER_URL>]: <ACCESS_KEY>
