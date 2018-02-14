@@ -131,10 +131,6 @@ func (s *Schemas) MustCustomizeType(version *APIVersion, obj interface{}, f func
 
 	f(schema)
 
-	if schema.SubContext != "" {
-		s.schemasBySubContext[schema.SubContext] = schema
-	}
-
 	return s
 }
 
@@ -271,6 +267,9 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		if fieldType.Kind() == reflect.Ptr {
 			schemaField.Nullable = true
 			fieldType = fieldType.Elem()
+		} else if fieldType.Kind() == reflect.Bool {
+			schemaField.Nullable = false
+			schemaField.Default = false
 		}
 
 		if err := applyTag(&field, &schemaField); err != nil {

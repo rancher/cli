@@ -1,20 +1,20 @@
 package client
 
 const (
-	PublicEndpointType          = "publicEndpoint"
-	PublicEndpointFieldAddress  = "address"
-	PublicEndpointFieldNode     = "node"
-	PublicEndpointFieldPod      = "pod"
-	PublicEndpointFieldPort     = "port"
-	PublicEndpointFieldProtocol = "protocol"
-	PublicEndpointFieldService  = "service"
+	PublicEndpointType           = "publicEndpoint"
+	PublicEndpointFieldAddress   = "address"
+	PublicEndpointFieldNodeId    = "nodeId"
+	PublicEndpointFieldPodId     = "podId"
+	PublicEndpointFieldPort      = "port"
+	PublicEndpointFieldProtocol  = "protocol"
+	PublicEndpointFieldServiceId = "serviceId"
 )
 
 type PublicEndpoint struct {
-	Address  string `json:"address,omitempty"`
-	Node     string `json:"node,omitempty"`
-	Pod      string `json:"pod,omitempty"`
-	Port     *int64 `json:"port,omitempty"`
-	Protocol string `json:"protocol,omitempty"`
-	Service  string `json:"service,omitempty"`
+	Address   string `json:"address,omitempty"`
+	NodeId    string `json:"nodeId,omitempty"`
+	PodId     string `json:"podId,omitempty"`
+	Port      *int64 `json:"port,omitempty"`
+	Protocol  string `json:"protocol,omitempty"`
+	ServiceId string `json:"serviceId,omitempty"`
 }
