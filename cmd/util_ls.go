@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/rancher/go-rancher/v3"
+	"github.com/rancher/norman/types"
 	"github.com/urfave/cli"
 )
 
@@ -19,8 +19,8 @@ func listSystemFlag() cli.BoolFlag {
 	}
 }
 
-func baseListOpts() *client.ListOpts {
-	return &client.ListOpts{
+func baseListOpts() *types.ListOpts {
+	return &types.ListOpts{
 		Filters: map[string]interface{}{
 			"limit": -2,
 			"all":   true,
@@ -28,7 +28,7 @@ func baseListOpts() *client.ListOpts {
 	}
 }
 
-func defaultListOpts(ctx *cli.Context) *client.ListOpts {
+func defaultListOpts(ctx *cli.Context) *types.ListOpts {
 	listOpts := baseListOpts()
 	if ctx != nil && !ctx.Bool("all") {
 		listOpts.Filters["removed_null"] = "1"

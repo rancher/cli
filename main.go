@@ -6,10 +6,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cmd"
 	"github.com/rancher/cli/rancher_prompt"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -25,7 +25,7 @@ Options:
   {{range .Flags}}{{if .Hidden}}{{else}}{{.}}
   {{end}}{{end}}{{end}}
 Commands:
-  {{range .Commands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
+  {{range .Commands}}{{.Name}}{{with .Aliases}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
   {{end}}
 Run '{{.Name}} COMMAND --help' for more information on a command.
 `
@@ -65,99 +65,13 @@ func mainErr() error {
 			Name:  "debug",
 			Usage: "Debug logging",
 		},
-		cli.StringFlag{
-			Name:   "config,c",
-			Usage:  "Client configuration file (default ${HOME}/.rancher/cli.json)",
-			EnvVar: "RANCHER_CLIENT_CONFIG",
-		},
-		cli.StringFlag{
-			Name:  "cluster",
-			Usage: "Specify cluster used for kubectl",
-		},
-		cli.StringFlag{
-			Name:   "environment,env",
-			Usage:  "Environment name or ID",
-			EnvVar: "RANCHER_ENVIRONMENT",
-		},
-		cli.StringFlag{
-			Name:   "url",
-			Usage:  "Specify the Rancher API endpoint URL",
-			EnvVar: "RANCHER_URL",
-		},
-		cli.StringFlag{
-			Name:   "access-key",
-			Usage:  "Specify Rancher API access key",
-			EnvVar: "RANCHER_ACCESS_KEY",
-		},
-		cli.StringFlag{
-			Name:   "secret-key",
-			Usage:  "Specify Rancher API secret key",
-			EnvVar: "RANCHER_SECRET_KEY",
-		},
-		cli.StringFlag{
-			Name:   "host",
-			Usage:  "Host used for docker command",
-			EnvVar: "RANCHER_DOCKER_HOST",
-		},
-		cli.BoolFlag{
-			Name:  "wait,w",
-			Usage: "Wait for resource to reach resting state",
-		},
-		cli.IntFlag{
-			Name:  "wait-timeout",
-			Usage: "Timeout in seconds to wait",
-			Value: 600,
-		},
-		cli.StringFlag{
-			Name:  "wait-state",
-			Usage: "State to wait for (active, healthy, etc)",
-		},
-		// Below four flags are for rancher-compose code capability.  The users doesn't use them directly
-		cli.StringFlag{
-			Name:   "rancher-file",
-			Hidden: true,
-		},
-		cli.StringFlag{
-			Name:   "env-file",
-			Hidden: true,
-		},
-		cli.StringSliceFlag{
-			Name:   "file,f",
-			Hidden: true,
-		},
-		cli.StringFlag{
-			Name:   "project-name",
-			Hidden: true,
-		},
 	}
 	app.Commands = []cli.Command{
-		cmd.CatalogCommand(),
 		cmd.ClusterCommand(),
-		cmd.ConfigCommand(),
-		cmd.DockerCommand(),
-		cmd.EnvCommand(),
-		cmd.EventsCommand(),
-		cmd.ExecCommand(),
-		cmd.ExportCommand(),
-		cmd.HostCommand(),
 		cmd.KubectlCommand(),
-		cmd.LogsCommand(),
+		cmd.LoginCommand(),
+		cmd.ProjectCommand(),
 		cmd.PsCommand(),
-		cmd.PullCommand(),
-		cmd.PromptCommand(),
-		cmd.RestartCommand(),
-		cmd.RmCommand(),
-		cmd.RunCommand(),
-		cmd.ScaleCommand(),
-		cmd.SecretCommand(),
-		cmd.SSHCommand(),
-		cmd.StackCommand(),
-		cmd.StartCommand(),
-		cmd.StopCommand(),
-		cmd.UpCommand(),
-		cmd.VolumeCommand(),
-		cmd.InspectCommand(),
-		cmd.WaitCommand(),
 	}
 	for _, com := range app.Commands {
 		rancherPrompt.Commands[com.Name] = com

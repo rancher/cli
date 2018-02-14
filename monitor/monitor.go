@@ -3,14 +3,13 @@ package monitor
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/patrickmn/go-cache"
-	"github.com/rancher/go-rancher/v3"
+	"github.com/rancher/cli/cliclient"
+	"github.com/sirupsen/logrus"
 )
 
 type Event struct {
@@ -22,7 +21,7 @@ type Event struct {
 
 type Monitor struct {
 	sync.Mutex
-	c             *client.RancherClient
+	c             *cliclient.MasterClient
 	cache         *cache.Cache
 	subCounter    int
 	subscriptions map[int]*Subscription
@@ -55,7 +54,7 @@ type Subscription struct {
 	C  chan *Event
 }
 
-func New(c *client.RancherClient) *Monitor {
+func New(c *cliclient.MasterClient) *Monitor {
 	return &Monitor{
 		c:             c,
 		cache:         cache.New(5*time.Minute, 30*time.Second),
@@ -63,44 +62,44 @@ func New(c *client.RancherClient) *Monitor {
 	}
 }
 
-func (m *Monitor) Start() error {
-	schema, ok := m.c.GetSchemas().CheckSchema("subscribe")
-	if !ok {
-		return fmt.Errorf("Not authorized to subscribe")
-	}
-
-	urlString := schema.Links["collection"]
-	u, err := url.Parse(urlString)
-	if err != nil {
-		return err
-	}
-
-	switch u.Scheme {
-	case "http":
-		u.Scheme = "ws"
-	case "https":
-		u.Scheme = "wss"
-	}
-
-	q := u.Query()
-	q.Add("eventNames", "resource.change")
-	q.Add("eventNames", "service.kubernetes.change")
-
-	u.RawQuery = q.Encode()
-
-	conn, resp, err := m.c.Websocket(u.String(), nil)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != 101 {
-		return fmt.Errorf("Bad status code: %d %s", resp.StatusCode, resp.Status)
-	}
-
-	logrus.Debugf("Connected to: %s", u.String())
-
-	return m.watch(conn)
-}
+//func (m *Monitor) Start() error {
+//	schema, err := m.c.ManagementClient.DynamicSchema.ByID("subscribe")
+//	if nil != err {
+//		return fmt.Errorf("not authorized to subscribe")
+//	}
+//
+//	urlString := schema.Links["collection"]
+//	u, err := url.Parse(urlString)
+//	if err != nil {
+//		return err
+//	}
+//
+//	switch u.Scheme {
+//	case "http":
+//		u.Scheme = "ws"
+//	case "https":
+//		u.Scheme = "wss"
+//	}
+//
+//	q := u.Query()
+//	q.Add("eventNames", "resource.change")
+//	q.Add("eventNames", "service.kubernetes.change")
+//
+//	u.RawQuery = q.Encode()
+//
+//	conn, resp, err := m.c.Websocket(u.String(), nil)
+//	if err != nil {
+//		return err
+//	}
+//
+//	if resp.StatusCode != 101 {
+//		return fmt.Errorf("Bad status code: %d %s", resp.StatusCode, resp.Status)
+//	}
+//
+//	logrus.Debugf("Connected to: %s", u.String())
+//
+//	return m.watch(conn)
+//}
 
 func (m *Monitor) Get(resourceType, resourceID string, obj interface{}) (bool, error) {
 	val, ok := m.cache.Get(key(resourceType, resourceID))

@@ -1,34 +1,27 @@
 Rancher CLI
 ===========
 
-The Rancher Command Line Interface (CLI)is a unified tool to manage your Rancher server. With this tool, you can control your services, containers and hosts within a Rancher environment and automate them through scripts. 
+The Rancher Command Line Interface (CLI) is a unified tool to interact with your Rancher server. 
 
-## Version Compatibility
-Rancher CLI v0.2.0+ is only compatible with Rancher Server v1.2.0+. 
-
-## Running
+## Installing
 
 You can check the [releases page](https://github.com/rancher/cli/releases) for direct downloads of the binary or [build your own](#building). 
 
 ## Setting up Rancher CLI with Rancher Server 
 
-To enable the CLI to connect to Rancher server, you can configure the environment variables needed. The environment variables that are required are `RANCHER_URL`, `RANCHER_ACCESS_KEY` and `RANCHER_SECRET_KEY`. 
-
-The access key and secret key should be an [account API key](http://docs.rancher.com/rancher/latest/en/api/api-keys/#account-api-keys). In your Rancher setup, you can create an account API key under the **API** tab and expand the **Advanced Options**. 
-
-You can run `rancher config` to set these environment variables for the CLI. 
+The CLI needs to know your server address and the credentials required to authenticate with it. 
+Rancher CLI will pull this information from a `cli.json` that is created the first time you run 
+`rancher login`. By default this file is located at `~/.rancher/cli.json`. 
 
 ```
-$ rancher --url http://<RANCHER_SERVER_URL> config
-URL [http://<RANCHER_SERVER_URL>]: 
-Access Key [http://<RANCHER_SERVER_URL>]: <ACCESS_KEY>
-Secret Key [http://<RANCHER_SERVER_URL>]: <SECRET_KEY>
-INFO[0102] Saving config to /Users/<username>/.rancher/cli.json 
+$ rancher login https://<RANCHER_SERVER_URL> -t my-secret-token --name CoolServer1
 ```
 
-> Note: The `<RANCHER_SERVER_URL>` includes whatever port was exposed when installing Rancher server. If you had followed the installation instructions, your URL would be `http://<server_ip>:8080/`.
+> Note: The `<RANCHER_SERVER_URL>` includes whatever port was exposed when installing Rancher server.
 
-## Building
+If you want to use Rancher CLI on a server that uses a self signed cert you will need to download the cert from `<RANCHER_SERVER_URL>/v3/settings` and pass that into `rancher login` using `--cacert` 
+
+## Building from source
 
 The binaries will be located in `/bin`.
 
@@ -40,9 +33,9 @@ Run `make`.
 
 Run `CROSS=1 make build`
 
-### Docker image
+## Docker image
 
-Run `docker run --rm -it rancher/cli [ARGS]`  You can pass in credentials by bind mounting in a config file or setting env vars.  You can also use the wrapper script in `./contrib/rancher` that will make the process a bit easier.
+Run `docker run --rm -it rancher/cli [ARGS]`  You can pass in credentials by bind mounting in a config file.
 
 To build `rancher/cli` just run `make`.  To use a custom Docker repository do `REPO=custom make` and it will producte `custom/cli` image.
 
@@ -54,7 +47,7 @@ For bugs, questions, comments, corrections, suggestions, etc., open an issue in
 Or just [click here](//github.com/rancher/rancher/issues/new?title=%5Bcli%5D%20) to create a new issue.
 
 ## License
-Copyright (c) 2014-2016 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2014-2018 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
