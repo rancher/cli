@@ -114,6 +114,11 @@ func getDefaultProject(ctx *cli.Context, cf *config.ServerConfig) (string, error
 		return "", err
 	}
 
+	if len(collection.Data) == 0 {
+		fmt.Println("There are no projects in the cluster, please create one and login again")
+		return "", nil
+	}
+
 	errMessage := fmt.Sprintf("invalid input, enter a number between 0 and %v", len(collection.Data)-1)
 
 	fmt.Println("Select your default Project:")
