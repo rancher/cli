@@ -34,7 +34,6 @@ func psLs(ctx *cli.Context) error {
 
 	workLoads, err := c.ProjectClient.Workload.List(defaultListOpts(ctx))
 	if nil != err {
-		fmt.Println("HERE")
 		return err
 	}
 

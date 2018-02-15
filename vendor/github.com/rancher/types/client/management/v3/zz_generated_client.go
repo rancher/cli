@@ -8,9 +8,8 @@ type Client struct {
 	clientbase.APIBaseClient
 
 	Node                       NodeOperations
-	Machine                    MachineOperations
-	MachineDriver              MachineDriverOperations
-	MachineTemplate            MachineTemplateOperations
+	NodeDriver                 NodeDriverOperations
+	NodeTemplate               NodeTemplateOperations
 	Project                    ProjectOperations
 	GlobalRole                 GlobalRoleOperations
 	GlobalRoleBinding          GlobalRoleBindingOperations
@@ -31,12 +30,14 @@ type Client struct {
 	AuthConfig                 AuthConfigOperations
 	Token                      TokenOperations
 	DynamicSchema              DynamicSchemaOperations
-	App                        AppOperations
 	Preference                 PreferenceOperations
 	ClusterLogging             ClusterLoggingOperations
 	ProjectLogging             ProjectLoggingOperations
 	ListenConfig               ListenConfigOperations
 	Setting                    SettingOperations
+	Notifier                   NotifierOperations
+	ClusterAlert               ClusterAlertOperations
+	ProjectAlert               ProjectAlertOperations
 }
 
 func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
@@ -50,9 +51,8 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	}
 
 	client.Node = newNodeClient(client)
-	client.Machine = newMachineClient(client)
-	client.MachineDriver = newMachineDriverClient(client)
-	client.MachineTemplate = newMachineTemplateClient(client)
+	client.NodeDriver = newNodeDriverClient(client)
+	client.NodeTemplate = newNodeTemplateClient(client)
 	client.Project = newProjectClient(client)
 	client.GlobalRole = newGlobalRoleClient(client)
 	client.GlobalRoleBinding = newGlobalRoleBindingClient(client)
@@ -73,12 +73,14 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	client.AuthConfig = newAuthConfigClient(client)
 	client.Token = newTokenClient(client)
 	client.DynamicSchema = newDynamicSchemaClient(client)
-	client.App = newAppClient(client)
 	client.Preference = newPreferenceClient(client)
 	client.ClusterLogging = newClusterLoggingClient(client)
 	client.ProjectLogging = newProjectLoggingClient(client)
 	client.ListenConfig = newListenConfigClient(client)
 	client.Setting = newSettingClient(client)
+	client.Notifier = newNotifierClient(client)
+	client.ClusterAlert = newClusterAlertClient(client)
+	client.ProjectAlert = newProjectAlertClient(client)
 
 	return client, nil
 }
