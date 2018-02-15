@@ -6,7 +6,6 @@ import (
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/types/client/management/v3"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -47,14 +46,14 @@ func ClusterCommand() cli.Command {
 				Name:        "import",
 				Usage:       "Import an existing Kubernetes cluster into a Rancher cluster",
 				Description: importDescription,
-				ArgsUsage:   "[NEWCLUSTERNAME...]",
+				ArgsUsage:   "[CLUSTERID]",
 				Action:      clusterImport,
 			},
 			{
 				Name:      "add-node",
 				Usage:     "Returns the command needed to add a node to an existing Rancher cluster",
-				ArgsUsage: "[CLUSTERNAME]",
-				Action:    getDockerCommand,
+				ArgsUsage: "[CLUSTERID]",
+				Action:    clusterAddNode,
 				Flags: []cli.Flag{
 					cli.StringSliceFlag{
 						Name:  "label",
@@ -73,6 +72,13 @@ func ClusterCommand() cli.Command {
 						Usage: "Use node as a worker",
 					},
 				},
+			},
+			{
+				Name:      "delete",
+				Aliases:   []string{"rm"},
+				Usage:     "Delete a cluster",
+				ArgsUsage: "[CLUSTERID]",
+				Action:    deleteCluster,
 			},
 		},
 	}
@@ -93,6 +99,7 @@ func clusterLs(ctx *cli.Context) error {
 		{"ID", "Cluster.ID"},
 		{"NAME", "Cluster.Name"},
 		{"STATE", "Cluster.State"},
+		{"DESCRIPTION", "Cluster.Description"},
 	}, ctx)
 
 	defer writer.Close()
@@ -137,7 +144,7 @@ func clusterImport(ctx *cli.Context) error {
 		return err
 	}
 
-	cluster, err := getClusterByName(ctx, c, ctx.Args().First())
+	cluster, err := getClusterByID(ctx, c, ctx.Args().First())
 	if nil != err {
 		return err
 	}
@@ -147,13 +154,13 @@ func clusterImport(ctx *cli.Context) error {
 		return err
 	}
 
-	//FIXME probably need more info here
-	logrus.Printf("Run the following command in your cluster: %v", clusterToken.Command)
+	fmt.Printf("Run the following command in your cluster: %v", clusterToken.Command)
+
 	return nil
 }
 
-// getDockerCommand prints the command needed to add a node to a cluster
-func getDockerCommand(ctx *cli.Context) error {
+// clusterAddNode prints the command needed to add a node to a cluster
+func clusterAddNode(ctx *cli.Context) error {
 	var clusterName string
 
 	if ctx.NArg() == 0 {
@@ -167,7 +174,7 @@ func getDockerCommand(ctx *cli.Context) error {
 		return err
 	}
 
-	cluster, err := getClusterByName(ctx, c, clusterName)
+	cluster, err := getClusterByID(ctx, c, clusterName)
 	if nil != err {
 		return err
 	}
@@ -205,6 +212,29 @@ func getDockerCommand(ctx *cli.Context) error {
 	return nil
 }
 
+func deleteCluster(ctx *cli.Context) error {
+	if ctx.NArg() == 0 {
+		return errors.New(clusterNameError)
+	}
+
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	cluster, err := getClusterByID(ctx, c, ctx.Args().First())
+	if nil != err {
+		return err
+	}
+
+	err = c.ManagementClient.Cluster.Delete(&cluster)
+	if nil != err {
+		return err
+	}
+
+	return nil
+}
+
 // getClusterRegToken will return an existing token or create one if none exist
 func getClusterRegToken(
 	ctx *cli.Context,
@@ -232,22 +262,22 @@ func getClusterRegToken(
 	return clusterTokenCollection.Data[0], nil
 }
 
-func getClusterByName(
+func getClusterByID(
 	ctx *cli.Context,
 	c *cliclient.MasterClient,
-	clusterName string,
+	clusterID string,
 ) (managementClient.Cluster, error) {
-	opts := defaultListOpts(ctx)
-	opts.Filters["name"] = clusterName
-
-	clusterCollection, err := c.ManagementClient.Cluster.List(opts)
+	clusterCollection, err := c.ManagementClient.Cluster.List(defaultListOpts(ctx))
 	if nil != err {
 		return managementClient.Cluster{}, err
 	}
 
-	if len(clusterCollection.Data) == 0 {
-		return managementClient.Cluster{}, fmt.Errorf("no cluster found with the name [%s], run "+
-			"`rancher clusters` to see available clusters", clusterName)
+	for _, cluster := range clusterCollection.Data {
+		if cluster.ID == clusterID {
+			return cluster, nil
+		}
 	}
-	return clusterCollection.Data[0], nil
+
+	return managementClient.Cluster{}, fmt.Errorf("no cluster found with the ID [%s], run "+
+		"`rancher clusters` to see available clusters", clusterID)
 }

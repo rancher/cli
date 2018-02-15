@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/urfave/cli"
 )
@@ -33,12 +35,24 @@ func ProjectCommand() cli.Command {
 				ArgsUsage:   "[NEWPROJECTNAME...]",
 				Action:      projectCreate,
 			},
+			{
+				Name:      "delete",
+				Aliases:   []string{"rm"},
+				Usage:     "Delete a project by ID",
+				ArgsUsage: "[PROJECTID]",
+				Action:    deleteProject,
+			},
 		},
 	}
 }
 
 func projectLs(ctx *cli.Context) error {
-	collection, err := getProjectList(ctx)
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	collection, err := getProjectList(ctx, c)
 	if err != nil {
 		return err
 	}
@@ -47,6 +61,7 @@ func projectLs(ctx *cli.Context) error {
 		{"ID", "Project.ID"},
 		{"NAME", "Project.Name"},
 		{"STATE", "Project.State"},
+		{"DESCRIPTION", "Project.Description"},
 	}, ctx)
 
 	defer writer.Close()
@@ -61,22 +76,22 @@ func projectLs(ctx *cli.Context) error {
 }
 
 func projectCreate(ctx *cli.Context) error {
+	if ctx.NArg() == 0 {
+		return errors.New("project name is required")
+	}
+
 	config, err := lookupConfig(ctx)
 	if nil != err {
 		return err
 	}
+
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	if ctx.NArg() == 0 {
-		return errors.New("name is required")
-	}
-
-	name := ctx.Args().First()
 	newProj := &managementClient.Project{
-		Name:      name,
+		Name:      ctx.Args().First(),
 		ClusterId: strings.Split(config.Project, ":")[0],
 	}
 
@@ -84,15 +99,64 @@ func projectCreate(ctx *cli.Context) error {
 	return nil
 }
 
-func getProjectList(ctx *cli.Context) (*managementClient.ProjectCollection, error) {
+func deleteProject(ctx *cli.Context) error {
+	if ctx.NArg() == 0 {
+		return errors.New("project name is required")
+	}
+
 	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	project, err := getProjectByID(ctx, c, ctx.Args().First())
+	if nil != err {
+		return err
+	}
+
+	err = c.ManagementClient.Project.Delete(&project)
+	if nil != err {
+		return err
+	}
+
+	return nil
+}
+
+func getProjectList(
+	ctx *cli.Context,
+	c *cliclient.MasterClient,
+) (*managementClient.ProjectCollection, error) {
+	config, err := lookupConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	collection, err := c.ManagementClient.Project.List(defaultListOpts(ctx))
+	filter := defaultListOpts(ctx)
+	filter.Filters["clusterId"] = config.FocusedCluster()
+
+	collection, err := c.ManagementClient.Project.List(filter)
 	if err != nil {
 		return nil, err
 	}
 	return collection, nil
+}
+
+func getProjectByID(
+	ctx *cli.Context,
+	c *cliclient.MasterClient,
+	projectID string,
+) (managementClient.Project, error) {
+	projectCollection, err := getProjectList(ctx, c)
+	if nil != err {
+		return managementClient.Project{}, err
+	}
+
+	for _, project := range projectCollection.Data {
+		if project.ID == projectID {
+			return project, nil
+		}
+	}
+
+	return managementClient.Project{}, fmt.Errorf("no project found with the ID [%s], run "+
+		"`rancher projects` to see available projects", projectID)
 }
