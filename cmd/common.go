@@ -37,7 +37,14 @@ func loadAndVerifyCert(path string) (string, error) {
 		return "", err
 	}
 
+	// replace the escaped version of the line break
+	caCert = bytes.Replace(caCert, []byte(`\n`), []byte("\n"), -1)
+
 	block, _ := pem.Decode(caCert)
+
+	if nil == block {
+		return "", errors.New("No cert was found")
+	}
 
 	parsedCert, err := x509.ParseCertificate(block.Bytes)
 	if !parsedCert.IsCA {
