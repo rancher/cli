@@ -214,7 +214,7 @@ func clusterAddNode(ctx *cli.Context) error {
 
 func deleteCluster(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New(clusterNameError)
+		return errors.New("cluster ID is required")
 	}
 
 	c, err := GetClient(ctx)
