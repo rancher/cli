@@ -101,7 +101,7 @@ func projectCreate(ctx *cli.Context) error {
 
 func deleteProject(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("project name is required")
+		return errors.New("project ID is required")
 	}
 
 	c, err := GetClient(ctx)
