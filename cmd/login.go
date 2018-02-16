@@ -20,7 +20,7 @@ func LoginCommand() cli.Command {
 		Aliases:   []string{"l"},
 		Usage:     "Login to a Rancher server",
 		Action:    loginSetup,
-		ArgsUsage: "None",
+		ArgsUsage: "[SERVERURL]",
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "token,t",
