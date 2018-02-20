@@ -72,12 +72,9 @@ func namespaceLs(ctx *cli.Context) error {
 
 	if !ctx.Bool("all-namespaces") {
 		var projectNamespaces []clusterClient.Namespace
-		config, err := lookupConfig(ctx)
-		if nil != err {
-			return err
-		}
+
 		for _, namespace := range collection.Data {
-			if namespace.ProjectID == config.Project {
+			if namespace.ProjectID == c.UserConfig.Project {
 				projectNamespaces = append(projectNamespaces, namespace)
 			}
 

@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/types/client/management/v3"
@@ -80,11 +79,6 @@ func projectCreate(ctx *cli.Context) error {
 		return errors.New("project name is required")
 	}
 
-	config, err := lookupConfig(ctx)
-	if nil != err {
-		return err
-	}
-
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
@@ -92,7 +86,7 @@ func projectCreate(ctx *cli.Context) error {
 
 	newProj := &managementClient.Project{
 		Name:      ctx.Args().First(),
-		ClusterId: strings.Split(config.Project, ":")[0],
+		ClusterId: c.UserConfig.FocusedCluster(),
 	}
 
 	c.ManagementClient.Project.Create(newProj)
@@ -126,13 +120,8 @@ func getProjectList(
 	ctx *cli.Context,
 	c *cliclient.MasterClient,
 ) (*managementClient.ProjectCollection, error) {
-	config, err := lookupConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	filter := defaultListOpts(ctx)
-	filter.Filters["clusterId"] = config.FocusedCluster()
+	filter.Filters["clusterId"] = c.UserConfig.FocusedCluster()
 
 	collection, err := c.ManagementClient.Project.List(filter)
 	if err != nil {
