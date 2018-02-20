@@ -71,8 +71,10 @@ func mainErr() error {
 		cmd.NamespaceCommand(),
 		cmd.KubectlCommand(),
 		cmd.LoginCommand(),
+		cmd.NodeCommand(),
 		cmd.ProjectCommand(),
 		cmd.PsCommand(),
+		cmd.SSHCommand(),
 	}
 	for _, com := range app.Commands {
 		rancherPrompt.Commands[com.Name] = com

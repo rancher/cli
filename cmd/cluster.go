@@ -14,7 +14,6 @@ const (
 Imports an existing cluster to be used in rancher by using a generated kubectl 
 command to run in your existing Kubernetes cluster.
 `
-	clusterNameError = "cluster name is required"
 )
 
 type ClusterData struct {
@@ -115,7 +114,7 @@ func clusterLs(ctx *cli.Context) error {
 
 func clusterCreate(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New(clusterNameError)
+		return errors.New("cluster name is required")
 	}
 	c, err := GetClient(ctx)
 	if nil != err {
@@ -136,7 +135,7 @@ func clusterCreate(ctx *cli.Context) error {
 
 func clusterImport(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New(clusterNameError)
+		return errors.New("cluster ID is required")
 	}
 
 	c, err := GetClient(ctx)
@@ -164,7 +163,7 @@ func clusterAddNode(ctx *cli.Context) error {
 	var clusterName string
 
 	if ctx.NArg() == 0 {
-		return errors.New(clusterNameError)
+		return errors.New("cluster ID is required")
 	}
 
 	clusterName = ctx.Args().First()
