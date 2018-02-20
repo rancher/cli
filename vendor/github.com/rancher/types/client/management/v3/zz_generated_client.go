@@ -7,6 +7,7 @@ import (
 type Client struct {
 	clientbase.APIBaseClient
 
+	NodePool                   NodePoolOperations
 	Node                       NodeOperations
 	NodeDriver                 NodeDriverOperations
 	NodeTemplate               NodeTemplateOperations
@@ -31,6 +32,7 @@ type Client struct {
 	Token                      TokenOperations
 	DynamicSchema              DynamicSchemaOperations
 	Preference                 PreferenceOperations
+	ProjectNetworkPolicy       ProjectNetworkPolicyOperations
 	ClusterLogging             ClusterLoggingOperations
 	ProjectLogging             ProjectLoggingOperations
 	ListenConfig               ListenConfigOperations
@@ -38,6 +40,12 @@ type Client struct {
 	Notifier                   NotifierOperations
 	ClusterAlert               ClusterAlertOperations
 	ProjectAlert               ProjectAlertOperations
+	SourceCodeCredential       SourceCodeCredentialOperations
+	ClusterPipeline            ClusterPipelineOperations
+	Pipeline                   PipelineOperations
+	PipelineExecution          PipelineExecutionOperations
+	SourceCodeRepository       SourceCodeRepositoryOperations
+	PipelineExecutionLog       PipelineExecutionLogOperations
 }
 
 func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
@@ -50,6 +58,7 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 		APIBaseClient: baseClient,
 	}
 
+	client.NodePool = newNodePoolClient(client)
 	client.Node = newNodeClient(client)
 	client.NodeDriver = newNodeDriverClient(client)
 	client.NodeTemplate = newNodeTemplateClient(client)
@@ -74,6 +83,7 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	client.Token = newTokenClient(client)
 	client.DynamicSchema = newDynamicSchemaClient(client)
 	client.Preference = newPreferenceClient(client)
+	client.ProjectNetworkPolicy = newProjectNetworkPolicyClient(client)
 	client.ClusterLogging = newClusterLoggingClient(client)
 	client.ProjectLogging = newProjectLoggingClient(client)
 	client.ListenConfig = newListenConfigClient(client)
@@ -81,6 +91,12 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	client.Notifier = newNotifierClient(client)
 	client.ClusterAlert = newClusterAlertClient(client)
 	client.ProjectAlert = newProjectAlertClient(client)
+	client.SourceCodeCredential = newSourceCodeCredentialClient(client)
+	client.ClusterPipeline = newClusterPipelineClient(client)
+	client.Pipeline = newPipelineClient(client)
+	client.PipelineExecution = newPipelineExecutionClient(client)
+	client.SourceCodeRepository = newSourceCodeRepositoryClient(client)
+	client.PipelineExecutionLog = newPipelineExecutionLogClient(client)
 
 	return client, nil
 }

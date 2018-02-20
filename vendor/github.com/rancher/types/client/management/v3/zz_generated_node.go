@@ -25,10 +25,8 @@ const (
 	NodeFieldLimits               = "limits"
 	NodeFieldName                 = "name"
 	NodeFieldNamespaceId          = "namespaceId"
-	NodeFieldNodeAnnotations      = "nodeAnnotations"
-	NodeFieldNodeLabels           = "nodeLabels"
 	NodeFieldNodeName             = "nodeName"
-	NodeFieldNodePoolUUID         = "nodePoolUuid"
+	NodeFieldNodePoolName         = "nodePoolUuid"
 	NodeFieldNodeTaints           = "nodeTaints"
 	NodeFieldNodeTemplateId       = "nodeTemplateId"
 	NodeFieldOwnerReferences      = "ownerReferences"
@@ -56,24 +54,22 @@ type Node struct {
 	Capacity             map[string]string         `json:"capacity,omitempty"`
 	ClusterId            string                    `json:"clusterId,omitempty"`
 	Conditions           []NodeCondition           `json:"conditions,omitempty"`
-	ControlPlane         *bool                     `json:"controlPlane,omitempty"`
+	ControlPlane         bool                      `json:"controlPlane,omitempty"`
 	Created              string                    `json:"created,omitempty"`
 	CreatorID            string                    `json:"creatorId,omitempty"`
 	CustomConfig         *CustomConfig             `json:"customConfig,omitempty"`
 	Description          string                    `json:"description,omitempty"`
-	Etcd                 *bool                     `json:"etcd,omitempty"`
+	Etcd                 bool                      `json:"etcd,omitempty"`
 	Hostname             string                    `json:"hostname,omitempty"`
 	IPAddress            string                    `json:"ipAddress,omitempty"`
-	Imported             *bool                     `json:"imported,omitempty"`
+	Imported             bool                      `json:"imported,omitempty"`
 	Info                 *NodeInfo                 `json:"info,omitempty"`
 	Labels               map[string]string         `json:"labels,omitempty"`
 	Limits               map[string]string         `json:"limits,omitempty"`
 	Name                 string                    `json:"name,omitempty"`
 	NamespaceId          string                    `json:"namespaceId,omitempty"`
-	NodeAnnotations      map[string]string         `json:"nodeAnnotations,omitempty"`
-	NodeLabels           map[string]string         `json:"nodeLabels,omitempty"`
 	NodeName             string                    `json:"nodeName,omitempty"`
-	NodePoolUUID         string                    `json:"nodePoolUuid,omitempty"`
+	NodePoolName         string                    `json:"nodePoolUuid,omitempty"`
 	NodeTaints           []Taint                   `json:"nodeTaints,omitempty"`
 	NodeTemplateId       string                    `json:"nodeTemplateId,omitempty"`
 	OwnerReferences      []OwnerReference          `json:"ownerReferences,omitempty"`
@@ -87,11 +83,11 @@ type Node struct {
 	Taints               []Taint                   `json:"taints,omitempty"`
 	Transitioning        string                    `json:"transitioning,omitempty"`
 	TransitioningMessage string                    `json:"transitioningMessage,omitempty"`
-	Unschedulable        *bool                     `json:"unschedulable,omitempty"`
+	Unschedulable        bool                      `json:"unschedulable,omitempty"`
 	Uuid                 string                    `json:"uuid,omitempty"`
 	VolumesAttached      map[string]AttachedVolume `json:"volumesAttached,omitempty"`
 	VolumesInUse         []string                  `json:"volumesInUse,omitempty"`
-	Worker               *bool                     `json:"worker,omitempty"`
+	Worker               bool                      `json:"worker,omitempty"`
 }
 type NodeCollection struct {
 	types.Collection
