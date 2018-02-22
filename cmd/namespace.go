@@ -133,12 +133,12 @@ func namespaceDelete(ctx *cli.Context) error {
 		return err
 	}
 
-	namespace, err := getNamespaceByID(ctx, c, ctx.Args().First())
+	namespace, err := getNamespaceByID(c, ctx.Args().First())
 	if nil != err {
 		return err
 	}
 
-	err = c.ClusterClient.Namespace.Delete(&namespace)
+	err = c.ClusterClient.Namespace.Delete(namespace)
 	if nil != err {
 		return err
 	}
@@ -156,7 +156,7 @@ func namespaceAssociate(ctx *cli.Context) error {
 		return err
 	}
 
-	namespace, err := getNamespaceByID(ctx, c, ctx.Args().First())
+	namespace, err := getNamespaceByID(c, ctx.Args().First())
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func namespaceAssociate(ctx *cli.Context) error {
 	update := make(map[string]string)
 	update["projectId"] = ctx.Args().Get(1)
 
-	c.ClusterClient.Namespace.Update(&namespace, update)
+	c.ClusterClient.Namespace.Update(namespace, update)
 
 	return nil
 }
@@ -181,21 +181,13 @@ func getNamespaceList(
 }
 
 func getNamespaceByID(
-	ctx *cli.Context,
 	c *cliclient.MasterClient,
 	namespaceID string,
-) (clusterClient.Namespace, error) {
-	namespaceCollection, err := getNamespaceList(ctx, c)
+) (*clusterClient.Namespace, error) {
+	namespace, err := c.ClusterClient.Namespace.ByID(namespaceID)
 	if nil != err {
-		return clusterClient.Namespace{}, err
+		return nil, fmt.Errorf("no namespace found with the ID [%s], run "+
+			"`rancher namespaces` to see available namespaces: %s", namespaceID, err)
 	}
-
-	for _, namespace := range namespaceCollection.Data {
-		if namespace.ID == namespaceID {
-			return namespace, nil
-		}
-	}
-
-	return clusterClient.Namespace{}, fmt.Errorf("no namespace found with the ID [%s], run "+
-		"`rancher namespaces` to see available namespaces", namespaceID)
+	return namespace, nil
 }
