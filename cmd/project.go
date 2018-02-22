@@ -103,12 +103,12 @@ func deleteProject(ctx *cli.Context) error {
 		return err
 	}
 
-	project, err := getProjectByID(ctx, c, ctx.Args().First())
+	project, err := getProjectByID(c, ctx.Args().First())
 	if nil != err {
 		return err
 	}
 
-	err = c.ManagementClient.Project.Delete(&project)
+	err = c.ManagementClient.Project.Delete(project)
 	if nil != err {
 		return err
 	}
@@ -131,21 +131,13 @@ func getProjectList(
 }
 
 func getProjectByID(
-	ctx *cli.Context,
 	c *cliclient.MasterClient,
 	projectID string,
-) (managementClient.Project, error) {
-	projectCollection, err := getProjectList(ctx, c)
+) (*managementClient.Project, error) {
+	project, err := c.ManagementClient.Project.ByID(projectID)
 	if nil != err {
-		return managementClient.Project{}, err
+		return nil, fmt.Errorf("no project found with the ID [%s], run "+
+			"`rancher projects` to see available projects: %s", projectID, err)
 	}
-
-	for _, project := range projectCollection.Data {
-		if project.ID == projectID {
-			return project, nil
-		}
-	}
-
-	return managementClient.Project{}, fmt.Errorf("no project found with the ID [%s], run "+
-		"`rancher projects` to see available projects", projectID)
+	return project, nil
 }

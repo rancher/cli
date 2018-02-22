@@ -143,7 +143,7 @@ func clusterImport(ctx *cli.Context) error {
 		return err
 	}
 
-	cluster, err := getClusterByID(ctx, c, ctx.Args().First())
+	cluster, err := getClusterByID(c, ctx.Args().First())
 	if nil != err {
 		return err
 	}
@@ -173,7 +173,7 @@ func clusterAddNode(ctx *cli.Context) error {
 		return err
 	}
 
-	cluster, err := getClusterByID(ctx, c, clusterName)
+	cluster, err := getClusterByID(c, clusterName)
 	if nil != err {
 		return err
 	}
@@ -221,12 +221,12 @@ func deleteCluster(ctx *cli.Context) error {
 		return err
 	}
 
-	cluster, err := getClusterByID(ctx, c, ctx.Args().First())
+	cluster, err := getClusterByID(c, ctx.Args().First())
 	if nil != err {
 		return err
 	}
 
-	err = c.ManagementClient.Cluster.Delete(&cluster)
+	err = c.ManagementClient.Cluster.Delete(cluster)
 	if nil != err {
 		return err
 	}
@@ -262,21 +262,13 @@ func getClusterRegToken(
 }
 
 func getClusterByID(
-	ctx *cli.Context,
 	c *cliclient.MasterClient,
 	clusterID string,
-) (managementClient.Cluster, error) {
-	clusterCollection, err := c.ManagementClient.Cluster.List(defaultListOpts(ctx))
+) (*managementClient.Cluster, error) {
+	cluster, err := c.ManagementClient.Cluster.ByID(clusterID)
 	if nil != err {
-		return managementClient.Cluster{}, err
+		return nil, fmt.Errorf("no cluster found with the ID [%s], run "+
+			"`rancher clusters` to see available clusters: %s", clusterID, err)
 	}
-
-	for _, cluster := range clusterCollection.Data {
-		if cluster.ID == clusterID {
-			return cluster, nil
-		}
-	}
-
-	return managementClient.Cluster{}, fmt.Errorf("no cluster found with the ID [%s], run "+
-		"`rancher clusters` to see available clusters", clusterID)
+	return cluster, nil
 }
