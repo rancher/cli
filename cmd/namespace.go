@@ -164,7 +164,10 @@ func namespaceAssociate(ctx *cli.Context) error {
 	update := make(map[string]string)
 	update["projectId"] = ctx.Args().Get(1)
 
-	c.ClusterClient.Namespace.Update(namespace, update)
+	_, err = c.ClusterClient.Namespace.Update(namespace, update)
+	if nil != err {
+		return err
+	}
 
 	return nil
 }

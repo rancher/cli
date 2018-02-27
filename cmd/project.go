@@ -89,7 +89,10 @@ func projectCreate(ctx *cli.Context) error {
 		ClusterId: c.UserConfig.FocusedCluster(),
 	}
 
-	c.ManagementClient.Project.Create(newProj)
+	_, err = c.ManagementClient.Project.Create(newProj)
+	if nil != err {
+		return err
+	}
 	return nil
 }
 
@@ -124,7 +127,7 @@ func getProjectList(
 	filter.Filters["clusterId"] = c.UserConfig.FocusedCluster()
 
 	collection, err := c.ManagementClient.Project.List(filter)
-	if err != nil {
+	if nil != err {
 		return nil, err
 	}
 	return collection, nil
