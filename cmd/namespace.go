@@ -112,7 +112,8 @@ func namespaceCreate(ctx *cli.Context) error {
 	}
 
 	newNamespace := &clusterClient.Namespace{
-		Name: ctx.Args().First(),
+		Name:      ctx.Args().First(),
+		ProjectID: c.UserConfig.Project,
 	}
 
 	_, err = c.ClusterClient.Namespace.Create(newNamespace)
