@@ -10,9 +10,15 @@ import (
 
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/config"
-
+	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/urfave/cli"
 )
+
+type LoginData struct {
+	Project     managementClient.Project
+	Index       int
+	ClusterName string
+}
 
 func LoginCommand() cli.Command {
 	return cli.Command{
@@ -109,24 +115,47 @@ func getDefaultProject(ctx *cli.Context, cf *config.ServerConfig) (string, error
 		return "", err
 	}
 
-	collection, err := mc.ManagementClient.Project.List(defaultListOpts(ctx))
+	projectCollection, err := mc.ManagementClient.Project.List(defaultListOpts(ctx))
 	if err != nil {
 		return "", err
 	}
 
-	if len(collection.Data) == 0 {
+	if len(projectCollection.Data) == 0 {
 		fmt.Println("There are no projects in the cluster, please create one and login again")
 		return "", nil
 	}
 
-	errMessage := fmt.Sprintf("invalid input, enter a number between 0 and %v", len(collection.Data)-1)
+	clusterNames, err := getClusterNames(ctx, mc)
+	if err != nil {
+		return "", err
+	}
+
+	writer := NewTableWriter([][]string{
+		{"NUMBER", "Index"},
+		{"CLUSTER NAME", "ClusterName"},
+		{"PROJECT ID", "Project.ID"},
+		{"PROJECT NAME", "Project.Name"},
+		{"PROJECT DESCRIPTION", "Project.Description"},
+	}, ctx)
 
 	fmt.Println("Select your default Project:")
-	for i, project := range collection.Data {
-		fmt.Printf("%v %v %v\n", i, project.ID, project.Name)
+	for i, item := range projectCollection.Data {
+		writer.Write(&LoginData{
+			Project:     item,
+			Index:       i,
+			ClusterName: clusterNames[item.ClusterId],
+		})
+	}
+
+	writer.Close()
+
+	if nil != writer.Err() {
+		return "", writer.Err()
 	}
 
 	reader := bufio.NewReader(os.Stdin)
+
+	errMessage := fmt.Sprintf("invalid input, enter a number between 0 and %v", len(projectCollection.Data)-1)
 	var selection int
 
 	for {
@@ -142,7 +171,7 @@ func getDefaultProject(ctx *cli.Context, cf *config.ServerConfig) (string, error
 				fmt.Println(errMessage)
 				continue
 			}
-			if i <= len(collection.Data)-1 {
+			if i <= len(projectCollection.Data)-1 {
 				selection = i
 				break
 			}
@@ -150,5 +179,5 @@ func getDefaultProject(ctx *cli.Context, cf *config.ServerConfig) (string, error
 			continue
 		}
 	}
-	return collection.Data[selection].ID, nil
+	return projectCollection.Data[selection].ID, nil
 }
