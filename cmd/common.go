@@ -222,3 +222,21 @@ func settingsToMap(client *cliclient.MasterClient) (map[string]string, error) {
 
 	return configMap, nil
 }
+
+// getClusterNames maps cluster ID to name and defaults to ID if name is blank
+func getClusterNames(ctx *cli.Context, c *cliclient.MasterClient) (map[string]string, error) {
+	clusterNames := make(map[string]string)
+	clusterCollection, err := c.ManagementClient.Cluster.List(defaultListOpts(ctx))
+	if err != nil {
+		return clusterNames, err
+	}
+
+	for _, cluster := range clusterCollection.Data {
+		if cluster.Name == "" {
+			clusterNames[cluster.ID] = cluster.ID
+		} else {
+			clusterNames[cluster.ID] = cluster.Name
+		}
+	}
+	return clusterNames, nil
+}
