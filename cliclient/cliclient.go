@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/rancher/cli/config"
+	"github.com/sirupsen/logrus"
 
 	"github.com/rancher/norman/clientbase"
 	clusterClient "github.com/rancher/types/client/cluster/v3"
@@ -18,13 +19,62 @@ type MasterClient struct {
 	UserConfig       *config.ServerConfig
 }
 
+// NewMasterClient returns a new MasterClient with Cluster Management and Cluster
+// clients populated
 func NewMasterClient(config *config.ServerConfig) (*MasterClient, error) {
-	mc := &MasterClient{
-		UserConfig: config,
+	mc, err := NewManagementClient(config)
+	if nil != err {
+		return nil, err
 	}
 
 	clustProj := SplitOnColon(config.Project)
 
+	options := createClientOpts(config)
+
+	baseURL := options.URL
+
+	// Setup the cluster client
+	if len(clustProj) != 2 {
+		logrus.Warn("No default project set, run `rancher login` again. " +
+			"Some commands will not work until project is set")
+	}
+	options.URL = baseURL + "/clusters/" + clustProj[0]
+
+	cClient, err := clusterClient.NewClient(options)
+	if err != nil {
+		return nil, err
+	}
+	mc.ClusterClient = cClient
+
+	// Setup the project client
+	options.URL = baseURL + "/projects/" + config.Project
+	pClient, err := projectClient.NewClient(options)
+	if err != nil {
+		return nil, err
+	}
+	mc.ProjectClient = pClient
+
+	return mc, nil
+}
+
+//NewManagementClient returns a new MasterClient with only the Management client
+func NewManagementClient(config *config.ServerConfig) (*MasterClient, error) {
+	mc := &MasterClient{
+		UserConfig: config,
+	}
+
+	options := createClientOpts(config)
+
+	// Setup the management client
+	mClient, err := managementClient.NewClient(options)
+	if err != nil {
+		return nil, err
+	}
+	mc.ManagementClient = mClient
+	return mc, nil
+}
+
+func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
 	serverURL := config.URL
 
 	if !strings.HasSuffix(serverURL, "/v3") {
@@ -37,35 +87,7 @@ func NewMasterClient(config *config.ServerConfig) (*MasterClient, error) {
 		SecretKey: config.SecretKey,
 		CACerts:   config.CACerts,
 	}
-
-	// Setup the management client
-	mClient, err := managementClient.NewClient(options)
-	if err != nil {
-		return nil, err
-	}
-	mc.ManagementClient = mClient
-
-	// Setup the cluster client
-	if len(clustProj) == 2 {
-		options.URL = serverURL + "/clusters/" + clustProj[0]
-	}
-	cClient, err := clusterClient.NewClient(options)
-	if err != nil {
-		return nil, err
-	}
-	mc.ClusterClient = cClient
-
-	// Setup the project client
-	if len(clustProj) == 2 {
-		options.URL = serverURL + "/projects/" + config.Project
-	}
-	pClient, err := projectClient.NewClient(options)
-	if err != nil {
-		return nil, err
-	}
-	mc.ProjectClient = pClient
-
-	return mc, nil
+	return options
 }
 
 func SplitOnColon(s string) []string {
