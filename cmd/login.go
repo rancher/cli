@@ -54,10 +54,7 @@ func loginSetup(ctx *cli.Context) error {
 		serverName = RandomName()
 	}
 
-	serverConfig, ok := cf.Servers[serverName]
-	if !ok {
-		serverConfig = &config.ServerConfig{}
-	}
+	serverConfig := &config.ServerConfig{}
 
 	if ctx.NArg() == 0 || ctx.NArg() > 1 {
 		return errors.New("one server is required")
@@ -102,9 +99,7 @@ func loginSetup(ctx *cli.Context) error {
 }
 
 func getDefaultProject(ctx *cli.Context, cf *config.ServerConfig) (string, error) {
-	// Set this on global as it's an arg to login and will be needed for clients
-
-	mc, err := cliclient.NewMasterClient(cf)
+	mc, err := cliclient.NewManagementClient(cf)
 	if nil != err {
 		return "", err
 	}
