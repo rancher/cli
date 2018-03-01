@@ -28,6 +28,10 @@ func LoginCommand() cli.Command {
 		Action:    loginSetup,
 		ArgsUsage: "[SERVERURL]",
 		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "context",
+				Usage: "Get the currently set context",
+			},
 			cli.StringFlag{
 				Name:  "token,t",
 				Usage: "Token from the Rancher UI",
@@ -45,6 +49,14 @@ func LoginCommand() cli.Command {
 }
 
 func loginSetup(ctx *cli.Context) error {
+	if ctx.Bool("context") {
+		err := loginContext(ctx)
+		if nil != err {
+			return err
+		}
+		return nil
+	}
+
 	path := ctx.GlobalString("cf")
 	if path == "" {
 		path = os.ExpandEnv("${HOME}/.rancher/cli.json")
@@ -65,7 +77,7 @@ func loginSetup(ctx *cli.Context) error {
 		serverConfig = &config.ServerConfig{}
 	}
 
-	if ctx.NArg() == 0 || ctx.NArg() > 1 {
+	if ctx.NArg() == 0 {
 		return errors.New("one server is required")
 	}
 	serverConfig.URL = ctx.Args().First()
@@ -180,4 +192,25 @@ func getDefaultProject(ctx *cli.Context, cf *config.ServerConfig) (string, error
 		}
 	}
 	return projectCollection.Data[selection].ID, nil
+}
+
+func loginContext(ctx *cli.Context) error {
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	cluster, err := getClusterByID(c, c.UserConfig.FocusedCluster())
+	if nil != err {
+		return err
+	}
+	clusterName := getClusterName(cluster)
+
+	project, err := getProjectByID(c, c.UserConfig.Project)
+	if nil != err {
+		return err
+	}
+
+	fmt.Printf("Cluster:%s Project:%s\n", clusterName, project.Name)
+	return nil
 }
