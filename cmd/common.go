@@ -16,13 +16,13 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/rancher/cli/cliclient"
-	"github.com/rancher/cli/config"
-
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/fatih/color"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
+	"github.com/rancher/cli/cliclient"
+	"github.com/rancher/cli/config"
+	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/urfave/cli"
 )
 
@@ -239,4 +239,11 @@ func getClusterNames(ctx *cli.Context, c *cliclient.MasterClient) (map[string]st
 		}
 	}
 	return clusterNames, nil
+}
+
+func getClusterName(cluster *managementClient.Cluster) string {
+	if cluster.Name != "" {
+		return cluster.Name
+	}
+	return cluster.ID
 }
