@@ -33,6 +33,12 @@ func ProjectCommand() cli.Command {
 				Description: "\nCreates a project in the current cluster.",
 				ArgsUsage:   "[NEWPROJECTNAME...]",
 				Action:      projectCreate,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "cluster",
+						Usage: "Cluster ID to create the project in",
+					},
+				},
 			},
 			{
 				Name:      "delete",
@@ -84,9 +90,18 @@ func projectCreate(ctx *cli.Context) error {
 		return err
 	}
 
+	clusterID := c.UserConfig.FocusedCluster()
+	if ctx.String("cluster") != "" {
+		cluster, err := getClusterByID(c, ctx.String("cluster"))
+		if nil != err {
+			return err
+		}
+		clusterID = cluster.ID
+	}
+
 	newProj := &managementClient.Project{
 		Name:      ctx.Args().First(),
-		ClusterId: c.UserConfig.FocusedCluster(),
+		ClusterId: clusterID,
 	}
 
 	_, err = c.ManagementClient.Project.Create(newProj)
