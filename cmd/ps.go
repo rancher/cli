@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/rancher/cli/cliclient"
 	projectClient "github.com/rancher/types/client/project/v3"
 	"github.com/urfave/cli"
 )
@@ -23,6 +24,12 @@ func PsCommand() cli.Command {
 		Usage:       "Show workloads and pods",
 		Description: "Prints out a table of pods not associated with a workload then a table of workloads",
 		Action:      psLs,
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "project",
+				Usage: "project to show workloads for",
+			},
+		},
 	}
 }
 
@@ -30,6 +37,26 @@ func psLs(ctx *cli.Context) error {
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	if ctx.String("project") != "" {
+		//Verify the project given is valid
+		_, err := getProjectByID(c, ctx.String("project"))
+		if nil != err {
+			return err
+		}
+
+		sc, err := lookupConfig(ctx)
+		if nil != err {
+			return err
+		}
+		sc.Project = ctx.String("project")
+
+		projClient, err := cliclient.NewProjectClient(sc)
+		if nil != err {
+			return err
+		}
+		c.ProjectClient = projClient.ProjectClient
 	}
 
 	workLoads, err := c.ProjectClient.Workload.List(defaultListOpts(ctx))

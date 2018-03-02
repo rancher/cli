@@ -47,12 +47,11 @@ func NewMasterClient(config *config.ServerConfig) (*MasterClient, error) {
 	mc.ClusterClient = cClient
 
 	// Setup the project client
-	options.URL = baseURL + "/projects/" + config.Project
-	pClient, err := projectClient.NewClient(options)
+	pClient, err := NewProjectClient(config)
 	if err != nil {
 		return nil, err
 	}
-	mc.ProjectClient = pClient
+	mc.ProjectClient = pClient.ProjectClient
 
 	return mc, nil
 }
@@ -71,6 +70,23 @@ func NewManagementClient(config *config.ServerConfig) (*MasterClient, error) {
 		return nil, err
 	}
 	mc.ManagementClient = mClient
+	return mc, nil
+}
+
+func NewProjectClient(config *config.ServerConfig) (*MasterClient, error) {
+	mc := &MasterClient{
+		UserConfig: config,
+	}
+
+	options := createClientOpts(config)
+	options.URL = options.URL + "/projects/" + config.Project
+
+	// Setup the project client
+	pc, err := projectClient.NewClient(options)
+	if err != nil {
+		return nil, err
+	}
+	mc.ProjectClient = pc
 	return mc, nil
 }
 
