@@ -1,38 +1,46 @@
+// +build !windows
+
 package prompt
 
 import (
+	"bytes"
 	"strconv"
 	"syscall"
 )
 
-type VT100Writer struct {
+// PosixWriter is a ConsoleWriter implementation for POSIX environment.
+// To control terminal emulator, this outputs VT100 escape sequences.
+type PosixWriter struct {
 	fd     int
 	buffer []byte
 }
 
-func (w *VT100Writer) WriteRaw(data []byte) {
+// WriteRaw to write raw byte array
+func (w *PosixWriter) WriteRaw(data []byte) {
 	w.buffer = append(w.buffer, data...)
-	// Flush because sometimes the render is broken when a large amount data in buffer.
-	w.Flush()
 	return
 }
 
-func (w *VT100Writer) Write(data []byte) {
-	w.WriteRaw(byteFilter(data, writeFilter))
+// Write to write safety byte array by removing control sequences.
+func (w *PosixWriter) Write(data []byte) {
+	w.WriteRaw(bytes.Replace(data, []byte{0x1b}, []byte{'?'}, -1))
 	return
 }
 
-func (w *VT100Writer) WriteRawStr(data string) {
+// WriteRawStr to write raw string
+func (w *PosixWriter) WriteRawStr(data string) {
 	w.WriteRaw([]byte(data))
 	return
 }
 
-func (w *VT100Writer) WriteStr(data string) {
+// WriteStr to write safety string by removing control sequences.
+func (w *PosixWriter) WriteStr(data string) {
 	w.Write([]byte(data))
 	return
 }
 
-func (w *VT100Writer) Flush() error {
+// Flush to flush buffer
+func (w *PosixWriter) Flush() error {
 	_, err := syscall.Write(w.fd, w.buffer)
 	if err != nil {
 		return err
@@ -43,48 +51,62 @@ func (w *VT100Writer) Flush() error {
 
 /* Erase */
 
-func (w *VT100Writer) EraseScreen() {
+// EraseScreen erases the screen with the background colour and moves the cursor to home.
+func (w *PosixWriter) EraseScreen() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x32, 0x4a})
 	return
 }
 
-func (w *VT100Writer) EraseUp() {
+// EraseUp erases the screen from the current line up to the top of the screen.
+func (w *PosixWriter) EraseUp() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x31, 0x4a})
 	return
 }
 
-func (w *VT100Writer) EraseDown() {
+// EraseDown erases the screen from the current line down to the bottom of the screen.
+func (w *PosixWriter) EraseDown() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x4a})
 	return
 }
 
-func (w *VT100Writer) EraseStartOfLine() {
+// EraseStartOfLine erases from the current cursor position to the start of the current line.
+func (w *PosixWriter) EraseStartOfLine() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x31, 0x4b})
 	return
 }
 
-func (w *VT100Writer) EraseEndOfLine() {
+// EraseEndOfLine erases from the current cursor position to the end of the current line.
+func (w *PosixWriter) EraseEndOfLine() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x4b})
 	return
 }
 
-func (w *VT100Writer) EraseLine() {
+// EraseLine erases the entire current line.
+func (w *PosixWriter) EraseLine() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x32, 0x4b})
 	return
 }
 
 /* Cursor */
 
-func (w *VT100Writer) ShowCursor() {
+// ShowCursor stops blinking cursor and show.
+func (w *PosixWriter) ShowCursor() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x3f, 0x31, 0x32, 0x6c, 0x1b, 0x5b, 0x3f, 0x32, 0x35, 0x68})
 }
 
-func (w *VT100Writer) HideCursor() {
+// HideCursor hides cursor.
+func (w *PosixWriter) HideCursor() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x3f, 0x32, 0x35, 0x6c})
 	return
 }
 
-func (w *VT100Writer) CursorGoTo(row, col int) {
+// CursorGoTo sets the cursor position where subsequent text will begin.
+func (w *PosixWriter) CursorGoTo(row, col int) {
+	if row == 0 && col == 0 {
+		// If no row/column parameters are provided (ie. <ESC>[H), the cursor will move to the home position.
+		w.WriteRaw([]byte{0x1b, 0x5b, 0x3b, 0x48})
+		return
+	}
 	r := strconv.Itoa(row)
 	c := strconv.Itoa(col)
 	w.WriteRaw([]byte{0x1b, 0x5b})
@@ -95,9 +117,12 @@ func (w *VT100Writer) CursorGoTo(row, col int) {
 	return
 }
 
-func (w *VT100Writer) CursorUp(n int) {
-	if n < 0 {
-		w.CursorDown(n)
+// CursorUp moves the cursor up by 'n' rows; the default count is 1.
+func (w *PosixWriter) CursorUp(n int) {
+	if n == 0 {
+		return
+	} else if n < 0 {
+		w.CursorDown(-n)
 		return
 	}
 	s := strconv.Itoa(n)
@@ -107,9 +132,12 @@ func (w *VT100Writer) CursorUp(n int) {
 	return
 }
 
-func (w *VT100Writer) CursorDown(n int) {
-	if n < 0 {
-		w.CursorUp(n)
+// CursorDown moves the cursor down by 'n' rows; the default count is 1.
+func (w *PosixWriter) CursorDown(n int) {
+	if n == 0 {
+		return
+	} else if n < 0 {
+		w.CursorUp(-n)
 		return
 	}
 	s := strconv.Itoa(n)
@@ -119,7 +147,8 @@ func (w *VT100Writer) CursorDown(n int) {
 	return
 }
 
-func (w *VT100Writer) CursorForward(n int) {
+// CursorForward moves the cursor forward by 'n' columns; the default count is 1.
+func (w *PosixWriter) CursorForward(n int) {
 	if n == 0 {
 		return
 	} else if n < 0 {
@@ -133,7 +162,8 @@ func (w *VT100Writer) CursorForward(n int) {
 	return
 }
 
-func (w *VT100Writer) CursorBackward(n int) {
+// CursorBackward moves the cursor backward by 'n' columns; the default count is 1.
+func (w *PosixWriter) CursorBackward(n int) {
 	if n == 0 {
 		return
 	} else if n < 0 {
@@ -147,52 +177,78 @@ func (w *VT100Writer) CursorBackward(n int) {
 	return
 }
 
-func (w *VT100Writer) AskForCPR() {
+// AskForCPR asks for a cursor position report (CPR).
+func (w *PosixWriter) AskForCPR() {
 	// CPR: Cursor Position Request.
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x36, 0x6e})
 	w.Flush()
 	return
 }
 
-func (w *VT100Writer) SaveCursor() {
+// SaveCursor saves current cursor position.
+func (w *PosixWriter) SaveCursor() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x73})
 	return
 }
 
-func (w *VT100Writer) UnSaveCursor() {
+// UnSaveCursor restores cursor position after a Save Cursor.
+func (w *PosixWriter) UnSaveCursor() {
 	w.WriteRaw([]byte{0x1b, 0x5b, 0x75})
 	return
 }
 
 /* Scrolling */
 
-func (w *VT100Writer) ScrollDown() {
+// ScrollDown scrolls display down one line.
+func (w *PosixWriter) ScrollDown() {
 	w.WriteRaw([]byte{0x1b, 0x44})
 	return
 }
 
-func (w *VT100Writer) ScrollUp() {
+// ScrollUp scroll display up one line.
+func (w *PosixWriter) ScrollUp() {
 	w.WriteRaw([]byte{0x1b, 0x4d})
 	return
 }
 
 /* Title */
 
-func (w *VT100Writer) SetTitle(title string) {
+// SetTitle sets a title of terminal window.
+func (w *PosixWriter) SetTitle(title string) {
+	titleBytes := []byte(title)
+	patterns := []struct {
+		from []byte
+		to   []byte
+	}{
+		{
+			from: []byte{0x13},
+			to:   []byte{},
+		},
+		{
+			from: []byte{0x07},
+			to:   []byte{},
+		},
+	}
+	for i := range patterns {
+		titleBytes = bytes.Replace(titleBytes, patterns[i].from, patterns[i].to, -1)
+	}
+
 	w.WriteRaw([]byte{0x1b, 0x5d, 0x32, 0x3b})
-	w.WriteRaw(byteFilter([]byte(title), setTextFilter))
+	w.WriteRaw(titleBytes)
 	w.WriteRaw([]byte{0x07})
 	return
 }
 
-func (w *VT100Writer) ClearTitle() {
+// ClearTitle clears a title of terminal window.
+func (w *PosixWriter) ClearTitle() {
 	w.WriteRaw([]byte{0x1b, 0x5d, 0x32, 0x3b, 0x07})
 	return
 }
 
 /* Font */
 
-func (w *VT100Writer) SetColor(fg, bg Color, bold bool) {
+// SetColor sets text and background colors. and specify whether text is bold.
+func (w *PosixWriter) SetColor(fg, bg Color, bold bool) {
 	f, ok := foregroundANSIColors[fg]
 	if !ok {
 		f = foregroundANSIColors[DefaultColor]
@@ -201,7 +257,6 @@ func (w *VT100Writer) SetColor(fg, bg Color, bold bool) {
 	if !ok {
 		b = backgroundANSIColors[DefaultColor]
 	}
-	syscall.Write(syscall.Stdout, []byte{0x1b, 0x5b, 0x33, 0x39, 0x3b, 0x34, 0x39, 0x6d})
 	w.WriteRaw([]byte{0x1b, 0x5b})
 	if !bold {
 		w.WriteRaw([]byte{0x30, 0x3b})
@@ -264,32 +319,11 @@ var backgroundANSIColors = map[Color][]byte{
 	White:     {0x31, 0x30, 0x37}, // 107
 }
 
-func writeFilter(buf byte) bool {
-	return buf != 0x1b && buf != 0x3f
-}
+var _ ConsoleWriter = &PosixWriter{}
 
-func setTextFilter(buf byte) bool {
-	return buf != 0x1b && buf != 0x07
-}
-
-func byteFilter(buf []byte, fn ...func(b byte) bool) []byte {
-	if len(fn) == 0 {
-		return buf
-	}
-	ret := make([]byte, 0, len(buf))
-	f := fn[0]
-	for i, n := range buf {
-		if f(n) {
-			ret = append(ret, buf[i])
-		}
-	}
-	return byteFilter(ret, fn[1:]...)
-}
-
-var _ ConsoleWriter = &VT100Writer{}
-
-func NewVT100StandardOutputWriter() *VT100Writer {
-	return &VT100Writer{
+// NewStandardOutputWriter returns ConsoleWriter object to write to stdout.
+func NewStandardOutputWriter() *PosixWriter {
+	return &PosixWriter{
 		fd: syscall.Stdout,
 	}
 }

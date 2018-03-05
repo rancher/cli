@@ -4,14 +4,11 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
 const (
-	logfile      = "/tmp/go-prompt-debug.log"
-	envEnableLog = "GO_PROMPT_ENABLE_LOG"
+	envDebugLogPath = "GO_PROMPT_LOG_PATH"
 )
 
 // Executor is called when user input something text.
@@ -39,10 +36,9 @@ type Exec struct {
 
 // Run starts prompt.
 func (p *Prompt) Run() {
-	// Logging
-	if os.Getenv(envEnableLog) != "true" {
+	if l := os.Getenv(envDebugLogPath); l == "" {
 		log.SetOutput(ioutil.Discard)
-	} else if f, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666); err != nil {
+	} else if f, err := os.OpenFile(l, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666); err != nil {
 		log.SetOutput(ioutil.Discard)
 	} else {
 		defer f.Close()
@@ -57,12 +53,12 @@ func (p *Prompt) Run() {
 
 	bufCh := make(chan []byte, 128)
 	stopReadBufCh := make(chan struct{})
-	go readBuffer(bufCh, stopReadBufCh)
+	go p.readBuffer(bufCh, stopReadBufCh)
 
 	exitCh := make(chan int)
 	winSizeCh := make(chan *WinSize)
 	stopHandleSignalCh := make(chan struct{})
-	go handleSignals(p.in, exitCh, winSizeCh, stopHandleSignalCh)
+	go p.handleSignals(exitCh, winSizeCh, stopHandleSignalCh)
 
 	for {
 		select {
@@ -85,8 +81,8 @@ func (p *Prompt) Run() {
 
 				// Set raw mode
 				p.in.Setup()
-				go readBuffer(bufCh, stopReadBufCh)
-				go handleSignals(p.in, exitCh, winSizeCh, stopHandleSignalCh)
+				go p.readBuffer(bufCh, stopReadBufCh)
+				go p.handleSignals(exitCh, winSizeCh, stopHandleSignalCh)
 			} else {
 				p.completion.Update(*p.buf.Document())
 				p.renderer.Render(p.buf, p.completion)
@@ -109,32 +105,10 @@ func (p *Prompt) feed(b []byte) (shouldExit bool, exec *Exec) {
 
 	// completion
 	completing := p.completion.Completing()
-	switch key {
-	case Down:
-		if completing {
-			p.completion.Next()
-		}
-	case Tab, ControlI:
-		p.completion.Next()
-	case Up:
-		if completing {
-			p.completion.Previous()
-		}
-	case BackTab:
-		p.completion.Previous()
-	default:
-		if s, ok := p.completion.GetSelectedSuggestion(); ok {
-			w := p.buf.Document().GetWordBeforeCursor()
-			if w != "" {
-				p.buf.DeleteBeforeCursor(len([]rune(w)))
-			}
-			p.buf.InsertText(s.Text, false, true)
-		}
-		p.completion.Reset()
-	}
+	p.handleCompletionKeyBinding(key, completing)
 
 	switch key {
-	case Enter, ControlJ:
+	case Enter, ControlJ, ControlM:
 		p.renderer.BreakLine(p.buf)
 
 		exec = &Exec{input: p.buf.Text()}
@@ -169,7 +143,37 @@ func (p *Prompt) feed(b []byte) (shouldExit bool, exec *Exec) {
 		p.buf.InsertText(string(b), false, true)
 	}
 
-	// Key bindings
+	p.handleKeyBinding(key)
+	return
+}
+
+func (p *Prompt) handleCompletionKeyBinding(key Key, completing bool) {
+	switch key {
+	case Down:
+		if completing {
+			p.completion.Next()
+		}
+	case Tab, ControlI:
+		p.completion.Next()
+	case Up:
+		if completing {
+			p.completion.Previous()
+		}
+	case BackTab:
+		p.completion.Previous()
+	default:
+		if s, ok := p.completion.GetSelectedSuggestion(); ok {
+			w := p.buf.Document().GetWordBeforeCursor()
+			if w != "" {
+				p.buf.DeleteBeforeCursor(len([]rune(w)))
+			}
+			p.buf.InsertText(s.Text, false, true)
+		}
+		p.completion.Reset()
+	}
+}
+
+func (p *Prompt) handleKeyBinding(key Key) {
 	for i := range commonKeyBindings {
 		kb := commonKeyBindings[i]
 		if kb.Key == key {
@@ -193,15 +197,13 @@ func (p *Prompt) feed(b []byte) (shouldExit bool, exec *Exec) {
 			kb.Fn(p.buf)
 		}
 	}
-	return
 }
 
 // Input just returns user input text.
 func (p *Prompt) Input() string {
-	// Logging
-	if os.Getenv(envEnableLog) != "true" {
+	if l := os.Getenv(envDebugLogPath); l == "" {
 		log.SetOutput(ioutil.Discard)
-	} else if f, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666); err != nil {
+	} else if f, err := os.OpenFile(l, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666); err != nil {
 		log.SetOutput(ioutil.Discard)
 	} else {
 		defer f.Close()
@@ -215,7 +217,7 @@ func (p *Prompt) Input() string {
 	p.renderer.Render(p.buf, p.completion)
 	bufCh := make(chan []byte, 128)
 	stopReadBufCh := make(chan struct{})
-	go readBuffer(bufCh, stopReadBufCh)
+	go p.readBuffer(bufCh, stopReadBufCh)
 
 	for {
 		select {
@@ -237,6 +239,22 @@ func (p *Prompt) Input() string {
 	}
 }
 
+func (p *Prompt) readBuffer(bufCh chan []byte, stopCh chan struct{}) {
+	log.Printf("[INFO] readBuffer start")
+	for {
+		select {
+		case <-stopCh:
+			log.Print("[INFO] stop readBuffer")
+			return
+		default:
+			if b, err := p.in.Read(); err == nil && !(len(b) == 1 && b[0] == 0) {
+				bufCh <- b
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func (p *Prompt) setUp() {
 	p.in.Setup()
 	p.renderer.Setup()
@@ -246,59 +264,4 @@ func (p *Prompt) setUp() {
 func (p *Prompt) tearDown() {
 	p.in.TearDown()
 	p.renderer.TearDown()
-}
-
-func readBuffer(bufCh chan []byte, stopCh chan struct{}) {
-	buf := make([]byte, 1024)
-
-	log.Printf("[INFO] readBuffer start")
-	for {
-		time.Sleep(10 * time.Millisecond)
-		select {
-		case <-stopCh:
-			log.Print("[INFO] stop readBuffer")
-			return
-		default:
-			if n, err := syscall.Read(syscall.Stdin, buf); err == nil {
-				bufCh <- buf[:n]
-			}
-		}
-	}
-}
-
-func handleSignals(in ConsoleParser, exitCh chan int, winSizeCh chan *WinSize, stop chan struct{}) {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(
-		sigCh,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-		syscall.SIGWINCH,
-	)
-
-	for {
-		select {
-		case <- stop:
-			log.Println("[INFO] stop handleSignals")
-			return
-		case s := <-sigCh:
-			switch s {
-			case syscall.SIGINT: // kill -SIGINT XXXX or Ctrl+c
-				log.Println("[SIGNAL] Catch SIGINT")
-				exitCh <- 0
-
-			case syscall.SIGTERM: // kill -SIGTERM XXXX
-				log.Println("[SIGNAL] Catch SIGTERM")
-				exitCh <- 1
-
-			case syscall.SIGQUIT: // kill -SIGQUIT XXXX
-				log.Println("[SIGNAL] Catch SIGQUIT")
-				exitCh <- 0
-
-			case syscall.SIGWINCH:
-				log.Println("[SIGNAL] Catch SIGWINCH")
-				winSizeCh <- in.GetWinSize()
-			}
-		}
-	}
 }
