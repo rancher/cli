@@ -77,10 +77,10 @@ func mainErr() error {
 		cmd.SSHCommand(),
 	}
 	for _, com := range app.Commands {
-		rancherPrompt.Commands[com.Name] = com
-		rancherPrompt.Commands[com.ShortName] = com
+		rancherprompt.Commands[com.Name] = com
+		rancherprompt.Commands[com.ShortName] = com
 	}
-	rancherPrompt.Flags = app.Flags
+	rancherprompt.Flags = app.Flags
 	parsed, err := parseArgs(os.Args)
 	if err != nil {
 		logrus.Error(err)

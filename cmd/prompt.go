@@ -23,8 +23,8 @@ func promptAction(ctx *cli.Context) error {
 	fmt.Print("rancher cli auto-completion mode")
 	defer fmt.Println("Goodbye!")
 	p := prompt.New(
-		rancherPrompt.Executor,
-		rancherPrompt.Completer,
+		rancherprompt.Executor,
+		rancherprompt.Completer,
 		prompt.OptionTitle("rancher-prompt: interactive rancher client"),
 		prompt.OptionPrefix("rancher$ "),
 		prompt.OptionInputTextColor(prompt.Yellow),

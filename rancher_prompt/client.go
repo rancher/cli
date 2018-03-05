@@ -1,1 +1,1 @@
-package rancherPrompt
+package rancherprompt
