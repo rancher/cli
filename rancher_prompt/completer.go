@@ -1,4 +1,4 @@
-package rancherPrompt
+package rancherprompt
 
 import (
 	"strings"
