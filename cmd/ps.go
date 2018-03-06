@@ -1,21 +1,20 @@
 package cmd
 
 import (
-	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/rancher/cli/cliclient"
-	projectClient "github.com/rancher/types/client/project/v3"
 	"github.com/urfave/cli"
 )
 
-type WorkLoadPS struct {
-	WorkLoad projectClient.Workload
-	Name     string // this is built from namespace/name
-}
-
-type PodPS struct {
-	Pod  projectClient.Pod
-	Name string // this is built from namespace/name
+type PSHolder struct {
+	NameSpace string
+	Name      string
+	Type      string
+	State     string
+	Image     string
+	Scale     string
 }
 
 func PsCommand() cli.Command {
@@ -65,23 +64,36 @@ func psLs(ctx *cli.Context) error {
 	}
 
 	wlWriter := NewTableWriter([][]string{
+		{"NAMESPACE", "NameSpace"},
 		{"NAME", "Name"},
-		{"STATE", "WorkLoad.State"},
-		{"SCALE", "WorkLoad.Scale"},
-		{"DETAIL", "WorkLoad.TransitioningMessage"},
+		{"TYPE", "Type"},
+		{"STATE", "State"},
+		{"IMAGE", "Image"},
+		{"SCALE", "Scale"},
 	}, ctx)
 
 	defer wlWriter.Close()
 
 	for _, item := range workLoads.Data {
-		wlWriter.Write(&WorkLoadPS{
-			WorkLoad: item,
-			Name:     fmt.Sprintf("%s/%s", item.NamespaceId, item.Name),
+		var scale string
+
+		if item.Scale == nil {
+			scale = "-"
+		} else {
+			scale = strconv.Itoa(int(*item.Scale))
+		}
+
+		item.Type = strings.Title(item.Type)
+
+		wlWriter.Write(&PSHolder{
+			NameSpace: item.NamespaceId,
+			Name:      item.Name,
+			Type:      item.Type,
+			State:     item.State,
+			Image:     item.Containers[0].Image,
+			Scale:     scale,
 		})
 	}
-
-	// Add an empty line to the stack to separate the tables
-	defer fmt.Println("")
 
 	opts := defaultListOpts(ctx)
 	opts.Filters["workloadId"] = ""
@@ -91,19 +103,18 @@ func psLs(ctx *cli.Context) error {
 		return err
 	}
 
-	podWriter := NewTableWriter([][]string{
-		{"NAME", "Name"},
-		{"STATE", "Pod.State"},
-		{"DETAIL", "Pod.TransitioningMessage"},
-	}, ctx)
-
-	defer podWriter.Close()
-
-	for _, item := range orphanPods.Data {
-		podWriter.Write(&PodPS{
-			Pod:  item,
-			Name: fmt.Sprintf("%s/%s", item.NamespaceId, item.Name),
-		})
+	if len(orphanPods.Data) > 0 {
+		for _, item := range orphanPods.Data {
+			item.Type = strings.Title(item.Type)
+			wlWriter.Write(&PSHolder{
+				NameSpace: item.NamespaceId,
+				Name:      item.Name,
+				Type:      item.Type,
+				State:     item.State,
+				Image:     item.Containers[0].Image,
+				Scale:     "Standalone", // a single pod doesn't have scale
+			})
+		}
 	}
 
 	return nil
