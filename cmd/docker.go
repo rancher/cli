@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/v2"
-	"github.com/rancher/rancher-docker-api-proxy"
 	"github.com/urfave/cli"
 )
 
@@ -100,18 +98,12 @@ func runDockerWithOutput(hostname string, c *client.RancherClient, args []string
 
 	apiVersion := determineAPIVersion(host)
 
-	tempfile, err := ioutil.TempFile("", "docker-sock")
+	dockerHost, proxy, err := getDockerHost(c, host.Id)
+
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tempfile.Name())
 
-	if err := tempfile.Close(); err != nil {
-		return err
-	}
-
-	dockerHost := "unix://" + tempfile.Name()
-	proxy := dockerapiproxy.NewProxy(c, host.Id, dockerHost)
 	if err := proxy.Listen(); err != nil {
 		return err
 	}
