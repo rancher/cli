@@ -46,8 +46,8 @@ func loadAndVerifyCert(path string) (string, error) {
 		return "", errors.New("No cert was found")
 	}
 
-	parsedCert, err := x509.ParseCertificate(block.Bytes)
-	if !parsedCert.IsCA {
+	_, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
 		return "", errors.New("CACerts is not valid")
 	}
 	return string(caCert), nil
