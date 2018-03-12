@@ -48,8 +48,12 @@ func NewProject(context *Context) (*project.Project, error) {
 	if context.Prune {
 		pruneServices(context, p)
 	}
+	sidekickInfo, err := NewSidekickInfo(p)
+	if err != nil {
+		return nil, err
+	}
 
-	context.SidekickInfo = NewSidekickInfo(p)
+	context.SidekickInfo = sidekickInfo
 
 	return p, nil
 }
