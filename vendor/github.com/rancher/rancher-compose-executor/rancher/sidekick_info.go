@@ -3,6 +3,7 @@ package rancher
 import (
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/rancher/rancher-compose-executor/project"
 )
 
@@ -12,7 +13,7 @@ type SidekickInfo struct {
 	sidekickToPrimaries  map[string][]string
 }
 
-func NewSidekickInfo(project *project.Project) *SidekickInfo {
+func NewSidekickInfo(project *project.Project) (*SidekickInfo, error) {
 	result := &SidekickInfo{
 		primariesToSidekicks: map[string][]string{},
 		primaries:            map[string]bool{},
@@ -42,9 +43,14 @@ func NewSidekickInfo(project *project.Project) *SidekickInfo {
 				result.sidekickToPrimaries[part] = append(list, name)
 			}
 		}
+		for sidekick, primaries := range result.sidekickToPrimaries {
+			if len(primaries) > 1 {
+				return nil, errors.Errorf("can't have more than one primary service %v referencing the same sidekick [%v]", primaries, sidekick)
+			}
+		}
 
 		result.primariesToSidekicks[name] = sidekicks
 	}
 
-	return result
+	return result, nil
 }
