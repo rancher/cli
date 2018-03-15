@@ -1,27 +1,35 @@
 package cmd
 
 import (
+	"bytes"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"os"
+	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker/api/types"
-	dclient "github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/libcompose/cli/logger"
+	"github.com/gorilla/websocket"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rancher/cli/monitor"
 	"github.com/rancher/go-rancher/v2"
-	"github.com/rancher/rancher-docker-api-proxy"
 	"github.com/urfave/cli"
 )
+
+type logOptions struct {
+	Follow bool `json:"follow"`
+	Lines  int  `json:"lines"`
+}
+
+type wsResponse struct {
+	Token string `json:"token"`
+	URL   string `json:"url"`
+}
 
 var loggerFactory = logger.NewColorLoggerFactory()
 
@@ -183,6 +191,11 @@ func logsCommand(ctx *cli.Context) error {
 		return err
 	}
 
+	config, err := lookupConfig(ctx)
+	if err != nil {
+		return err
+	}
+
 	if ctx.Bool("service") {
 		return serviceLogs(c, ctx)
 	}
@@ -196,113 +209,88 @@ func logsCommand(ctx *cli.Context) error {
 		return err
 	}
 
-	listenSocks := map[string]*dclient.Client{}
+	payload := logOptions{
+		Follow: ctx.Bool("follow"),
+		Lines:  ctx.Int("tail"),
+	}
+
+	payloadJSON, err := json.Marshal(payload)
+	if nil != err {
+		return fmt.Errorf("json error: %v", err)
+	}
+
+	httpClient := http.DefaultClient
+
 	for _, i := range instances {
-		if i.ExternalId == "" || i.HostId == "" {
+		logLink, ok := i.Actions["logs"]
+		if !ok {
+			logrus.Debugf("no logs action found for %s", i.Name)
 			continue
 		}
 
-		if dockerClient, ok := listenSocks[i.HostId]; ok {
-			wg.Add(1)
-			go func(dockerClient *dclient.Client, i client.Instance) {
-				doLog(len(instances) <= 1, ctx, i, dockerClient)
-				wg.Done()
-			}(dockerClient, i)
-			continue
+		req, err := http.NewRequest("POST", logLink, bytes.NewBuffer(payloadJSON))
+		if nil != err {
+			return fmt.Errorf("request error:%v", err)
 		}
 
-		resource, err := Lookup(c, i.HostId, "host")
-		if err != nil {
+		req.SetBasicAuth(config.AccessKey, config.SecretKey)
+
+		res, err := httpClient.Do(req)
+		if nil != err {
 			return err
 		}
 
-		host, err := c.Host.ById(resource.Id)
-		if err != nil {
+		bodyBytes, err := ioutil.ReadAll(res.Body)
+		if nil != err {
 			return err
 		}
 
-		state := getHostState(host)
-		if state != "active" && state != "inactive" {
-			logrus.Errorf("Can not contact host %s in state %s", i.HostId, state)
-			continue
-		}
+		res.Body.Close()
 
-		tempfile, err := ioutil.TempFile("", "docker-sock")
-		if err != nil {
-			return err
-		}
-		defer os.Remove(tempfile.Name())
-
-		if err := tempfile.Close(); err != nil {
+		var ws wsResponse
+		err = json.Unmarshal(bodyBytes, &ws)
+		if nil != err {
 			return err
 		}
 
-		dockerHost := "unix://" + tempfile.Name()
-		proxy := dockerapiproxy.NewProxy(c, host.Id, dockerHost)
-		if err := proxy.Listen(); err != nil {
-			return err
-		}
-
-		go func() {
-			logrus.Fatal(proxy.Serve())
-		}()
-
-		dockerClient, err := dclient.NewClient(dockerHost, "", nil, nil)
-		if err != nil {
-			logrus.Errorf("Failed to connect to host %s: %v", i.HostId, err)
-			continue
-		}
-
-		listenSocks[i.HostId] = dockerClient
+		wsURL := ws.URL + "?token=" + ws.Token
 
 		wg.Add(1)
-		go func(dockerClient *dclient.Client, i client.Instance) {
-			doLog(len(instances) <= 1, ctx, i, dockerClient)
+		go func(wsURL string) {
+			doLog(wsURL)
 			wg.Done()
-		}(dockerClient, i)
+		}(wsURL)
 	}
 
 	wg.Wait()
 	return nil
 }
 
-func doLog(single bool, ctx *cli.Context, instance client.Instance, dockerClient *dclient.Client) error {
-	c, err := dockerClient.ContainerInspect(context.Background(), instance.ExternalId)
-	if err != nil {
+func doLog(wsURL string) error {
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{})
+	if nil != err {
+		logrus.Errorf("websocket dial error: %v", err)
 		return err
 	}
+	defer conn.Close()
 
-	options := types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Since:      ctx.String("since"),
-		Timestamps: ctx.Bool("timestamps"),
-		Follow:     ctx.Bool("follow"),
-		Tail:       ctx.String("tail"),
-		//Details:    ctx.Bool("details"),
+	for {
+		msgType, buf, err := conn.ReadMessage()
+		if nil != err {
+			return err
+		}
+		var text string
+		switch msgType {
+		case websocket.TextMessage:
+			text = string(buf)
+		case websocket.BinaryMessage:
+			text = bytesToFormattedHex(buf)
+		default:
+			return fmt.Errorf("unknown websocket frame type: %d", msgType)
+		}
+
+		fmt.Println(text)
 	}
-	responseBody, err := dockerClient.ContainerLogs(context.Background(), c.ID, options)
-	if err != nil {
-		return err
-	}
-	defer responseBody.Close()
-
-	if c.Config.Tty {
-		_, err = io.Copy(os.Stdout, responseBody)
-	} else if single {
-		_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, responseBody)
-	} else {
-		l := loggerFactory.CreateContainerLogger(instance.Name)
-		_, err = stdcopy.StdCopy(writerFunc(l.Out), writerFunc(l.Err), responseBody)
-	}
-	return err
-}
-
-type writerFunc func(p []byte)
-
-func (f writerFunc) Write(p []byte) (n int, err error) {
-	f(p)
-	return len(p), nil
 }
 
 func resolveServices(c *client.RancherClient, names []string) (map[string]bool, error) {
@@ -359,4 +347,9 @@ func resolveContainers(c *client.RancherClient, names []string) ([]client.Instan
 	}
 
 	return result, nil
+}
+
+func bytesToFormattedHex(bytes []byte) string {
+	text := hex.EncodeToString(bytes)
+	return regexp.MustCompile("(..)").ReplaceAllString(text, "$1 ")
 }
