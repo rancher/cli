@@ -67,6 +67,7 @@ func mainErr() error {
 		},
 	}
 	app.Commands = []cli.Command{
+		cmd.UpCommand(),
 		cmd.ClusterCommand(),
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
