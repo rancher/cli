@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 	"text/template"
@@ -309,6 +311,29 @@ func printTemplate(out io.Writer, templateContent string, obj interface{}) error
 	}
 
 	return tmpl.Execute(out, obj)
+}
+
+func selectFromList(header string, choices []string) int {
+	if header != "" {
+		fmt.Println(header)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	selected := -1
+	for selected <= 0 || selected > len(choices) {
+		for i, choice := range choices {
+			fmt.Printf("[%d] %s\n", i+1, choice)
+		}
+		fmt.Print("Select: ")
+
+		text, _ := reader.ReadString('\n')
+		text = strings.TrimSpace(text)
+		num, err := strconv.Atoi(text)
+		if err == nil {
+			selected = num
+		}
+	}
+	return selected - 1
 }
 
 func processExitCode(err error) error {

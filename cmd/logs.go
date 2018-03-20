@@ -1,13 +1,9 @@
 package cmd
 
 import (
-	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -24,11 +20,6 @@ import (
 type logOptions struct {
 	Follow bool `json:"follow"`
 	Lines  int  `json:"lines"`
-}
-
-type wsResponse struct {
-	Token string `json:"token"`
-	URL   string `json:"url"`
 }
 
 var loggerFactory = logger.NewColorLoggerFactory()
@@ -191,11 +182,6 @@ func logsCommand(ctx *cli.Context) error {
 		return err
 	}
 
-	config, err := lookupConfig(ctx)
-	if err != nil {
-		return err
-	}
-
 	if ctx.Bool("service") {
 		return serviceLogs(c, ctx)
 	}
@@ -219,8 +205,6 @@ func logsCommand(ctx *cli.Context) error {
 		return fmt.Errorf("json error: %v", err)
 	}
 
-	httpClient := http.DefaultClient
-
 	for _, i := range instances {
 		logLink, ok := i.Actions["logs"]
 		if !ok {
@@ -228,32 +212,10 @@ func logsCommand(ctx *cli.Context) error {
 			continue
 		}
 
-		req, err := http.NewRequest("POST", logLink, bytes.NewBuffer(payloadJSON))
-		if nil != err {
-			return fmt.Errorf("request error:%v", err)
-		}
-
-		req.SetBasicAuth(config.AccessKey, config.SecretKey)
-
-		res, err := httpClient.Do(req)
+		wsURL, err := resolveWebsocketURL(ctx, logLink, payloadJSON)
 		if nil != err {
 			return err
 		}
-
-		bodyBytes, err := ioutil.ReadAll(res.Body)
-		if nil != err {
-			return err
-		}
-
-		res.Body.Close()
-
-		var ws wsResponse
-		err = json.Unmarshal(bodyBytes, &ws)
-		if nil != err {
-			return err
-		}
-
-		wsURL := ws.URL + "?token=" + ws.Token
 
 		wg.Add(1)
 		go func(wsURL string) {
@@ -275,21 +237,11 @@ func doLog(wsURL string) error {
 	defer conn.Close()
 
 	for {
-		msgType, buf, err := conn.ReadMessage()
+		_, buf, err := conn.ReadMessage()
 		if nil != err {
 			return err
 		}
-		var text string
-		switch msgType {
-		case websocket.TextMessage:
-			text = string(buf)
-		case websocket.BinaryMessage:
-			text = bytesToFormattedHex(buf)
-		default:
-			return fmt.Errorf("unknown websocket frame type: %d", msgType)
-		}
-
-		fmt.Println(text)
+		fmt.Println(string(buf))
 	}
 }
 
@@ -347,9 +299,4 @@ func resolveContainers(c *client.RancherClient, names []string) ([]client.Instan
 	}
 
 	return result, nil
-}
-
-func bytesToFormattedHex(bytes []byte) string {
-	text := hex.EncodeToString(bytes)
-	return regexp.MustCompile("(..)").ReplaceAllString(text, "$1 ")
 }
