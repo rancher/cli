@@ -2,15 +2,30 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
+	"reflect"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/containerd/console"
+	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/urfave/cli"
 )
+
+type execPayload struct {
+	AttachStdin  bool     `json:"attachStdin"`
+	AttachStdout bool     `json:"attachStdout"`
+	Command      []string `json:"command"`
+	TTY          bool     `json:"tty"`
+}
 
 func ExecCommand() cli.Command {
 	return cli.Command{
@@ -47,90 +62,156 @@ func execCommandInternal(ctx *cli.Context) error {
 		return err
 	}
 
-	args, hostID, _, err := selectContainer(c, ctx.Args())
+	args, execURL, err := selectContainer(c, ctx.Args())
 	if err != nil {
 		return err
 	}
 
-	// this is a massive hack. Need to fix the real issue
-	args = append([]string{"-i"}, args...)
-	return runDockerCommand(hostID, c, "exec", args)
-}
-
-func isHelp(args []string) bool {
-	for _, i := range args {
-		if i == "--help" || i == "-h" {
-			return true
-		}
+	if execURL == "" {
+		return errors.New("not authorized to exec into this container")
 	}
 
-	return false
+	fmt.Println(execURL)
+
+	payload := execPayload{
+		AttachStdin:  true,
+		AttachStdout: true,
+		Command:      args,
+		TTY:          true,
+	}
+
+	payloadJSON, err := json.Marshal(payload)
+	if nil != err {
+		return fmt.Errorf("json error: %v", err)
+	}
+
+	wsURL, err := resolveWebsocketURL(ctx, execURL, payloadJSON)
+	if nil != err {
+		return err
+	}
+
+	logrus.Debugf("websocket full URL: %s", wsURL)
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{})
+	if nil != err {
+		logrus.Errorf("websocket dial error: %v", err)
+		return err
+	}
+	defer conn.Close()
+
+	current, err := console.ConsoleFromFile(os.Stdin)
+	if err != nil {
+		return err
+	}
+	defer current.Reset()
+
+	err = current.SetRaw()
+	if err != nil {
+		return err
+	}
+
+	errChannel := make(chan error)
+
+	// get input from stdin
+	go getInput(conn, errChannel)
+	// print out from the websocket
+	go streamWebsocket(conn, errChannel)
+
+	err = <-errChannel
+
+	if err != nil && reflect.TypeOf(err).String() == "*websocket.CloseError" &&
+		err.Error() == "websocket: close 1000 (normal)" {
+		return nil
+	}
+	return err
 }
 
-func selectContainer(c *client.RancherClient, args []string) ([]string, string, string, error) {
+func streamWebsocket(conn *websocket.Conn, errChannel chan<- error) {
+	for {
+		_, buf, err := conn.NextReader()
+		if err != nil {
+			errChannel <- err
+			return
+		}
+
+		p, err := ioutil.ReadAll(buf)
+		data, err := base64.StdEncoding.DecodeString(string(p))
+		fmt.Print(string(data))
+	}
+}
+
+func getInput(conn *websocket.Conn, errChannel chan<- error) {
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Split(bufio.ScanBytes)
+	for scanner.Scan() {
+		if len(scanner.Bytes()) == 1 && scanner.Bytes()[0] == 3 {
+			errChannel <- nil
+			return
+		}
+		data := base64.StdEncoding.EncodeToString(scanner.Bytes())
+		err := conn.WriteMessage(websocket.TextMessage, []byte(data))
+		if nil != err {
+			errChannel <- err
+			return
+		}
+
+	}
+}
+
+func selectContainer(c *client.RancherClient, args []string) ([]string, string, error) {
 	newArgs := make([]string, len(args))
 	copy(newArgs, args)
 
-	name := ""
-	index := 0
+	var name string
 	for i, val := range newArgs {
 		if !strings.HasPrefix(val, "-") {
 			name = val
-			index = i
+			newArgs = newArgs[i+1:]
 			break
 		}
 	}
 
 	if name == "" {
-		return nil, "", "", fmt.Errorf("Please specify container name as an argument")
+		return nil, "", fmt.Errorf("Please specify container name as an argument")
 	}
 
 	resource, err := Lookup(c, name, "container", "service")
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 
-	if _, ok := resource.Links["hosts"]; ok {
-		hostID, containerID, err := getHostnameAndContainerID(c, resource.Id)
-		if err != nil {
-			return nil, "", "", err
-		}
-
-		newArgs[index] = containerID
-		return newArgs, hostID, containerID, nil
-	}
-
+	var containerExecURL string
 	if _, ok := resource.Links["instances"]; ok {
 		var instances client.ContainerCollection
 		if err := c.GetLink(*resource, "instances", &instances); err != nil {
-			return nil, "", "", err
+			return nil, "", err
 		}
 
-		hostID, containerID, err := getHostnameAndContainerIDFromList(c, instances)
+		containerExecURL, err = getContainerIDFromList(c, instances)
 		if err != nil {
-			return nil, "", "", err
+			return nil, "", err
 		}
-		newArgs[index] = containerID
-		return newArgs, hostID, containerID, nil
+	} else {
+		containerExecURL = resource.Actions["execute"]
 	}
 
-	return nil, "", "", nil
+	return newArgs, containerExecURL, nil
 }
 
-func getHostnameAndContainerIDFromList(c *client.RancherClient, containers client.ContainerCollection) (string, string, error) {
+func getContainerIDFromList(c *client.RancherClient, containers client.ContainerCollection) (string, error) {
 	if len(containers.Data) == 0 {
-		return "", "", fmt.Errorf("Failed to find a container")
+		return "", fmt.Errorf("failed to find a container")
 	}
 
 	if len(containers.Data) == 1 {
-		return containers.Data[0].HostId, containers.Data[0].ExternalId, nil
+		return containers.Data[0].Actions["execute"], nil
 	}
 
-	names := []string{}
+	var names []string
 	for _, container := range containers.Data {
 		name := ""
 		if container.Name == "" {
-			name = container.Id
+			name = container.Actions["execute"]
 		} else {
 			name = container.Name
 		}
@@ -138,48 +219,7 @@ func getHostnameAndContainerIDFromList(c *client.RancherClient, containers clien
 	}
 
 	index := selectFromList("Containers:", names)
-	return containers.Data[index].HostId, containers.Data[index].ExternalId, nil
-}
-
-func selectFromList(header string, choices []string) int {
-	if header != "" {
-		fmt.Println(header)
-	}
-
-	reader := bufio.NewReader(os.Stdin)
-	selected := -1
-	for selected <= 0 || selected > len(choices) {
-		for i, choice := range choices {
-			fmt.Printf("[%d] %s\n", i+1, choice)
-		}
-		fmt.Print("Select: ")
-
-		text, _ := reader.ReadString('\n')
-		text = strings.TrimSpace(text)
-		num, err := strconv.Atoi(text)
-		if err == nil {
-			selected = num
-		}
-	}
-	return selected - 1
-}
-
-func getHostnameAndContainerID(c *client.RancherClient, containerID string) (string, string, error) {
-	container, err := c.Container.ById(containerID)
-	if err != nil {
-		return "", "", err
-	}
-
-	var hosts client.HostCollection
-	if err := c.GetLink(container.Resource, "hosts", &hosts); err != nil {
-		return "", "", err
-	}
-
-	if len(hosts.Data) != 1 {
-		return "", "", fmt.Errorf("Failed to find host for container %s", container.Name)
-	}
-
-	return hosts.Data[0].Id, container.ExternalId, nil
+	return containers.Data[index].Actions["execute"], nil
 }
 
 func runDockerHelp(subcommand string) error {
