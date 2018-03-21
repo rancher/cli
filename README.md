@@ -11,10 +11,16 @@ You can check the [releases page](https://github.com/rancher/cli/releases) for d
 
 The CLI needs to know your server address and the credentials required to authenticate with it. 
 Rancher CLI will pull this information from a `cli.json` that is created the first time you run 
-`rancher login`. By default this file is located at `~/.rancher/cli.json`. 
+`rancher config`. By default this file is located at `~/.rancher/cli.json`. 
 
 ```
-$ rancher login https://<RANCHER_SERVER_URL> -t my-secret-token --name CoolServer1
+$ rancher config
+
+URL []: <RANCHER_SERVER_URL>
+Access Key []: <RANCHER_API_ACCESS_KEY>
+Secret Key []: <RANCHER_API_SECRET_KEY>
+Environments:
+[1] env_name
 ```
 
 > Note: The `<RANCHER_SERVER_URL>` includes whatever port was exposed when installing Rancher server.
