@@ -32,7 +32,10 @@ func loadAndVerifyCert(path string) (string, error) {
 	if nil != err {
 		return "", err
 	}
+	return verifyCert(caCert)
+}
 
+func verifyCert(caCert []byte) (string, error) {
 	// replace the escaped version of the line break
 	caCert = bytes.Replace(caCert, []byte(`\n`), []byte("\n"), -1)
 
@@ -43,6 +46,10 @@ func loadAndVerifyCert(path string) (string, error) {
 	}
 
 	parsedCert, err := x509.ParseCertificate(block.Bytes)
+	if nil != err {
+		return "", err
+	}
+
 	if !parsedCert.IsCA {
 		return "", errors.New("CACerts is not valid")
 	}
@@ -71,7 +78,7 @@ func loadConfig(path string) (config.Config, error) {
 func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 	path := ctx.GlobalString("config")
 	if path == "" {
-		path = os.ExpandEnv("${HOME}/.rancher/cli.json")
+		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
 	}
 
 	cf, err := loadConfig(path)
