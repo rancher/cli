@@ -7,17 +7,14 @@ import (
 	"encoding/pem"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
 	"text/template"
-	"time"
 	"unicode"
 
 	"github.com/docker/docker/pkg/namesgenerator"
-	"github.com/fatih/color"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
@@ -28,7 +25,6 @@ import (
 
 var (
 	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
-	colors   = []color.Attribute{color.FgGreen, color.FgBlue, color.FgCyan, color.FgMagenta, color.FgRed, color.FgWhite, color.FgYellow}
 )
 
 func loadAndVerifyCert(path string) (string, error) {
@@ -168,13 +164,6 @@ func processExitCode(err error) error {
 	}
 
 	return err
-}
-
-func getRandomColor() color.Attribute {
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	index := r1.Intn(8)
-	return colors[index]
 }
 
 func SplitOnColon(s string) []string {
