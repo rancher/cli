@@ -79,6 +79,13 @@ func ClusterCommand() cli.Command {
 				ArgsUsage: "[CLUSTERID]",
 				Action:    deleteCluster,
 			},
+			{
+				Name:      "kubeconfig",
+				Aliases:   []string{"kf"},
+				Usage:     "Return the kube config used to access the cluster",
+				ArgsUsage: "[CLUSTERID]",
+				Action:    clusterKubeConfig,
+			},
 		},
 	}
 }
@@ -231,6 +238,33 @@ func deleteCluster(ctx *cli.Context) error {
 		return err
 	}
 
+	return nil
+}
+
+func clusterKubeConfig(ctx *cli.Context) error {
+	var clusterName string
+
+	if ctx.NArg() == 0 {
+		return errors.New("cluster ID is required")
+	}
+
+	clusterName = ctx.Args().First()
+
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	cluster, err := getClusterByID(c, clusterName)
+	if nil != err {
+		return err
+	}
+
+	config, err := c.ManagementClient.Cluster.ActionGenerateKubeconfig(cluster)
+	if nil != err {
+		return err
+	}
+	fmt.Println(config.Config)
 	return nil
 }
 
