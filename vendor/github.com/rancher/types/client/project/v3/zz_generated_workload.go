@@ -12,12 +12,12 @@ const (
 	WorkloadFieldContainers                    = "containers"
 	WorkloadFieldCreated                       = "created"
 	WorkloadFieldCreatorID                     = "creatorId"
-	WorkloadFieldCronJob                       = "cronJob"
+	WorkloadFieldCronJobConfig                 = "cronJobConfig"
 	WorkloadFieldCronJobStatus                 = "cronJobStatus"
 	WorkloadFieldDNSPolicy                     = "dnsPolicy"
-	WorkloadFieldDaemonSet                     = "daemonSet"
+	WorkloadFieldDaemonSetConfig               = "daemonSetConfig"
 	WorkloadFieldDaemonSetStatus               = "daemonSetStatus"
-	WorkloadFieldDeployment                    = "deployment"
+	WorkloadFieldDeploymentConfig              = "deploymentConfig"
 	WorkloadFieldDeploymentStatus              = "deploymentStatus"
 	WorkloadFieldFsgid                         = "fsgid"
 	WorkloadFieldGids                          = "gids"
@@ -27,7 +27,7 @@ const (
 	WorkloadFieldHostPID                       = "hostPID"
 	WorkloadFieldHostname                      = "hostname"
 	WorkloadFieldImagePullSecrets              = "imagePullSecrets"
-	WorkloadFieldJob                           = "job"
+	WorkloadFieldJobConfig                     = "jobConfig"
 	WorkloadFieldJobStatus                     = "jobStatus"
 	WorkloadFieldLabels                        = "labels"
 	WorkloadFieldName                          = "name"
@@ -37,10 +37,11 @@ const (
 	WorkloadFieldPriority                      = "priority"
 	WorkloadFieldPriorityClassName             = "priorityClassName"
 	WorkloadFieldProjectID                     = "projectId"
+	WorkloadFieldPublicEndpoints               = "publicEndpoints"
 	WorkloadFieldRemoved                       = "removed"
-	WorkloadFieldReplicaSet                    = "replicaSet"
+	WorkloadFieldReplicaSetConfig              = "replicaSetConfig"
 	WorkloadFieldReplicaSetStatus              = "replicaSetStatus"
-	WorkloadFieldReplicationController         = "replicationController"
+	WorkloadFieldReplicationControllerConfig   = "replicationControllerConfig"
 	WorkloadFieldReplicationControllerStatus   = "replicationControllerStatus"
 	WorkloadFieldRestartPolicy                 = "restartPolicy"
 	WorkloadFieldRunAsNonRoot                  = "runAsNonRoot"
@@ -50,7 +51,7 @@ const (
 	WorkloadFieldSelector                      = "selector"
 	WorkloadFieldServiceAccountName            = "serviceAccountName"
 	WorkloadFieldState                         = "state"
-	WorkloadFieldStatefulSet                   = "statefulSet"
+	WorkloadFieldStatefulSetConfig             = "statefulSetConfig"
 	WorkloadFieldStatefulSetStatus             = "statefulSetStatus"
 	WorkloadFieldSubdomain                     = "subdomain"
 	WorkloadFieldTerminationGracePeriodSeconds = "terminationGracePeriodSeconds"
@@ -65,61 +66,62 @@ const (
 
 type Workload struct {
 	types.Resource
-	ActiveDeadlineSeconds         *int64                       `json:"activeDeadlineSeconds,omitempty"`
-	Annotations                   map[string]string            `json:"annotations,omitempty"`
-	AutomountServiceAccountToken  *bool                        `json:"automountServiceAccountToken,omitempty"`
-	Containers                    []Container                  `json:"containers,omitempty"`
-	Created                       string                       `json:"created,omitempty"`
-	CreatorID                     string                       `json:"creatorId,omitempty"`
-	CronJob                       *CronJobConfig               `json:"cronJob,omitempty"`
-	CronJobStatus                 *CronJobStatus               `json:"cronJobStatus,omitempty"`
-	DNSPolicy                     string                       `json:"dnsPolicy,omitempty"`
-	DaemonSet                     *DaemonSetConfig             `json:"daemonSet,omitempty"`
-	DaemonSetStatus               *DaemonSetStatus             `json:"daemonSetStatus,omitempty"`
-	Deployment                    *DeploymentConfig            `json:"deployment,omitempty"`
-	DeploymentStatus              *DeploymentStatus            `json:"deploymentStatus,omitempty"`
-	Fsgid                         *int64                       `json:"fsgid,omitempty"`
-	Gids                          []int64                      `json:"gids,omitempty"`
-	HostAliases                   []HostAlias                  `json:"hostAliases,omitempty"`
-	HostIPC                       bool                         `json:"hostIPC,omitempty"`
-	HostNetwork                   bool                         `json:"hostNetwork,omitempty"`
-	HostPID                       bool                         `json:"hostPID,omitempty"`
-	Hostname                      string                       `json:"hostname,omitempty"`
-	ImagePullSecrets              []LocalObjectReference       `json:"imagePullSecrets,omitempty"`
-	Job                           *JobConfig                   `json:"job,omitempty"`
-	JobStatus                     *JobStatus                   `json:"jobStatus,omitempty"`
-	Labels                        map[string]string            `json:"labels,omitempty"`
-	Name                          string                       `json:"name,omitempty"`
-	NamespaceId                   string                       `json:"namespaceId,omitempty"`
-	NodeId                        string                       `json:"nodeId,omitempty"`
-	OwnerReferences               []OwnerReference             `json:"ownerReferences,omitempty"`
-	Priority                      *int64                       `json:"priority,omitempty"`
-	PriorityClassName             string                       `json:"priorityClassName,omitempty"`
-	ProjectID                     string                       `json:"projectId,omitempty"`
-	Removed                       string                       `json:"removed,omitempty"`
-	ReplicaSet                    *ReplicaSetConfig            `json:"replicaSet,omitempty"`
-	ReplicaSetStatus              *ReplicaSetStatus            `json:"replicaSetStatus,omitempty"`
-	ReplicationController         *ReplicationControllerConfig `json:"replicationController,omitempty"`
-	ReplicationControllerStatus   *ReplicationControllerStatus `json:"replicationControllerStatus,omitempty"`
-	RestartPolicy                 string                       `json:"restartPolicy,omitempty"`
-	RunAsNonRoot                  *bool                        `json:"runAsNonRoot,omitempty"`
-	Scale                         *int64                       `json:"scale,omitempty"`
-	SchedulerName                 string                       `json:"schedulerName,omitempty"`
-	Scheduling                    *Scheduling                  `json:"scheduling,omitempty"`
-	Selector                      *LabelSelector               `json:"selector,omitempty"`
-	ServiceAccountName            string                       `json:"serviceAccountName,omitempty"`
-	State                         string                       `json:"state,omitempty"`
-	StatefulSet                   *StatefulSetConfig           `json:"statefulSet,omitempty"`
-	StatefulSetStatus             *StatefulSetStatus           `json:"statefulSetStatus,omitempty"`
-	Subdomain                     string                       `json:"subdomain,omitempty"`
-	TerminationGracePeriodSeconds *int64                       `json:"terminationGracePeriodSeconds,omitempty"`
-	Transitioning                 string                       `json:"transitioning,omitempty"`
-	TransitioningMessage          string                       `json:"transitioningMessage,omitempty"`
-	Uid                           *int64                       `json:"uid,omitempty"`
-	Uuid                          string                       `json:"uuid,omitempty"`
-	Volumes                       []Volume                     `json:"volumes,omitempty"`
-	WorkloadAnnotations           map[string]string            `json:"workloadAnnotations,omitempty"`
-	WorkloadLabels                map[string]string            `json:"workloadLabels,omitempty"`
+	ActiveDeadlineSeconds         *int64                       `json:"activeDeadlineSeconds,omitempty" yaml:"activeDeadlineSeconds,omitempty"`
+	Annotations                   map[string]string            `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	AutomountServiceAccountToken  *bool                        `json:"automountServiceAccountToken,omitempty" yaml:"automountServiceAccountToken,omitempty"`
+	Containers                    []Container                  `json:"containers,omitempty" yaml:"containers,omitempty"`
+	Created                       string                       `json:"created,omitempty" yaml:"created,omitempty"`
+	CreatorID                     string                       `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	CronJobConfig                 *CronJobConfig               `json:"cronJobConfig,omitempty" yaml:"cronJobConfig,omitempty"`
+	CronJobStatus                 *CronJobStatus               `json:"cronJobStatus,omitempty" yaml:"cronJobStatus,omitempty"`
+	DNSPolicy                     string                       `json:"dnsPolicy,omitempty" yaml:"dnsPolicy,omitempty"`
+	DaemonSetConfig               *DaemonSetConfig             `json:"daemonSetConfig,omitempty" yaml:"daemonSetConfig,omitempty"`
+	DaemonSetStatus               *DaemonSetStatus             `json:"daemonSetStatus,omitempty" yaml:"daemonSetStatus,omitempty"`
+	DeploymentConfig              *DeploymentConfig            `json:"deploymentConfig,omitempty" yaml:"deploymentConfig,omitempty"`
+	DeploymentStatus              *DeploymentStatus            `json:"deploymentStatus,omitempty" yaml:"deploymentStatus,omitempty"`
+	Fsgid                         *int64                       `json:"fsgid,omitempty" yaml:"fsgid,omitempty"`
+	Gids                          []int64                      `json:"gids,omitempty" yaml:"gids,omitempty"`
+	HostAliases                   []HostAlias                  `json:"hostAliases,omitempty" yaml:"hostAliases,omitempty"`
+	HostIPC                       bool                         `json:"hostIPC,omitempty" yaml:"hostIPC,omitempty"`
+	HostNetwork                   bool                         `json:"hostNetwork,omitempty" yaml:"hostNetwork,omitempty"`
+	HostPID                       bool                         `json:"hostPID,omitempty" yaml:"hostPID,omitempty"`
+	Hostname                      string                       `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	ImagePullSecrets              []LocalObjectReference       `json:"imagePullSecrets,omitempty" yaml:"imagePullSecrets,omitempty"`
+	JobConfig                     *JobConfig                   `json:"jobConfig,omitempty" yaml:"jobConfig,omitempty"`
+	JobStatus                     *JobStatus                   `json:"jobStatus,omitempty" yaml:"jobStatus,omitempty"`
+	Labels                        map[string]string            `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Name                          string                       `json:"name,omitempty" yaml:"name,omitempty"`
+	NamespaceId                   string                       `json:"namespaceId,omitempty" yaml:"namespaceId,omitempty"`
+	NodeId                        string                       `json:"nodeId,omitempty" yaml:"nodeId,omitempty"`
+	OwnerReferences               []OwnerReference             `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
+	Priority                      *int64                       `json:"priority,omitempty" yaml:"priority,omitempty"`
+	PriorityClassName             string                       `json:"priorityClassName,omitempty" yaml:"priorityClassName,omitempty"`
+	ProjectID                     string                       `json:"projectId,omitempty" yaml:"projectId,omitempty"`
+	PublicEndpoints               []PublicEndpoint             `json:"publicEndpoints,omitempty" yaml:"publicEndpoints,omitempty"`
+	Removed                       string                       `json:"removed,omitempty" yaml:"removed,omitempty"`
+	ReplicaSetConfig              *ReplicaSetConfig            `json:"replicaSetConfig,omitempty" yaml:"replicaSetConfig,omitempty"`
+	ReplicaSetStatus              *ReplicaSetStatus            `json:"replicaSetStatus,omitempty" yaml:"replicaSetStatus,omitempty"`
+	ReplicationControllerConfig   *ReplicationControllerConfig `json:"replicationControllerConfig,omitempty" yaml:"replicationControllerConfig,omitempty"`
+	ReplicationControllerStatus   *ReplicationControllerStatus `json:"replicationControllerStatus,omitempty" yaml:"replicationControllerStatus,omitempty"`
+	RestartPolicy                 string                       `json:"restartPolicy,omitempty" yaml:"restartPolicy,omitempty"`
+	RunAsNonRoot                  *bool                        `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
+	Scale                         *int64                       `json:"scale,omitempty" yaml:"scale,omitempty"`
+	SchedulerName                 string                       `json:"schedulerName,omitempty" yaml:"schedulerName,omitempty"`
+	Scheduling                    *Scheduling                  `json:"scheduling,omitempty" yaml:"scheduling,omitempty"`
+	Selector                      *LabelSelector               `json:"selector,omitempty" yaml:"selector,omitempty"`
+	ServiceAccountName            string                       `json:"serviceAccountName,omitempty" yaml:"serviceAccountName,omitempty"`
+	State                         string                       `json:"state,omitempty" yaml:"state,omitempty"`
+	StatefulSetConfig             *StatefulSetConfig           `json:"statefulSetConfig,omitempty" yaml:"statefulSetConfig,omitempty"`
+	StatefulSetStatus             *StatefulSetStatus           `json:"statefulSetStatus,omitempty" yaml:"statefulSetStatus,omitempty"`
+	Subdomain                     string                       `json:"subdomain,omitempty" yaml:"subdomain,omitempty"`
+	TerminationGracePeriodSeconds *int64                       `json:"terminationGracePeriodSeconds,omitempty" yaml:"terminationGracePeriodSeconds,omitempty"`
+	Transitioning                 string                       `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+	TransitioningMessage          string                       `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
+	Uid                           *int64                       `json:"uid,omitempty" yaml:"uid,omitempty"`
+	Uuid                          string                       `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+	Volumes                       []Volume                     `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	WorkloadAnnotations           map[string]string            `json:"workloadAnnotations,omitempty" yaml:"workloadAnnotations,omitempty"`
+	WorkloadLabels                map[string]string            `json:"workloadLabels,omitempty" yaml:"workloadLabels,omitempty"`
 }
 type WorkloadCollection struct {
 	types.Collection

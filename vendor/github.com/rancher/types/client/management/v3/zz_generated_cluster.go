@@ -7,6 +7,7 @@ import (
 const (
 	ClusterType                                     = "cluster"
 	ClusterFieldAPIEndpoint                         = "apiEndpoint"
+	ClusterFieldAgentImage                          = "agentImage"
 	ClusterFieldAllocatable                         = "allocatable"
 	ClusterFieldAnnotations                         = "annotations"
 	ClusterFieldAzureKubernetesServiceConfig        = "azureKubernetesServiceConfig"
@@ -19,6 +20,7 @@ const (
 	ClusterFieldDefaultClusterRoleForProjectMembers = "defaultClusterRoleForProjectMembers"
 	ClusterFieldDefaultPodSecurityPolicyTemplateId  = "defaultPodSecurityPolicyTemplateId"
 	ClusterFieldDescription                         = "description"
+	ClusterFieldDesiredAgentImage                   = "desiredAgentImage"
 	ClusterFieldDriver                              = "driver"
 	ClusterFieldFailedSpec                          = "failedSpec"
 	ClusterFieldGoogleKubernetesEngineConfig        = "googleKubernetesEngineConfig"
@@ -39,35 +41,37 @@ const (
 
 type Cluster struct {
 	types.Resource
-	APIEndpoint                         string                         `json:"apiEndpoint,omitempty"`
-	Allocatable                         map[string]string              `json:"allocatable,omitempty"`
-	Annotations                         map[string]string              `json:"annotations,omitempty"`
-	AzureKubernetesServiceConfig        *AzureKubernetesServiceConfig  `json:"azureKubernetesServiceConfig,omitempty"`
-	CACert                              string                         `json:"caCert,omitempty"`
-	Capacity                            map[string]string              `json:"capacity,omitempty"`
-	ComponentStatuses                   []ClusterComponentStatus       `json:"componentStatuses,omitempty"`
-	Conditions                          []ClusterCondition             `json:"conditions,omitempty"`
-	Created                             string                         `json:"created,omitempty"`
-	CreatorID                           string                         `json:"creatorId,omitempty"`
-	DefaultClusterRoleForProjectMembers string                         `json:"defaultClusterRoleForProjectMembers,omitempty"`
-	DefaultPodSecurityPolicyTemplateId  string                         `json:"defaultPodSecurityPolicyTemplateId,omitempty"`
-	Description                         string                         `json:"description,omitempty"`
-	Driver                              string                         `json:"driver,omitempty"`
-	FailedSpec                          *ClusterSpec                   `json:"failedSpec,omitempty"`
-	GoogleKubernetesEngineConfig        *GoogleKubernetesEngineConfig  `json:"googleKubernetesEngineConfig,omitempty"`
-	ImportedConfig                      *ImportedConfig                `json:"importedConfig,omitempty"`
-	Internal                            bool                           `json:"internal,omitempty"`
-	Labels                              map[string]string              `json:"labels,omitempty"`
-	Limits                              map[string]string              `json:"limits,omitempty"`
-	Name                                string                         `json:"name,omitempty"`
-	OwnerReferences                     []OwnerReference               `json:"ownerReferences,omitempty"`
-	RancherKubernetesEngineConfig       *RancherKubernetesEngineConfig `json:"rancherKubernetesEngineConfig,omitempty"`
-	Removed                             string                         `json:"removed,omitempty"`
-	Requested                           map[string]string              `json:"requested,omitempty"`
-	State                               string                         `json:"state,omitempty"`
-	Transitioning                       string                         `json:"transitioning,omitempty"`
-	TransitioningMessage                string                         `json:"transitioningMessage,omitempty"`
-	Uuid                                string                         `json:"uuid,omitempty"`
+	APIEndpoint                         string                         `json:"apiEndpoint,omitempty" yaml:"apiEndpoint,omitempty"`
+	AgentImage                          string                         `json:"agentImage,omitempty" yaml:"agentImage,omitempty"`
+	Allocatable                         map[string]string              `json:"allocatable,omitempty" yaml:"allocatable,omitempty"`
+	Annotations                         map[string]string              `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	AzureKubernetesServiceConfig        *AzureKubernetesServiceConfig  `json:"azureKubernetesServiceConfig,omitempty" yaml:"azureKubernetesServiceConfig,omitempty"`
+	CACert                              string                         `json:"caCert,omitempty" yaml:"caCert,omitempty"`
+	Capacity                            map[string]string              `json:"capacity,omitempty" yaml:"capacity,omitempty"`
+	ComponentStatuses                   []ClusterComponentStatus       `json:"componentStatuses,omitempty" yaml:"componentStatuses,omitempty"`
+	Conditions                          []ClusterCondition             `json:"conditions,omitempty" yaml:"conditions,omitempty"`
+	Created                             string                         `json:"created,omitempty" yaml:"created,omitempty"`
+	CreatorID                           string                         `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	DefaultClusterRoleForProjectMembers string                         `json:"defaultClusterRoleForProjectMembers,omitempty" yaml:"defaultClusterRoleForProjectMembers,omitempty"`
+	DefaultPodSecurityPolicyTemplateId  string                         `json:"defaultPodSecurityPolicyTemplateId,omitempty" yaml:"defaultPodSecurityPolicyTemplateId,omitempty"`
+	Description                         string                         `json:"description,omitempty" yaml:"description,omitempty"`
+	DesiredAgentImage                   string                         `json:"desiredAgentImage,omitempty" yaml:"desiredAgentImage,omitempty"`
+	Driver                              string                         `json:"driver,omitempty" yaml:"driver,omitempty"`
+	FailedSpec                          *ClusterSpec                   `json:"failedSpec,omitempty" yaml:"failedSpec,omitempty"`
+	GoogleKubernetesEngineConfig        *GoogleKubernetesEngineConfig  `json:"googleKubernetesEngineConfig,omitempty" yaml:"googleKubernetesEngineConfig,omitempty"`
+	ImportedConfig                      *ImportedConfig                `json:"importedConfig,omitempty" yaml:"importedConfig,omitempty"`
+	Internal                            bool                           `json:"internal,omitempty" yaml:"internal,omitempty"`
+	Labels                              map[string]string              `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Limits                              map[string]string              `json:"limits,omitempty" yaml:"limits,omitempty"`
+	Name                                string                         `json:"name,omitempty" yaml:"name,omitempty"`
+	OwnerReferences                     []OwnerReference               `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
+	RancherKubernetesEngineConfig       *RancherKubernetesEngineConfig `json:"rancherKubernetesEngineConfig,omitempty" yaml:"rancherKubernetesEngineConfig,omitempty"`
+	Removed                             string                         `json:"removed,omitempty" yaml:"removed,omitempty"`
+	Requested                           map[string]string              `json:"requested,omitempty" yaml:"requested,omitempty"`
+	State                               string                         `json:"state,omitempty" yaml:"state,omitempty"`
+	Transitioning                       string                         `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+	TransitioningMessage                string                         `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
+	Uuid                                string                         `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
 type ClusterCollection struct {
 	types.Collection
@@ -85,6 +89,8 @@ type ClusterOperations interface {
 	Update(existing *Cluster, updates interface{}) (*Cluster, error)
 	ByID(id string) (*Cluster, error)
 	Delete(container *Cluster) error
+
+	ActionGenerateKubeconfig(*Cluster) (*GenerateKubeConfigOutput, error)
 }
 
 func newClusterClient(apiClient *Client) *ClusterClient {
@@ -130,4 +136,13 @@ func (c *ClusterClient) ByID(id string) (*Cluster, error) {
 
 func (c *ClusterClient) Delete(container *Cluster) error {
 	return c.apiClient.Ops.DoResourceDelete(ClusterType, &container.Resource)
+}
+
+func (c *ClusterClient) ActionGenerateKubeconfig(resource *Cluster) (*GenerateKubeConfigOutput, error) {
+
+	resp := &GenerateKubeConfigOutput{}
+
+	err := c.apiClient.Ops.DoAction(ClusterType, "generateKubeconfig", &resource.Resource, nil, resp)
+
+	return resp, err
 }
