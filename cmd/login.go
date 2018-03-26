@@ -88,7 +88,14 @@ func loginSetup(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
 		return cli.ShowCommandHelp(ctx, "login")
 	}
-	serverConfig.URL = ctx.Args().First()
+
+	// Validate the url and drop the path
+	u, err := url.Parse(ctx.Args().First())
+	if err != nil {
+		return err
+	}
+	u.Path = ""
+	serverConfig.URL = u.String()
 
 	if ctx.String("token") != "" {
 		auth := SplitOnColon(ctx.String("token"))
