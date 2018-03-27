@@ -52,7 +52,7 @@ func nodeLs(ctx *cli.Context) error {
 		return err
 	}
 
-	collection, err := getNodesList(ctx, c)
+	collection, err := getNodesList(ctx, c, c.UserConfig.FocusedCluster())
 	if nil != err {
 		return err
 	}
@@ -114,9 +114,10 @@ func deleteNode(ctx *cli.Context) error {
 func getNodesList(
 	ctx *cli.Context,
 	c *cliclient.MasterClient,
+	clusterID string,
 ) (*managementClient.NodeCollection, error) {
 	filter := defaultListOpts(ctx)
-	filter.Filters["clusterId"] = c.UserConfig.FocusedCluster()
+	filter.Filters["clusterId"] = clusterID
 
 	collection, err := c.ManagementClient.Node.List(filter)
 	if nil != err {
@@ -130,7 +131,7 @@ func getNodeByID(
 	c *cliclient.MasterClient,
 	nodeID string,
 ) (managementClient.Node, error) {
-	nodeCollection, err := getNodesList(ctx, c)
+	nodeCollection, err := getNodesList(ctx, c, c.UserConfig.FocusedCluster())
 	if nil != err {
 		return managementClient.Node{}, err
 	}

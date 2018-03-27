@@ -1,11 +1,15 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/types/client/management/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -17,7 +21,14 @@ command to run in your existing Kubernetes cluster.
 )
 
 type ClusterData struct {
-	Cluster managementClient.Cluster
+	Current  string
+	Cluster  managementClient.Cluster
+	Name     string
+	Provider string
+	Nodes    int
+	CPU      string
+	RAM      string
+	Pods     string
 }
 
 func ClusterCommand() cli.Command {
@@ -46,6 +57,33 @@ func ClusterCommand() cli.Command {
 				Description: "Creates a new empty cluster",
 				ArgsUsage:   "[NEWCLUSTERNAME...]",
 				Action:      clusterCreate,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "description",
+						Usage: "Description to apply to the cluster",
+					},
+					cli.BoolTFlag{
+						Name:  "disable-docker-version",
+						Usage: "Allow unsupported versions of docker on the nodes, [default=true]",
+					},
+					cli.BoolFlag{
+						Name:  "import",
+						Usage: "Mark the cluster for import, this is required if the cluster is going to be used to import an existing k8s cluster",
+					},
+					cli.StringFlag{
+						Name:  "k8s-version",
+						Usage: "Kubernetes version to use for the cluster, pass in 'list' to see available versions",
+					},
+					cli.StringFlag{
+						Name:  "network-provider",
+						Usage: "Network provider for the cluster (flannel, canal, calico)",
+						Value: "canal",
+					},
+					cli.StringFlag{
+						Name:  "psp-default-policy",
+						Usage: "Default pod security policy to apply",
+					},
+				},
 			},
 			{
 				Name:        "import",
@@ -56,7 +94,7 @@ func ClusterCommand() cli.Command {
 			},
 			{
 				Name:      "add-node",
-				Usage:     "Returns the command needed to add a node to an existing Rancher cluster",
+				Usage:     "Outputs the docker command needed to add a node to an existing Rancher cluster",
 				ArgsUsage: "[CLUSTERID]",
 				Action:    clusterAddNode,
 				Flags: []cli.Flag{
@@ -108,17 +146,38 @@ func clusterLs(ctx *cli.Context) error {
 	}
 
 	writer := NewTableWriter([][]string{
+		{"CURRENT", "Current"},
 		{"ID", "Cluster.ID"},
-		{"NAME", "Cluster.Name"},
 		{"STATE", "Cluster.State"},
-		{"DESCRIPTION", "Cluster.Description"},
+		{"NAME", "Name"},
+		{"PROVIDER", "Provider"},
+		{"NODES", "Nodes"},
+		{"CPU", "CPU"},
+		{"RAM", "RAM"},
+		{"PODS", "Pods"},
 	}, ctx)
 
 	defer writer.Close()
 
 	for _, item := range collection.Data {
+		var current string
+		if item.ID == c.UserConfig.FocusedCluster() {
+			current = "*"
+		}
+		nodeCount, err := getClusterNodeCount(ctx, c, item.ID)
+		if nil != err {
+			logrus.Errorf("error getting cluster node count for cluster %s: %s", item.Name, err)
+		}
+
 		writer.Write(&ClusterData{
-			Cluster: item,
+			Current:  current,
+			Cluster:  item,
+			Name:     getClusterName(&item),
+			Provider: getClusterProvider(item),
+			Nodes:    nodeCount,
+			CPU:      getClusterCPU(item),
+			RAM:      getClusterRAM(item),
+			Pods:     getClusterPods(item),
 		})
 	}
 
@@ -134,15 +193,35 @@ func clusterCreate(ctx *cli.Context) error {
 		return err
 	}
 
-	cluster, err := c.ManagementClient.Cluster.Create(&managementClient.Cluster{
-		Name: ctx.Args().First(),
-	})
+	if ctx.String("k8s-version") != "" {
+		k8sVersions := getClusterK8sOptions(c)
+		if ok := findStringInArray(ctx.String("k8s-version"), k8sVersions); !ok {
+			fmt.Println("Available Kubernetes versions:")
+			for _, val := range k8sVersions {
+				fmt.Println(val)
+			}
+		}
+	}
+
+	rkeConfig := getRKEConfig(ctx)
+
+	clusterConfig := &managementClient.Cluster{
+		Name:                          ctx.Args().First(),
+		Description:                   ctx.String("description"),
+		RancherKubernetesEngineConfig: rkeConfig,
+	}
+
+	if ctx.String("psp-default-policy") != "" {
+		clusterConfig.DefaultPodSecurityPolicyTemplateId = ctx.String("psp-default-policy")
+	}
+
+	createdCluster, err := c.ManagementClient.Cluster.Create(clusterConfig)
 
 	if nil != err {
 		return err
 	}
 
-	fmt.Printf("Successfully created cluster %v\n", cluster.Name)
+	fmt.Printf("Successfully created cluster %v\n", createdCluster.Name)
 	return nil
 }
 
@@ -161,12 +240,16 @@ func clusterImport(ctx *cli.Context) error {
 		return err
 	}
 
+	if cluster.Driver != "" {
+		return errors.New("existing k8s cluster can't be imported into this cluster")
+	}
+
 	clusterToken, err := getClusterRegToken(ctx, c, cluster.ID)
 	if nil != err {
 		return err
 	}
 
-	fmt.Printf("Run the following command in your cluster: %v", clusterToken.Command)
+	fmt.Printf("Run the following command in your cluster: %v\n", clusterToken.Command)
 
 	return nil
 }
@@ -189,6 +272,21 @@ func clusterAddNode(ctx *cli.Context) error {
 	cluster, err := getClusterByID(c, clusterName)
 	if nil != err {
 		return err
+	}
+
+	if cluster.Driver == "rancherKubernetesEngine" || cluster.Driver == "" {
+		filter := defaultListOpts(ctx)
+		filter.Filters["clusterId"] = clusterName
+		nodePools, err := c.ManagementClient.NodePool.List(filter)
+		if nil != err {
+			return err
+		}
+
+		if len(nodePools.Data) > 0 {
+			return errors.New("a node can't be added to the cluster this way")
+		}
+	} else {
+		return errors.New("a node can't be added to the cluster this way")
 	}
 
 	clusterToken, err := getClusterRegToken(ctx, c, cluster.ID)
@@ -311,4 +409,103 @@ func getClusterByID(
 			"`rancher clusters` to see available clusters: %s", clusterID, err)
 	}
 	return cluster, nil
+}
+
+func getClusterProvider(cluster managementClient.Cluster) string {
+	switch cluster.Driver {
+	case "imported":
+		return "Imported"
+	case "rancherKubernetesEngine":
+		return "Rancher Kubernetes Engine"
+	case "azureKubernetesService":
+		return "Azure Container Service"
+	case "googleKubernetesEngine":
+		return "Google Kubernetes Engine"
+	default:
+		return "Unknown"
+	}
+}
+
+func getClusterNodeCount(ctx *cli.Context, c *cliclient.MasterClient, clusterID string) (int, error) {
+	nodes, err := getNodesList(ctx, c, clusterID)
+	if err != nil {
+		return 0, err
+	}
+	return len(nodes.Data), nil
+}
+
+func getClusterCPU(cluster managementClient.Cluster) string {
+	cpu, err := strconv.ParseFloat(strings.Replace(cluster.Requested["cpu"], "m", "", -1), 64)
+	if nil != err {
+		fmt.Println(err)
+	}
+	cpu = cpu / 1000
+	cpu2 := strconv.FormatFloat(cpu, 'f', 2, 32)
+	return cpu2 + "/" + cluster.Allocatable["cpu"]
+}
+
+func getClusterRAM(cluster managementClient.Cluster) string {
+	allo := strings.Replace(cluster.Allocatable["memory"], "Ki", "", -1)
+	alloInt, err := strconv.ParseFloat(allo, 64)
+	if nil != err {
+		fmt.Println(err)
+	}
+	alloInt = alloInt / 1024 / 1024
+	alloString := fmt.Sprintf("%.2f", alloInt)
+	alloString = strings.TrimSuffix(alloString, ".0")
+
+	requested := strings.Replace(cluster.Requested["memory"], "Mi", "", -1)
+	requestedInt, err := strconv.ParseFloat(requested, 64)
+	if nil != err {
+		fmt.Println(err)
+	}
+	requestedInt = requestedInt / 1024
+	requestedString := fmt.Sprintf("%.2f", requestedInt)
+	requestedString = strings.TrimSuffix(requestedString, ".0")
+
+	return requestedString + "/" + alloString + " GB"
+}
+
+func getClusterPods(cluster managementClient.Cluster) string {
+	return cluster.Requested["pods"] + "/" + cluster.Allocatable["pods"]
+}
+
+func getClusterK8sOptions(c *cliclient.MasterClient) []string {
+	var options []string
+	setting, _ := c.ManagementClient.Setting.ByID("k8s-version-to-images")
+	var objmap map[string]*json.RawMessage
+
+	json.Unmarshal([]byte(setting.Value), &objmap)
+	for key := range objmap {
+		options = append(options, key)
+	}
+	return options
+}
+
+func getRKEConfig(ctx *cli.Context) *managementClient.RancherKubernetesEngineConfig {
+	if ctx.Bool("import") {
+		return nil
+	}
+	rkeConfig := &managementClient.RancherKubernetesEngineConfig{
+		IgnoreDockerVersion: ctx.BoolT("disable-docker-version"),
+	}
+
+	if ctx.String("k8s-version") != "" {
+		rkeConfig.Version = ctx.String("k8s-version")
+	}
+
+	if ctx.String("network-provider") != "" {
+		rkeConfig.Network = &managementClient.NetworkConfig{
+			Plugin: ctx.String("network-provider"),
+		}
+	}
+
+	if ctx.String("psp-default-policy") != "" {
+		rkeConfig.Services = &managementClient.RKEConfigServices{
+			KubeAPI: &managementClient.KubeAPIService{
+				PodSecurityPolicy: true,
+			},
+		}
+	}
+	return rkeConfig
 }
