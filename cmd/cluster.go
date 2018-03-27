@@ -33,6 +33,12 @@ func ClusterCommand() cli.Command {
 				Description: "Lists all clusters",
 				ArgsUsage:   "None",
 				Action:      clusterLs,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json' or Custom format: '{{.Cluster.ID}} {{.Cluster.Name}}'",
+					},
+				},
 			},
 			{
 				Name:        "create",

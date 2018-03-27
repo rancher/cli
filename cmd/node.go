@@ -28,6 +28,12 @@ func NodeCommand() cli.Command {
 				Description: "\nLists all nodes in the current cluster.",
 				ArgsUsage:   "None",
 				Action:      nodeLs,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json' or Custom format: '{{.Node.ID}} {{.Node.Name}}'",
+					},
+				},
 			},
 			{
 				Name:      "delete",

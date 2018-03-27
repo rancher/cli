@@ -31,6 +31,10 @@ func NamespaceCommand() cli.Command {
 						Name:  "all-namespaces",
 						Usage: "List all namespaces in the current cluster",
 					},
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json' or Custom format: '{{.Namespace.ID}} {{.Namespace.Name}}'",
+					},
 				},
 			},
 			{
