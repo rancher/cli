@@ -243,3 +243,12 @@ func getClusterName(cluster *managementClient.Cluster) string {
 	}
 	return cluster.ID
 }
+
+func findStringInArray(s string, a []string) bool {
+	for _, val := range a {
+		if s == val {
+			return true
+		}
+	}
+	return false
+}
