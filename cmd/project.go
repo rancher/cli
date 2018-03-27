@@ -26,6 +26,12 @@ func ProjectCommand() cli.Command {
 				Description: "\nLists all projects in the current cluster.",
 				ArgsUsage:   "None",
 				Action:      projectLs,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json' or Custom format: '{{.Project.ID}} {{.Project.Name}}'",
+					},
+				},
 			},
 			{
 				Name:        "create",

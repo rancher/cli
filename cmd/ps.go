@@ -28,6 +28,10 @@ func PsCommand() cli.Command {
 				Name:  "project",
 				Usage: "project to show workloads for",
 			},
+			cli.StringFlag{
+				Name:  "format",
+				Usage: "'json' or Custom format: '{{.Name}} {{.Image}}'",
+			},
 		},
 	}
 }
