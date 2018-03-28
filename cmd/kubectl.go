@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -12,7 +13,7 @@ func KubectlCommand() cli.Command {
 	return cli.Command{
 		Name:            "kubectl",
 		Usage:           "Run kubectl commands",
-		Description:     "Use the current kubectl context to run commands",
+		Description:     "Use the current cluster context to run kubectl commands in the cluster",
 		Action:          runKubectl,
 		SkipFlagParsing: true,
 	}
@@ -26,10 +27,48 @@ func runKubectl(ctx *cli.Context) error {
 
 	path, err := exec.LookPath("kubectl")
 	if nil != err {
-		return fmt.Errorf("kubectl is required to use this command: %s", err.Error())
+		return fmt.Errorf("kubectl is required to be set in your path to use this "+
+			"command. See https://kubernetes.io/docs/tasks/tools/install-kubectl/ "+
+			"for more info. Error: %s", err.Error())
 	}
 
-	cmd := exec.Command(path, ctx.Args()...)
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	cluster, err := getClusterByID(c, c.UserConfig.FocusedCluster())
+	if nil != err {
+		return err
+	}
+
+	config, err := c.ManagementClient.Cluster.ActionGenerateKubeconfig(cluster)
+	if nil != err {
+		return err
+	}
+
+	tmpfile, err := ioutil.TempFile("", "rancher-")
+	if nil != err {
+		return err
+	}
+	defer os.Remove(tmpfile.Name())
+
+	_, err = tmpfile.Write([]byte(config.Config))
+	if nil != err {
+		return err
+	}
+
+	err = tmpfile.Close()
+	if nil != err {
+		return err
+	}
+
+	kubeLocationFlag := "--kubeconfig=" + tmpfile.Name()
+
+	combinedArgs := []string{kubeLocationFlag}
+	combinedArgs = append(combinedArgs, ctx.Args()...)
+
+	cmd := exec.Command(path, combinedArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
