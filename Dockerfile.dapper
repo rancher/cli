@@ -1,4 +1,4 @@
-FROM golang:1.7.3
+FROM golang:1.9.4
 RUN apt-get update && \
     apt-get install -y xz-utils zip rsync
 RUN go get github.com/rancher/trash
