@@ -44,6 +44,10 @@ func ProjectCommand() cli.Command {
 						Name:  "cluster",
 						Usage: "Cluster ID to create the project in",
 					},
+					cli.StringFlag{
+						Name:  "description",
+						Usage: "Description to apply to the project",
+					},
 				},
 			},
 			{
@@ -106,8 +110,9 @@ func projectCreate(ctx *cli.Context) error {
 	}
 
 	newProj := &managementClient.Project{
-		Name:      ctx.Args().First(),
-		ClusterId: clusterID,
+		Name:        ctx.Args().First(),
+		ClusterId:   clusterID,
+		Description: ctx.String("description"),
 	}
 
 	_, err = c.ManagementClient.Project.Create(newProj)
