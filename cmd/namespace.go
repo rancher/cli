@@ -43,6 +43,12 @@ func NamespaceCommand() cli.Command {
 				Description: "\nCreates a namespace in the current cluster.",
 				ArgsUsage:   "[NEWPROJECTNAME...]",
 				Action:      namespaceCreate,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "description",
+						Usage: "Description to apply to the namespace",
+					},
+				},
 			},
 			{
 				Name:      "delete",
@@ -116,8 +122,9 @@ func namespaceCreate(ctx *cli.Context) error {
 	}
 
 	newNamespace := &clusterClient.Namespace{
-		Name:      ctx.Args().First(),
-		ProjectID: c.UserConfig.Project,
+		Name:        ctx.Args().First(),
+		ProjectID:   c.UserConfig.Project,
+		Description: ctx.String("description"),
 	}
 
 	_, err = c.ClusterClient.Namespace.Create(newNamespace)
