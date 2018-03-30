@@ -200,6 +200,7 @@ func clusterCreate(ctx *cli.Context) error {
 			for _, val := range k8sVersions {
 				fmt.Println(val)
 			}
+			return nil
 		}
 	}
 
