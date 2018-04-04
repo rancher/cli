@@ -1,14 +1,17 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 	"text/template"
@@ -26,6 +29,123 @@ import (
 var (
 	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
 )
+
+type RoleTemplate struct {
+	ID          string
+	Name        string
+	Description string
+}
+
+type RoleTemplateBinding struct {
+	ID      string
+	User    string
+	Role    string
+	Created string
+}
+
+func listRoles(ctx *cli.Context, context string) error {
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	filter := defaultListOpts(ctx)
+	filter.Filters["hidden"] = false
+	filter.Filters["context"] = context
+
+	templates, err := c.ManagementClient.RoleTemplate.List(filter)
+
+	writer := NewTableWriter([][]string{
+		{"ID", "ID"},
+		{"NAME", "Name"},
+		{"DESCRIPTION", "Description"},
+	}, ctx)
+
+	defer writer.Close()
+
+	for _, item := range templates.Data {
+		writer.Write(&RoleTemplate{
+			ID:          item.ID,
+			Name:        item.Name,
+			Description: item.Description,
+		})
+	}
+
+	return writer.Err()
+}
+
+func listRoleTemplateBindings(ctx *cli.Context, b []RoleTemplateBinding) error {
+	writer := NewTableWriter([][]string{
+		{"BINDING-ID", "ID"},
+		{"USER", "User"},
+		{"ROLE", "Role"},
+		{"CREATED", "Created"},
+	}, ctx)
+
+	defer writer.Close()
+
+	for _, item := range b {
+		writer.Write(&RoleTemplateBinding{
+			ID:      item.ID,
+			User:    item.User,
+			Role:    item.Role,
+			Created: item.Created,
+		})
+	}
+	return writer.Err()
+}
+
+func usersToNameMapping(u []managementClient.User) map[string]string {
+	userMapping := make(map[string]string)
+	for _, user := range u {
+		if user.Name != "" {
+			userMapping[user.ID] = user.Name
+
+		} else {
+			userMapping[user.ID] = user.Username
+		}
+	}
+	return userMapping
+}
+
+func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (*managementClient.Principal, error) {
+	filter := defaultListOpts(ctx)
+	filter.Filters["ID"] = "thisisnotathingIhope"
+
+	// A collection is needed to get the action link
+	pCollection, err := c.ManagementClient.Principal.List(filter)
+	if nil != err {
+		return nil, err
+	}
+
+	p := managementClient.SearchPrincipalsInput{
+		Name: name,
+	}
+
+	results, err := c.ManagementClient.Principal.ActionSearch(pCollection, &p)
+	if nil != err {
+		return nil, err
+	}
+
+	dataLength := len(results.Data)
+	switch {
+	case dataLength == 0:
+		return nil, errors.New("no results found")
+	case dataLength == 1:
+		return &results.Data[0], nil
+	case dataLength >= 10:
+		results.Data = results.Data[:10]
+	}
+
+	var names []string
+
+	for _, person := range results.Data {
+		names = append(names, person.Name+fmt.Sprintf(" (%s)", person.PrincipalType))
+	}
+	selection := selectFromList("Multiple results found:", names)
+
+	return &results.Data[selection], nil
+}
 
 func loadAndVerifyCert(path string) (string, error) {
 	caCert, err := ioutil.ReadFile(path)
@@ -161,6 +281,29 @@ func printTemplate(out io.Writer, templateContent string, obj interface{}) error
 	}
 
 	return tmpl.Execute(out, obj)
+}
+
+func selectFromList(header string, choices []string) int {
+	if header != "" {
+		fmt.Println(header)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	selected := -1
+	for selected <= 0 || selected > len(choices) {
+		for i, choice := range choices {
+			fmt.Printf("[%d] %s\n", i+1, choice)
+		}
+		fmt.Print("Select: ")
+
+		text, _ := reader.ReadString('\n')
+		text = strings.TrimSpace(text)
+		num, err := strconv.Atoi(text)
+		if err == nil {
+			selected = num
+		}
+	}
+	return selected - 1
 }
 
 func processExitCode(err error) error {

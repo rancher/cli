@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/types/client/management/v3"
@@ -129,6 +130,48 @@ func ClusterCommand() cli.Command {
 				Usage:     "Return the kube config used to access the cluster",
 				ArgsUsage: "[CLUSTERID]",
 				Action:    clusterKubeConfig,
+			},
+			{
+				Name:        "add-member-role",
+				Usage:       "Add a member to the cluster",
+				Action:      addClusterMemberRoles,
+				Description: "Examples:\n #Create the roles of 'nodes-view' and 'projects-view' for a user named 'user1'\n rancher cluster add-member-role user1 nodes-view projects-view\n",
+				ArgsUsage:   "[USERNAME, ROLE...]",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "cluster-id",
+						Usage: "Optional cluster ID to add member role to, defaults to the current context",
+					},
+				},
+			},
+			{
+				Name:        "delete-member-role",
+				Usage:       "Delete a member from the cluster",
+				Action:      deleteClusterMemberRoles,
+				Description: "Examples:\n #Delete the roles of 'nodes-view' and 'projects-view' for a user named 'user1'\n rancher cluster delete-member-role user1 nodes-view projects-view\n",
+				ArgsUsage:   "[USERNAME, ROLE...]",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "cluster-id",
+						Usage: "Optional cluster ID to remove member role from, defaults to the current context",
+					},
+				},
+			},
+			{
+				Name:   "list-roles",
+				Usage:  "List all available roles for a cluster",
+				Action: listClusterRoles,
+			},
+			{
+				Name:   "list-members",
+				Usage:  "List current members of the cluster",
+				Action: listClusterMembers,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "cluster-id",
+						Usage: "Optional cluster ID to list members for, defaults to the current context",
+					},
+				},
 			},
 		},
 	}
@@ -371,6 +414,148 @@ func clusterKubeConfig(ctx *cli.Context) error {
 	}
 	fmt.Println(config.Config)
 	return nil
+}
+
+func addClusterMemberRoles(ctx *cli.Context) error {
+	if len(ctx.Args()) < 2 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	memberName := ctx.Args().First()
+
+	roles := ctx.Args()[1:]
+
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	member, err := searchForMember(ctx, c, memberName)
+	if nil != err {
+		return err
+	}
+
+	clusterID := c.UserConfig.FocusedCluster()
+	if ctx.String("cluster-id") != "" {
+		clusterID = ctx.String("cluster-id")
+	}
+
+	for _, role := range roles {
+		rtb := managementClient.ClusterRoleTemplateBinding{
+			ClusterId:       clusterID,
+			RoleTemplateId:  role,
+			UserPrincipalId: member.ID,
+		}
+		if member.PrincipalType == "user" {
+			rtb.UserPrincipalId = member.ID
+		} else {
+			rtb.GroupPrincipalId = member.ID
+		}
+		_, err = c.ManagementClient.ClusterRoleTemplateBinding.Create(&rtb)
+		if nil != err {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteClusterMemberRoles(ctx *cli.Context) error {
+	if len(ctx.Args()) < 2 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	memberName := ctx.Args().First()
+
+	roles := ctx.Args()[1:]
+
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	member, err := searchForMember(ctx, c, memberName)
+	if nil != err {
+		return err
+	}
+
+	clusterID := c.UserConfig.FocusedCluster()
+	if ctx.String("cluster-id") != "" {
+		clusterID = ctx.String("cluster-id")
+	}
+
+	for _, role := range roles {
+		filter := defaultListOpts(ctx)
+		filter.Filters["clusterId"] = clusterID
+		filter.Filters["roleTemplateId"] = role
+
+		if member.PrincipalType == "user" {
+			filter.Filters["userPrincipalId"] = member.ID
+		} else {
+			filter.Filters["groupPrincipalId"] = member.ID
+		}
+
+		bindings, err := c.ManagementClient.ClusterRoleTemplateBinding.List(filter)
+		if nil != err {
+			return err
+		}
+
+		for _, binding := range bindings.Data {
+			err = c.ManagementClient.ClusterRoleTemplateBinding.Delete(&binding)
+			if nil != err {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func listClusterRoles(ctx *cli.Context) error {
+	return listRoles(ctx, "cluster")
+}
+
+func listClusterMembers(ctx *cli.Context) error {
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	clusterID := c.UserConfig.FocusedCluster()
+	if ctx.String("cluster-id") != "" {
+		clusterID = ctx.String("cluster-id")
+	}
+
+	filter := defaultListOpts(ctx)
+	filter.Filters["clusterId"] = clusterID
+	bindings, err := c.ManagementClient.ClusterRoleTemplateBinding.List(filter)
+	if nil != err {
+		return err
+	}
+
+	userFilter := defaultListOpts(ctx)
+	users, err := c.ManagementClient.User.List(userFilter)
+	if nil != err {
+		return err
+	}
+
+	userMap := usersToNameMapping(users.Data)
+
+	var b []RoleTemplateBinding
+
+	for _, binding := range bindings.Data {
+		parsedTime, err := time.Parse(time.RFC3339, binding.Created)
+		if nil != err {
+			return err
+		}
+
+		b = append(b, RoleTemplateBinding{
+			ID:      binding.ID,
+			User:    userMap[binding.UserId],
+			Role:    binding.RoleTemplateId,
+			Created: parsedTime.Format("02 Jan 2006 15:04:05 MST"),
+		})
+	}
+
+	return listRoleTemplateBindings(ctx, b)
 }
 
 // getClusterRegToken will return an existing token or create one if none exist
