@@ -45,7 +45,7 @@ type Token struct {
 	OwnerReferences []OwnerReference  `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
 	ProviderInfo    map[string]string `json:"providerInfo,omitempty" yaml:"providerInfo,omitempty"`
 	Removed         string            `json:"removed,omitempty" yaml:"removed,omitempty"`
-	TTLMillis       *int64            `json:"ttl,omitempty" yaml:"ttl,omitempty"`
+	TTLMillis       int64             `json:"ttl,omitempty" yaml:"ttl,omitempty"`
 	Token           string            `json:"token,omitempty" yaml:"token,omitempty"`
 	UserID          string            `json:"userId,omitempty" yaml:"userId,omitempty"`
 	UserPrincipal   string            `json:"userPrincipal,omitempty" yaml:"userPrincipal,omitempty"`
@@ -67,6 +67,8 @@ type TokenOperations interface {
 	Update(existing *Token, updates interface{}) (*Token, error)
 	ByID(id string) (*Token, error)
 	Delete(container *Token) error
+
+	ActionLogout(resource *TokenCollection) error
 }
 
 func newTokenClient(apiClient *Client) *TokenClient {
@@ -112,4 +114,10 @@ func (c *TokenClient) ByID(id string) (*Token, error) {
 
 func (c *TokenClient) Delete(container *Token) error {
 	return c.apiClient.Ops.DoResourceDelete(TokenType, &container.Resource)
+}
+
+func (c *TokenClient) ActionLogout(resource *TokenCollection) error {
+	err := c.apiClient.Ops.DoCollectionAction(TokenType, "logout", &resource.Collection, nil, nil)
+	return err
+
 }

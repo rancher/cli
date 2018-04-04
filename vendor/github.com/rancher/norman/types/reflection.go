@@ -2,24 +2,20 @@ package types
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
-
-	"net/http"
 
 	"github.com/rancher/norman/types/convert"
 	"github.com/rancher/norman/types/definition"
 	"github.com/rancher/norman/types/slice"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
 	namespacedType = reflect.TypeOf(Namespaced{})
 	resourceType   = reflect.TypeOf(Resource{})
-	typeType       = reflect.TypeOf(metav1.TypeMeta{})
-	metaType       = reflect.TypeOf(metav1.ObjectMeta{})
 	blacklistNames = map[string]bool{
 		"links":   true,
 		"actions": true,
@@ -151,7 +147,7 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 
 	mappers := s.mapper(&schema.Version, schema.ID)
 	if s.DefaultMappers != nil {
-		if schema.CanList(nil) {
+		if schema.CanList(nil) == nil {
 			mappers = append(s.DefaultMappers(), mappers...)
 		}
 	}
@@ -175,7 +171,7 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 
 	mapper := &typeMapper{
 		Mappers: mappers,
-		root:    schema.CanList(nil),
+		root:    schema.CanList(nil) == nil,
 	}
 
 	if err := mapper.ModifySchema(schema, s); err != nil {
@@ -192,6 +188,16 @@ func (s *Schemas) importType(version *APIVersion, t reflect.Type, overrides ...r
 
 func jsonName(f reflect.StructField) string {
 	return strings.SplitN(f.Tag.Get("json"), ",", 2)[0]
+}
+
+func k8sType(field reflect.StructField) bool {
+	return field.Type.Name() == "TypeMeta" &&
+		strings.HasSuffix(field.Type.PkgPath(), "k8s.io/apimachinery/pkg/apis/meta/v1")
+}
+
+func k8sObject(field reflect.StructField) bool {
+	return field.Type.Name() == "ObjectMeta" &&
+		strings.HasSuffix(field.Type.PkgPath(), "k8s.io/apimachinery/pkg/apis/meta/v1")
 }
 
 func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
@@ -212,16 +218,15 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		}
 
 		jsonName := jsonName(field)
-
 		if jsonName == "-" {
 			continue
 		}
 
-		if field.Anonymous && jsonName == "" && field.Type == typeType {
+		if field.Anonymous && jsonName == "" && k8sType(field) {
 			hasType = true
 		}
 
-		if field.Anonymous && jsonName == "metadata" && field.Type == metaType {
+		if field.Anonymous && jsonName == "metadata" && k8sObject(field) {
 			hasMeta = true
 		}
 
@@ -270,6 +275,11 @@ func (s *Schemas) readFields(schema *Schema, t reflect.Type) error {
 		} else if fieldType.Kind() == reflect.Bool {
 			schemaField.Nullable = false
 			schemaField.Default = false
+		} else if fieldType.Kind() == reflect.Int ||
+			fieldType.Kind() == reflect.Int32 ||
+			fieldType.Kind() == reflect.Int64 {
+			schemaField.Nullable = false
+			schemaField.Default = 0
 		}
 
 		if err := applyTag(&field, &schemaField); err != nil {

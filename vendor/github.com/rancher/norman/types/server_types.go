@@ -69,11 +69,11 @@ type ResponseWriter interface {
 }
 
 type AccessControl interface {
-	CanCreate(apiContext *APIContext, schema *Schema) bool
-	CanList(apiContext *APIContext, schema *Schema) bool
-	CanGet(apiContext *APIContext, schema *Schema) bool
-	CanUpdate(apiContext *APIContext, obj map[string]interface{}, schema *Schema) bool
-	CanDelete(apiContext *APIContext, obj map[string]interface{}, schema *Schema) bool
+	CanCreate(apiContext *APIContext, schema *Schema) error
+	CanList(apiContext *APIContext, schema *Schema) error
+	CanGet(apiContext *APIContext, schema *Schema) error
+	CanUpdate(apiContext *APIContext, obj map[string]interface{}, schema *Schema) error
+	CanDelete(apiContext *APIContext, obj map[string]interface{}, schema *Schema) error
 
 	Filter(apiContext *APIContext, schema *Schema, obj map[string]interface{}, context map[string]string) map[string]interface{}
 	FilterList(apiContext *APIContext, schema *Schema, obj []map[string]interface{}, context map[string]string) []map[string]interface{}
@@ -184,6 +184,7 @@ type URLBuilder interface {
 	FilterLink(schema *Schema, fieldName string, value string) string
 	Action(action string, resource *RawResource) string
 	ResourceLinkByID(schema *Schema, id string) string
+	ActionLinkByID(schema *Schema, id string, action string) string
 }
 
 type StorageContext string
