@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/types/client/management/v3"
@@ -56,6 +57,48 @@ func ProjectCommand() cli.Command {
 				Usage:     "Delete a project by ID",
 				ArgsUsage: "[PROJECTID]",
 				Action:    deleteProject,
+			},
+			{
+				Name:        "add-member-role",
+				Usage:       "Add a member to the project",
+				Action:      addProjectMemberRoles,
+				Description: "Examples:\n #Create the roles of 'create-ns' and 'services-manage' for a user named 'user1'\n rancher project add-member-role user1 create-ns services-manage\n",
+				ArgsUsage:   "[USERNAME, ROLE...]",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "project-id",
+						Usage: "Optional project ID to apply this change to, defaults to the current context",
+					},
+				},
+			},
+			{
+				Name:        "delete-member-role",
+				Usage:       "Delete a member from the project",
+				Action:      deleteProjectMemberRoles,
+				Description: "Examples:\n #Delete the roles of 'create-ns' and 'services-manage' for a user named 'user1'\n rancher project delete-member-role user1 create-ns services-manage\n",
+				ArgsUsage:   "[USERNAME, ROLE...]",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "project-id",
+						Usage: "Optional project ID to apply this change to, defaults to the current context",
+					},
+				},
+			},
+			{
+				Name:   "list-roles",
+				Usage:  "List all available roles for a project",
+				Action: listProjectRoles,
+			},
+			{
+				Name:   "list-members",
+				Usage:  "List current members of the project",
+				Action: listProjectMembers,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "project-id",
+						Usage: "Optional project ID to list members for, defaults to the current context",
+					},
+				},
 			},
 		},
 	}
@@ -143,6 +186,148 @@ func deleteProject(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+func addProjectMemberRoles(ctx *cli.Context) error {
+	if len(ctx.Args()) < 2 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	memberName := ctx.Args().First()
+
+	roles := ctx.Args()[1:]
+
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	member, err := searchForMember(ctx, c, memberName)
+	if nil != err {
+		return err
+	}
+
+	projectID := c.UserConfig.Project
+	if ctx.String("project-id") != "" {
+		projectID = ctx.String("project-id")
+	}
+
+	for _, role := range roles {
+		rtb := managementClient.ProjectRoleTemplateBinding{
+			ProjectId:       projectID,
+			RoleTemplateId:  role,
+			UserPrincipalId: member.ID,
+		}
+		if member.PrincipalType == "user" {
+			rtb.UserPrincipalId = member.ID
+		} else {
+			rtb.GroupPrincipalId = member.ID
+		}
+		_, err = c.ManagementClient.ProjectRoleTemplateBinding.Create(&rtb)
+		if nil != err {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteProjectMemberRoles(ctx *cli.Context) error {
+	if len(ctx.Args()) < 2 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	memberName := ctx.Args().First()
+
+	roles := ctx.Args()[1:]
+
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	member, err := searchForMember(ctx, c, memberName)
+	if nil != err {
+		return err
+	}
+
+	projectID := c.UserConfig.Project
+	if ctx.String("project-id") != "" {
+		projectID = ctx.String("project-id")
+	}
+
+	for _, role := range roles {
+		filter := defaultListOpts(ctx)
+		filter.Filters["projectId"] = projectID
+		filter.Filters["roleTemplateId"] = role
+
+		if member.PrincipalType == "user" {
+			filter.Filters["userPrincipalId"] = member.ID
+		} else {
+			filter.Filters["groupPrincipalId"] = member.ID
+		}
+
+		bindings, err := c.ManagementClient.ProjectRoleTemplateBinding.List(filter)
+		if nil != err {
+			return err
+		}
+
+		for _, binding := range bindings.Data {
+			err = c.ManagementClient.ProjectRoleTemplateBinding.Delete(&binding)
+			if nil != err {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func listProjectRoles(ctx *cli.Context) error {
+	return listRoles(ctx, "project")
+}
+
+func listProjectMembers(ctx *cli.Context) error {
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	projectID := c.UserConfig.Project
+	if ctx.String("project-id") != "" {
+		projectID = ctx.String("project-id")
+	}
+
+	filter := defaultListOpts(ctx)
+	filter.Filters["projectId"] = projectID
+	bindings, err := c.ManagementClient.ProjectRoleTemplateBinding.List(filter)
+	if nil != err {
+		return err
+	}
+
+	userFilter := defaultListOpts(ctx)
+	users, err := c.ManagementClient.User.List(userFilter)
+	if nil != err {
+		return err
+	}
+
+	userMap := usersToNameMapping(users.Data)
+
+	var b []RoleTemplateBinding
+
+	for _, binding := range bindings.Data {
+		parsedTime, err := time.Parse(time.RFC3339, binding.Created)
+		if nil != err {
+			return err
+		}
+
+		b = append(b, RoleTemplateBinding{
+			ID:      binding.ID,
+			User:    userMap[binding.UserId],
+			Role:    binding.RoleTemplateId,
+			Created: parsedTime.Format("02 Jan 2006 15:04:05 MST"),
+		})
+	}
+
+	return listRoleTemplateBindings(ctx, b)
 }
 
 func getProjectList(
