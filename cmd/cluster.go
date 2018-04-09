@@ -19,6 +19,9 @@ const (
 Imports an existing cluster to be used in rancher by using a generated kubectl 
 command to run in your existing Kubernetes cluster.
 `
+	importClusterNotice = "If you get an error about 'certificate signed by unknown authority' " +
+		"because your Rancher installation is running with an untrusted/self-signed SSL " +
+		"certificate, run the command below instead to bypass the certificate check:"
 )
 
 type ClusterData struct {
@@ -293,7 +296,7 @@ func clusterImport(ctx *cli.Context) error {
 		return err
 	}
 
-	fmt.Printf("Run the following command in your cluster: %v\n", clusterToken.Command)
+	fmt.Printf("Run the following command in your cluster:\n%s\n\n%s\n%s\n", clusterToken.Command, importClusterNotice, clusterToken.InsecureCommand)
 
 	return nil
 }
