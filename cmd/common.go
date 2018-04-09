@@ -51,6 +51,14 @@ type RoleTemplateBinding struct {
 	Created string
 }
 
+func listAllRoles() []string {
+	roles := []string{}
+	roles = append(roles, ManagementResourceTypes...)
+	roles = append(roles, ProjectResourceTypes...)
+	roles = append(roles, ClusterResourceTypes...)
+	return roles
+}
+
 func listRoles(ctx *cli.Context, context string) error {
 	c, err := GetClient(ctx)
 	if nil != err {
