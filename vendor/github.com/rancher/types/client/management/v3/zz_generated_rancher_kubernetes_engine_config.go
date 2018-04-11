@@ -12,6 +12,7 @@ const (
 	RancherKubernetesEngineConfigFieldIngress             = "ingress"
 	RancherKubernetesEngineConfigFieldNetwork             = "network"
 	RancherKubernetesEngineConfigFieldNodes               = "nodes"
+	RancherKubernetesEngineConfigFieldPrefixPath          = "prefixPath"
 	RancherKubernetesEngineConfigFieldPrivateRegistries   = "privateRegistries"
 	RancherKubernetesEngineConfigFieldSSHAgentAuth        = "sshAgentAuth"
 	RancherKubernetesEngineConfigFieldSSHKeyPath          = "sshKeyPath"
@@ -30,6 +31,7 @@ type RancherKubernetesEngineConfig struct {
 	Ingress             *IngressConfig     `json:"ingress,omitempty" yaml:"ingress,omitempty"`
 	Network             *NetworkConfig     `json:"network,omitempty" yaml:"network,omitempty"`
 	Nodes               []RKEConfigNode    `json:"nodes,omitempty" yaml:"nodes,omitempty"`
+	PrefixPath          string             `json:"prefixPath,omitempty" yaml:"prefixPath,omitempty"`
 	PrivateRegistries   []PrivateRegistry  `json:"privateRegistries,omitempty" yaml:"privateRegistries,omitempty"`
 	SSHAgentAuth        bool               `json:"sshAgentAuth,omitempty" yaml:"sshAgentAuth,omitempty"`
 	SSHKeyPath          string             `json:"sshKeyPath,omitempty" yaml:"sshKeyPath,omitempty"`
