@@ -22,12 +22,20 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/config"
+	"github.com/rancher/norman/clientbase"
+	ntypes "github.com/rancher/norman/types"
 	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/urfave/cli"
 )
 
 var (
 	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
+	// ManagementResourceTypes lists the types we use the management client for
+	ManagementResourceTypes = []string{"cluster", "node", "project"}
+	// ProjectResourceTypes lists the types we use the cluster client for
+	ProjectResourceTypes = []string{"secret", "namespacedSecret", "workload"}
+	// ClusterResourceTypes lists the types we use the project client for
+	ClusterResourceTypes = []string{"persistentVolume", "storageClass", "namespace"}
 )
 
 type RoleTemplate struct {
@@ -54,6 +62,9 @@ func listRoles(ctx *cli.Context, context string) error {
 	filter.Filters["context"] = context
 
 	templates, err := c.ManagementClient.RoleTemplate.List(filter)
+	if nil != err {
+		return err
+	}
 
 	writer := NewTableWriter([][]string{
 		{"ID", "ID"},
@@ -226,6 +237,74 @@ func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
 	}
 
 	return mc, nil
+}
+
+func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Resource, error) {
+	var byName *ntypes.Resource
+
+	for _, schemaType := range types {
+		var schemaClient clientbase.APIBaseClientInterface
+		// the schemaType dictates which client we need to use
+		if _, ok := c.ManagementClient.APIBaseClient.Types[schemaType]; ok {
+			schemaClient = c.ManagementClient
+		} else if _, ok := c.ProjectClient.APIBaseClient.Types[schemaType]; ok {
+			schemaClient = c.ProjectClient
+		} else if _, ok := c.ClusterClient.APIBaseClient.Types[schemaType]; ok {
+			schemaClient = c.ClusterClient
+		} else {
+			return nil, errors.New("unkown resource type")
+		}
+
+		// Attempt to get the resource by ID
+		var resource ntypes.Resource
+
+		if err := schemaClient.ByID(schemaType, name, &resource); !clientbase.IsNotFound(err) && err != nil {
+			return nil, err
+		} else if err == nil && resource.ID == name {
+			return &resource, nil
+		}
+
+		// Resource was not found assuming the ID, check if it's the name of a resource
+		var collection ntypes.ResourceCollection
+
+		listOpts := &ntypes.ListOpts{
+			Filters: map[string]interface{}{
+				"name":         name,
+				"removed_null": 1,
+			},
+		}
+
+		if err := schemaClient.List(schemaType, listOpts, &collection); err != nil {
+			return nil, err
+		}
+
+		if len(collection.Data) > 1 {
+			ids := []string{}
+			for _, data := range collection.Data {
+				ids = append(ids, data.ID)
+			}
+			return nil, fmt.Errorf("Multiple resources of type %s found for name %s: %v", schemaType, name, ids)
+		}
+
+		// No matches for this schemaType, try the next one
+		if len(collection.Data) == 0 {
+			continue
+		}
+
+		if byName != nil {
+			return nil, fmt.Errorf("Multiple resources named %s: %s:%s, %s:%s", name, collection.Data[0].Type,
+				collection.Data[0].ID, byName.Type, byName.ID)
+		}
+
+		byName = &collection.Data[0]
+
+	}
+
+	if byName == nil {
+		return nil, fmt.Errorf("Not found: %s", name)
+	}
+
+	return byName, nil
 }
 
 func RandomName() string {

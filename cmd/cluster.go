@@ -93,13 +93,13 @@ func ClusterCommand() cli.Command {
 				Name:        "import",
 				Usage:       "Import an existing Kubernetes cluster into a Rancher cluster",
 				Description: importDescription,
-				ArgsUsage:   "[CLUSTERID]",
+				ArgsUsage:   "[CLUSTERID CLUSTERNAME]",
 				Action:      clusterImport,
 			},
 			{
 				Name:      "add-node",
 				Usage:     "Outputs the docker command needed to add a node to an existing Rancher cluster",
-				ArgsUsage: "[CLUSTERID]",
+				ArgsUsage: "[CLUSTERID CLUSTERNAME]",
 				Action:    clusterAddNode,
 				Flags: []cli.Flag{
 					cli.StringSliceFlag{
@@ -124,14 +124,14 @@ func ClusterCommand() cli.Command {
 				Name:      "delete",
 				Aliases:   []string{"rm"},
 				Usage:     "Delete a cluster",
-				ArgsUsage: "[CLUSTERID]",
+				ArgsUsage: "[CLUSTERID CLUSTERNAME]",
 				Action:    deleteCluster,
 			},
 			{
 				Name:      "kubeconfig",
 				Aliases:   []string{"kf"},
 				Usage:     "Return the kube config used to access the cluster",
-				ArgsUsage: "[CLUSTERID]",
+				ArgsUsage: "[CLUSTERID CLUSTERNAME]",
 				Action:    clusterKubeConfig,
 			},
 			{
@@ -274,7 +274,7 @@ func clusterCreate(ctx *cli.Context) error {
 
 func clusterImport(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("cluster ID is required")
+		return errors.New("cluster name or ID is required")
 	}
 
 	c, err := GetClient(ctx)
@@ -282,7 +282,12 @@ func clusterImport(ctx *cli.Context) error {
 		return err
 	}
 
-	cluster, err := getClusterByID(c, ctx.Args().First())
+	resource, err := Lookup(c, ctx.Args().First(), "cluster")
+	if nil != err {
+		return err
+	}
+
+	cluster, err := getClusterByID(c, resource.ID)
 	if nil != err {
 		return err
 	}
@@ -303,27 +308,28 @@ func clusterImport(ctx *cli.Context) error {
 
 // clusterAddNode prints the command needed to add a node to a cluster
 func clusterAddNode(ctx *cli.Context) error {
-	var clusterName string
-
 	if ctx.NArg() == 0 {
-		return errors.New("cluster ID is required")
+		return errors.New("cluster name or ID is required")
 	}
-
-	clusterName = ctx.Args().First()
 
 	c, err := GetClient(ctx)
 	if nil != err {
 		return err
 	}
 
-	cluster, err := getClusterByID(c, clusterName)
+	resource, err := Lookup(c, ctx.Args().First(), "cluster")
+	if nil != err {
+		return err
+	}
+
+	cluster, err := getClusterByID(c, resource.ID)
 	if nil != err {
 		return err
 	}
 
 	if cluster.Driver == "rancherKubernetesEngine" || cluster.Driver == "" {
 		filter := defaultListOpts(ctx)
-		filter.Filters["clusterId"] = clusterName
+		filter.Filters["clusterId"] = cluster.ID
 		nodePools, err := c.ManagementClient.NodePool.List(filter)
 		if nil != err {
 			return err
@@ -371,7 +377,7 @@ func clusterAddNode(ctx *cli.Context) error {
 
 func deleteCluster(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("cluster ID is required")
+		return errors.New("cluster name or ID is required")
 	}
 
 	c, err := GetClient(ctx)
@@ -379,7 +385,12 @@ func deleteCluster(ctx *cli.Context) error {
 		return err
 	}
 
-	cluster, err := getClusterByID(c, ctx.Args().First())
+	resource, err := Lookup(c, ctx.Args().First(), "cluster")
+	if nil != err {
+		return err
+	}
+
+	cluster, err := getClusterByID(c, resource.ID)
 	if nil != err {
 		return err
 	}
@@ -393,20 +404,21 @@ func deleteCluster(ctx *cli.Context) error {
 }
 
 func clusterKubeConfig(ctx *cli.Context) error {
-	var clusterName string
-
 	if ctx.NArg() == 0 {
-		return errors.New("cluster ID is required")
+		return errors.New("cluster name or ID is required")
 	}
-
-	clusterName = ctx.Args().First()
 
 	c, err := GetClient(ctx)
 	if nil != err {
 		return err
 	}
 
-	cluster, err := getClusterByID(c, clusterName)
+	resource, err := Lookup(c, ctx.Args().First(), "cluster")
+	if nil != err {
+		return err
+	}
+
+	cluster, err := getClusterByID(c, resource.ID)
 	if nil != err {
 		return err
 	}

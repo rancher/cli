@@ -26,7 +26,7 @@ func SSHCommand() cli.Command {
 		Name:            "ssh",
 		Usage:           "SSH into a node",
 		Description:     sshDescription,
-		ArgsUsage:       "[NODEID]",
+		ArgsUsage:       "[NODEID NODENAME]",
 		Action:          nodeSSH,
 		Flags:           []cli.Flag{},
 		SkipFlagParsing: true,
@@ -47,10 +47,12 @@ func nodeSSH(ctx *cli.Context) error {
 		return err
 	}
 
-	filter := defaultListOpts(ctx)
-	filter.Filters["clusterId"] = c.UserConfig.FocusedCluster()
+	resource, err := Lookup(c, args[0], "node")
+	if nil != err {
+		return err
+	}
 
-	sshNode, err := getNodeByID(ctx, c, args[0])
+	sshNode, err := getNodeByID(ctx, c, resource.ID)
 	if nil != err {
 		return err
 	}
