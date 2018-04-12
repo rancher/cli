@@ -33,7 +33,7 @@ func NamespaceCommand() cli.Command {
 					},
 					cli.StringFlag{
 						Name:  "format",
-						Usage: "'json' or Custom format: '{{.Namespace.ID}} {{.Namespace.Name}}'",
+						Usage: "'json', 'yaml' or Custom format: '{{.Namespace.ID}} {{.Namespace.Name}}'",
 					},
 				},
 			},
