@@ -53,8 +53,8 @@ func NamespaceCommand() cli.Command {
 			{
 				Name:      "delete",
 				Aliases:   []string{"rm"},
-				Usage:     "Delete a namespace by ID",
-				ArgsUsage: "[PROJECTID]",
+				Usage:     "Delete a namespace by name or ID",
+				ArgsUsage: "[NAMESPACEID NAMESPACENAME]",
 				Action:    namespaceDelete,
 			},
 			{
@@ -62,7 +62,7 @@ func NamespaceCommand() cli.Command {
 				Usage: "Associate a namespace with a project",
 				Description: "\nAssociates a namespace with a project. If no " +
 					"[PROJECTID] is provided the namespace will be unassociated from all projects",
-				ArgsUsage: "[NAMESPACEID PROJECTID]",
+				ArgsUsage: "[NAMESPACEID/NAMESPACENAME PROJECTID]",
 				Action:    namespaceAssociate,
 			},
 		},
@@ -137,7 +137,7 @@ func namespaceCreate(ctx *cli.Context) error {
 
 func namespaceDelete(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("namespace name is required")
+		return errors.New("namespace name or ID is required")
 	}
 
 	c, err := GetClient(ctx)
@@ -145,7 +145,12 @@ func namespaceDelete(ctx *cli.Context) error {
 		return err
 	}
 
-	namespace, err := getNamespaceByID(c, ctx.Args().First())
+	resource, err := Lookup(c, ctx.Args().First(), "namespace")
+	if nil != err {
+		return err
+	}
+
+	namespace, err := getNamespaceByID(c, resource.ID)
 	if nil != err {
 		return err
 	}
@@ -168,7 +173,12 @@ func namespaceAssociate(ctx *cli.Context) error {
 		return err
 	}
 
-	namespace, err := getNamespaceByID(c, ctx.Args().First())
+	resource, err := Lookup(c, ctx.Args().First(), "namespace")
+	if nil != err {
+		return err
+	}
+
+	namespace, err := getNamespaceByID(c, resource.ID)
 	if err != nil {
 		return err
 	}

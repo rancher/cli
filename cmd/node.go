@@ -39,7 +39,7 @@ func NodeCommand() cli.Command {
 				Name:      "delete",
 				Aliases:   []string{"rm"},
 				Usage:     "Delete a node by ID",
-				ArgsUsage: "[NODEID]",
+				ArgsUsage: "[NODEID NODENAME]",
 				Action:    deleteNode,
 			},
 		},
@@ -85,7 +85,7 @@ func nodeLs(ctx *cli.Context) error {
 
 func deleteNode(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("node ID is required")
+		return errors.New("node name or ID is required")
 	}
 
 	c, err := GetClient(ctx)
@@ -93,7 +93,12 @@ func deleteNode(ctx *cli.Context) error {
 		return err
 	}
 
-	node, err := getNodeByID(ctx, c, ctx.Args().First())
+	resource, err := Lookup(c, ctx.Args().First(), "node")
+	if nil != err {
+		return err
+	}
+
+	node, err := getNodeByID(ctx, c, resource.ID)
 	if nil != err {
 		return err
 	}

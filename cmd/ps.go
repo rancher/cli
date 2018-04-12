@@ -44,7 +44,12 @@ func psLs(ctx *cli.Context) error {
 
 	if ctx.String("project") != "" {
 		//Verify the project given is valid
-		_, err := getProjectByID(c, ctx.String("project"))
+		resource, err := Lookup(c, ctx.String("project"), "project")
+		if nil != err {
+			return err
+		}
+
+		_, err = getProjectByID(c, resource.ID)
 		if nil != err {
 			return err
 		}

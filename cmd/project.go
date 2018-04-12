@@ -55,7 +55,7 @@ func ProjectCommand() cli.Command {
 				Name:      "delete",
 				Aliases:   []string{"rm"},
 				Usage:     "Delete a project by ID",
-				ArgsUsage: "[PROJECTID]",
+				ArgsUsage: "[PROJECTID PROJECTNAME]",
 				Action:    deleteProject,
 			},
 			{
@@ -175,7 +175,12 @@ func deleteProject(ctx *cli.Context) error {
 		return err
 	}
 
-	project, err := getProjectByID(c, ctx.Args().First())
+	resource, err := Lookup(c, ctx.Args().First(), "project")
+	if nil != err {
+		return err
+	}
+
+	project, err := getProjectByID(c, resource.ID)
 	if nil != err {
 		return err
 	}
