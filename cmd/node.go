@@ -31,7 +31,7 @@ func NodeCommand() cli.Command {
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "format",
-						Usage: "'json' or Custom format: '{{.Node.ID}} {{.Node.Name}}'",
+						Usage: "'json', 'yaml' or Custom format: '{{.Node.ID}} {{.Node.Name}}'",
 					},
 				},
 			},

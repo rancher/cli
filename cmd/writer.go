@@ -5,6 +5,7 @@ import (
 	"os"
 	"text/tabwriter"
 
+	"github.com/ghodss/yaml"
 	"github.com/urfave/cli"
 )
 
@@ -32,6 +33,9 @@ func NewTableWriter(values [][]string, ctx *cli.Context) *TableWriter {
 	if customFormat == "json" {
 		t.HeaderFormat = ""
 		t.ValueFormat = "json"
+	} else if customFormat == "yaml" {
+		t.HeaderFormat = ""
+		t.ValueFormat = "yaml"
 	} else if customFormat != "" {
 		t.ValueFormat = customFormat + "\n"
 		t.HeaderFormat = ""
@@ -66,6 +70,13 @@ func (t *TableWriter) Write(obj interface{}) {
 
 	if t.ValueFormat == "json" {
 		content, err := json.Marshal(obj)
+		t.err = err
+		if t.err != nil {
+			return
+		}
+		_, t.err = t.Writer.Write(append(content, byte('\n')))
+	} else if t.ValueFormat == "yaml" {
+		content, err := yaml.Marshal(obj)
 		t.err = err
 		if t.err != nil {
 			return

@@ -51,7 +51,7 @@ func ClusterCommand() cli.Command {
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "format",
-						Usage: "'json' or Custom format: '{{.Cluster.ID}} {{.Cluster.Name}}'",
+						Usage: "'json', 'yaml' or Custom format: '{{.Cluster.ID}} {{.Cluster.Name}}'",
 					},
 				},
 			},

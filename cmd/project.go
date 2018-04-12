@@ -30,7 +30,7 @@ func ProjectCommand() cli.Command {
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "format",
-						Usage: "'json' or Custom format: '{{.Project.ID}} {{.Project.Name}}'",
+						Usage: "'json', 'yaml' or Custom format: '{{.Project.ID}} {{.Project.Name}}'",
 					},
 				},
 			},

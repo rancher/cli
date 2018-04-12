@@ -30,7 +30,7 @@ func PsCommand() cli.Command {
 			},
 			cli.StringFlag{
 				Name:  "format",
-				Usage: "'json' or Custom format: '{{.Name}} {{.Image}}'",
+				Usage: "'json', 'yaml' or Custom format: '{{.Name}} {{.Image}}'",
 			},
 		},
 	}
