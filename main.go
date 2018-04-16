@@ -75,6 +75,7 @@ func mainErr() error {
 		cmd.NodeCommand(),
 		cmd.ProjectCommand(),
 		cmd.PsCommand(),
+		cmd.SettingsCommand(),
 		cmd.SSHCommand(),
 	}
 	for _, com := range app.Commands {
