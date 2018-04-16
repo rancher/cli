@@ -19,14 +19,21 @@ type PSHolder struct {
 
 func PsCommand() cli.Command {
 	return cli.Command{
-		Name:        "ps",
-		Usage:       "Show workloads and pods",
-		Description: "Prints out a table of pods not associated with a workload then a table of workloads",
-		Action:      psLs,
+		Name:  "ps",
+		Usage: "Show workloads in a project",
+		Description: `Show information on the workloads in a project. Defaults to the current context.
+Examples:
+	# Show workloads in the current context
+	$ rancher ps
+
+	#Show workloads in a specific project and output the results in yaml
+	$ rancher ps --project projectFoo --format yaml
+`,
+		Action: psLs,
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "project",
-				Usage: "project to show workloads for",
+				Usage: "Optional project to show workloads for",
 			},
 			cli.StringFlag{
 				Name:  "format",
@@ -49,16 +56,11 @@ func psLs(ctx *cli.Context) error {
 			return err
 		}
 
-		_, err = getProjectByID(c, resource.ID)
-		if nil != err {
-			return err
-		}
-
 		sc, err := lookupConfig(ctx)
 		if nil != err {
 			return err
 		}
-		sc.Project = ctx.String("project")
+		sc.Project = resource.ID
 
 		projClient, err := cliclient.NewProjectClient(sc)
 		if nil != err {
