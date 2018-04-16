@@ -36,6 +36,11 @@ var (
 	ProjectResourceTypes = []string{"secret", "namespacedSecret", "workload"}
 	// ClusterResourceTypes lists the types we use the project client for
 	ClusterResourceTypes = []string{"persistentVolume", "storageClass", "namespace"}
+
+	formatFlag = cli.StringFlag{
+		Name:  "format",
+		Usage: "'json', 'yaml' or custom format",
+	}
 )
 
 type RoleTemplate struct {
