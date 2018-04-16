@@ -145,11 +145,11 @@ func projectCreate(ctx *cli.Context) error {
 
 	clusterID := c.UserConfig.FocusedCluster()
 	if ctx.String("cluster") != "" {
-		cluster, err := getClusterByID(c, ctx.String("cluster"))
+		resource, err := Lookup(c, ctx.String("cluster"), "cluster")
 		if nil != err {
 			return err
 		}
-		clusterID = cluster.ID
+		clusterID = resource.ID
 	}
 
 	newProj := &managementClient.Project{
