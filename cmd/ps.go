@@ -26,7 +26,7 @@ Examples:
 	# Show workloads in the current context
 	$ rancher ps
 
-	#Show workloads in a specific project and output the results in yaml
+	# Show workloads in a specific project and output the results in yaml
 	$ rancher ps --project projectFoo --format yaml
 `,
 		Action: psLs,
