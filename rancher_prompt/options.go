@@ -44,8 +44,8 @@ func optionCompleter(args []string, long bool) []prompt.Suggest {
 }
 
 var optionHelp = []prompt.Suggest{
-	{Text: "-h", Description: "Help Commmand"},
-	{Text: "--help", Description: "Help Commmand"},
+	{Text: "-h", Description: "Help Command"},
+	{Text: "--help", Description: "Help Command"},
 }
 
 func excludeOptions(args []string) []string {

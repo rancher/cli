@@ -265,7 +265,7 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 		} else if _, ok := c.ClusterClient.APIBaseClient.Types[schemaType]; ok {
 			schemaClient = c.ClusterClient
 		} else {
-			return nil, errors.New("unkown resource type")
+			return nil, errors.New("unknown resource type")
 		}
 
 		// Attempt to get the resource by ID
