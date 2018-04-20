@@ -83,7 +83,7 @@ func inspectResources(ctx *cli.Context) error {
 			return err
 		}
 	} else {
-		return errors.New("unkown resource type")
+		return errors.New("unknown resource type")
 	}
 
 	if !ctx.Bool("links") {
