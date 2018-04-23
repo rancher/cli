@@ -71,8 +71,6 @@ func execCommandInternal(ctx *cli.Context) error {
 		return errors.New("not authorized to exec into this container")
 	}
 
-	fmt.Println(execURL)
-
 	payload := execPayload{
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -181,24 +179,27 @@ func selectContainer(c *client.RancherClient, args []string) ([]string, string, 
 	}
 
 	var containerExecURL string
-	if _, ok := resource.Links["instances"]; ok {
+	if _, ok := resource.Actions["execute"]; ok {
+		containerExecURL = resource.Actions["execute"]
+	} else {
 		var instances client.ContainerCollection
 		if err := c.GetLink(*resource, "instances", &instances); err != nil {
 			return nil, "", err
 		}
 
-		containerExecURL, err = getContainerIDFromList(c, instances)
+		containerExecURL, err = getContainerExecFromList(c, instances)
 		if err != nil {
 			return nil, "", err
 		}
-	} else {
-		containerExecURL = resource.Actions["execute"]
 	}
 
 	return newArgs, containerExecURL, nil
 }
 
-func getContainerIDFromList(c *client.RancherClient, containers client.ContainerCollection) (string, error) {
+// getContainerExecFromList accepts a container collection, if there is more than
+// one it prints them to the screen, accepts user input then returns the execute
+// link for the user chosen container
+func getContainerExecFromList(c *client.RancherClient, containers client.ContainerCollection) (string, error) {
 	if len(containers.Data) == 0 {
 		return "", fmt.Errorf("failed to find a container")
 	}
