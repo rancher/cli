@@ -67,7 +67,6 @@ func mainErr() error {
 		},
 	}
 	app.Commands = []cli.Command{
-		cmd.UpCommand(),
 		cmd.ClusterCommand(),
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
@@ -79,6 +78,12 @@ func mainErr() error {
 		cmd.SettingsCommand(),
 		cmd.SSHCommand(),
 	}
+
+	env := os.Getenv("RANCHER_EXPERIMENTAL")
+	if env != "" {
+		app.Commands = append(app.Commands, cmd.UpCommand())
+	}
+
 	for _, com := range app.Commands {
 		rancherprompt.Commands[com.Name] = com
 		rancherprompt.Commands[com.ShortName] = com
