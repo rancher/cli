@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/grantae/certinfo"
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/config"
@@ -68,6 +70,10 @@ func loginSetup(ctx *cli.Context) error {
 		return nil
 	}
 
+	if ctx.NArg() == 0 {
+		return cli.ShowCommandHelp(ctx, "login")
+	}
+
 	path := ctx.GlobalString("cf")
 	if path == "" {
 		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
@@ -84,10 +90,6 @@ func loginSetup(ctx *cli.Context) error {
 	}
 
 	serverConfig := &config.ServerConfig{}
-
-	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "login")
-	}
 
 	// Validate the url and drop the path
 	u, err := url.Parse(ctx.Args().First())
@@ -119,7 +121,21 @@ func loginSetup(ctx *cli.Context) error {
 
 	}
 
-	proj, err := getDefaultProject(ctx, serverConfig)
+	c, err := cliclient.NewManagementClient(serverConfig)
+	if nil != err {
+		if _, ok := err.(*url.Error); ok && strings.Contains(err.Error(), "certificate signed by unknown authority") {
+			// no cert was provided and it's most likely a self signed cert if
+			// we get here so grab the cacert and see if the user accepts the server
+			c, err = getCertFromServer(serverConfig)
+			if nil != err {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	proj, err := getProjectContext(ctx, c)
 	if nil != err {
 		return err
 	}
@@ -134,36 +150,23 @@ func loginSetup(ctx *cli.Context) error {
 	return nil
 }
 
-func getDefaultProject(ctx *cli.Context, cf *config.ServerConfig) (string, error) {
-	mc, err := cliclient.NewManagementClient(cf)
-	if nil != err {
-		if _, ok := err.(*url.Error); ok && strings.Contains(err.Error(), "certificate signed by unknown authority") {
-			// no cert was provided and it's most likely a self signed cert if
-			// we get here so grab the cacert and see if the user accepts the server
-			mc, err = getCertFromServer(cf)
-			if nil != err {
-				return "", err
-			}
-		} else {
-			return "", err
-		}
-	}
-
-	projectCollection, err := mc.ManagementClient.Project.List(defaultListOpts(ctx))
+func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, error) {
+	projectCollection, err := c.ManagementClient.Project.List(defaultListOpts(ctx))
 	if err != nil {
 		return "", err
 	}
 
 	if len(projectCollection.Data) == 0 {
-		fmt.Println("There are no projects in the cluster, please create one and login again")
+		logrus.Warn("There are no projects in the cluster, please create one and try again")
 		return "", nil
 	}
 
 	if len(projectCollection.Data) == 1 {
+		logrus.Infof("Only 1 project available: %s", projectCollection.Data[0].Name)
 		return projectCollection.Data[0].ID, nil
 	}
 
-	clusterNames, err := getClusterNames(ctx, mc)
+	clusterNames, err := getClusterNames(ctx, c)
 	if err != nil {
 		return "", err
 	}
@@ -189,7 +192,7 @@ func getDefaultProject(ctx *cli.Context, cf *config.ServerConfig) (string, error
 		return "", writer.Err()
 	}
 
-	fmt.Print("Select your default Project:")
+	fmt.Print("Select a Project:")
 
 	reader := bufio.NewReader(os.Stdin)
 

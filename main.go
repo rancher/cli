@@ -32,10 +32,25 @@ Run '{{.Name}} COMMAND --help' for more information on a command.
 
 var CommandHelpTemplate = `{{.Usage}}
 {{if .Description}}{{.Description}}{{end}}
-Usage: rancher [global options] {{.Name}} {{if .Flags}}[OPTIONS] {{end}}{{if ne "None" .ArgsUsage}}{{if ne "" .ArgsUsage}}{{.ArgsUsage}}{{else}}[arg...]{{end}}{{end}}
+Usage: 
+	rancher {{.Name}} {{if .Flags}}[OPTIONS] {{end}}{{if ne "None" .ArgsUsage}}{{if ne "" .ArgsUsage}}{{.ArgsUsage}}{{else}}[arg...]{{end}}{{end}}
 
 {{if .Flags}}Options:{{range .Flags}}
 	 {{.}}{{end}}{{end}}
+`
+
+var SubcommandHelpTemplate = `{{.Usage}}
+{{if .Description}}{{.Description}}{{end}}
+Usage:
+   {{.HelpName}} command{{if .VisibleFlags}} [command options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}
+
+Commands:{{range .VisibleCategories}}{{if .Name}}
+   {{.Name}}:{{end}}{{range .VisibleCommands}}
+     {{join .Names ", "}}{{"\t"}}{{.Usage}}{{end}}
+{{end}}{{if .VisibleFlags}}
+Options:
+   {{range .VisibleFlags}}{{.}}
+   {{end}}{{end}}
 `
 
 func main() {
@@ -47,6 +62,7 @@ func main() {
 func mainErr() error {
 	cli.AppHelpTemplate = AppHelpTemplate
 	cli.CommandHelpTemplate = CommandHelpTemplate
+	cli.SubcommandHelpTemplate = SubcommandHelpTemplate
 
 	app := cli.NewApp()
 	app.Name = "rancher"
@@ -68,6 +84,7 @@ func mainErr() error {
 	}
 	app.Commands = []cli.Command{
 		cmd.ClusterCommand(),
+		cmd.ContextCommand(),
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
 		cmd.LoginCommand(),
