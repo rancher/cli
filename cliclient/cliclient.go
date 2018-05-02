@@ -1,15 +1,16 @@
 package cliclient
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/rancher/cli/config"
-	"github.com/sirupsen/logrus"
-
 	"github.com/rancher/norman/clientbase"
 	clusterClient "github.com/rancher/types/client/cluster/v3"
 	managementClient "github.com/rancher/types/client/management/v3"
 	projectClient "github.com/rancher/types/client/project/v3"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 type MasterClient struct {
@@ -19,75 +20,118 @@ type MasterClient struct {
 	UserConfig       *config.ServerConfig
 }
 
-// NewMasterClient returns a new MasterClient with Cluster Management and Cluster
+// NewMasterClient returns a new MasterClient with Cluster, Management and Project
 // clients populated
 func NewMasterClient(config *config.ServerConfig) (*MasterClient, error) {
-	mc, err := NewManagementClient(config)
-	if nil != err {
+	mc := &MasterClient{
+		UserConfig: config,
+	}
+
+	clustProj := CheckProject(mc.UserConfig.Project)
+	if clustProj == nil {
+		logrus.Warn("No context set; some commands will not work. Run `rancher login` again.")
+	}
+
+	var g errgroup.Group
+
+	g.Go(mc.newManagementClient)
+	g.Go(mc.newClusterClient)
+	g.Go(mc.newProjectClient)
+
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-
-	clustProj := SplitOnColon(config.Project)
-
-	options := createClientOpts(config)
-
-	baseURL := options.URL
-
-	// Setup the cluster client
-	if len(clustProj) != 2 {
-		logrus.Warn("No default project set, run `rancher login` again. " +
-			"Some commands will not work until project is set")
-	}
-	options.URL = baseURL + "/clusters/" + clustProj[0]
-
-	cClient, err := clusterClient.NewClient(options)
-	if err != nil {
-		return nil, err
-	}
-	mc.ClusterClient = cClient
-
-	// Setup the project client
-	pClient, err := NewProjectClient(config)
-	if err != nil {
-		return nil, err
-	}
-	mc.ProjectClient = pClient.ProjectClient
-
 	return mc, nil
 }
 
-//NewManagementClient returns a new MasterClient with only the Management client
+// NewManagementClient returns a new MasterClient with only the Management client
 func NewManagementClient(config *config.ServerConfig) (*MasterClient, error) {
 	mc := &MasterClient{
 		UserConfig: config,
 	}
 
-	options := createClientOpts(config)
-
-	// Setup the management client
-	mClient, err := managementClient.NewClient(options)
+	err := mc.newManagementClient()
 	if err != nil {
 		return nil, err
 	}
-	mc.ManagementClient = mClient
 	return mc, nil
 }
 
-func NewProjectClient(config *config.ServerConfig) (*MasterClient, error) {
+// NewClusterClient returns a new MasterClient with only the Cluster client
+func NewClusterClient(config *config.ServerConfig) (*MasterClient, error) {
+	clustProj := CheckProject(config.Project)
+	if clustProj == nil {
+		return nil, errors.New("no context set")
+	}
+
 	mc := &MasterClient{
 		UserConfig: config,
 	}
 
-	options := createClientOpts(config)
-	options.URL = options.URL + "/projects/" + config.Project
+	err := mc.newClusterClient()
+	if err != nil {
+		return nil, err
+	}
+	return mc, nil
+}
+
+// NewProjectClient returns a new MasterClient with only the Project client
+func NewProjectClient(config *config.ServerConfig) (*MasterClient, error) {
+	clustProj := CheckProject(config.Project)
+	if clustProj == nil {
+		return nil, errors.New("no context set")
+	}
+
+	mc := &MasterClient{
+		UserConfig: config,
+	}
+
+	err := mc.newProjectClient()
+	if err != nil {
+		return nil, err
+	}
+	return mc, nil
+}
+
+func (mc *MasterClient) newManagementClient() error {
+	options := createClientOpts(mc.UserConfig)
+
+	// Setup the management client
+	mClient, err := managementClient.NewClient(options)
+	if err != nil {
+		return err
+	}
+	mc.ManagementClient = mClient
+
+	return nil
+}
+
+func (mc *MasterClient) newClusterClient() error {
+	options := createClientOpts(mc.UserConfig)
+	options.URL = options.URL + "/clusters/" + mc.UserConfig.FocusedCluster()
+
+	// Setup the project client
+	cc, err := clusterClient.NewClient(options)
+	if err != nil {
+		return err
+	}
+	mc.ClusterClient = cc
+
+	return nil
+}
+
+func (mc *MasterClient) newProjectClient() error {
+	options := createClientOpts(mc.UserConfig)
+	options.URL = options.URL + "/projects/" + mc.UserConfig.Project
 
 	// Setup the project client
 	pc, err := projectClient.NewClient(options)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	mc.ProjectClient = pc
-	return mc, nil
+
+	return nil
 }
 
 func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
@@ -108,4 +152,15 @@ func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
 
 func SplitOnColon(s string) []string {
 	return strings.Split(s, ":")
+}
+
+// CheckProject verifies s matches the valid project ID of <cluster>:<project>
+func CheckProject(s string) []string {
+	clustProj := SplitOnColon(s)
+
+	if len(s) == 0 || len(clustProj) != 2 {
+		return nil
+	}
+
+	return clustProj
 }
