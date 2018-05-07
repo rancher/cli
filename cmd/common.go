@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 	"text/template"
+	"time"
 	"unicode"
 
 	"github.com/docker/docker/pkg/namesgenerator"
@@ -38,7 +39,7 @@ var (
 	ClusterResourceTypes = []string{"persistentVolume", "storageClass", "namespace"}
 
 	formatFlag = cli.StringFlag{
-		Name:  "format",
+		Name:  "format,o",
 		Usage: "'json', 'yaml' or custom format",
 	}
 )
@@ -146,7 +147,7 @@ func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (
 		Name: name,
 	}
 
-	results, err := c.ManagementClient.Principal.ActionSearch(pCollection, &p)
+	results, err := c.ManagementClient.Principal.CollectionActionSearch(pCollection, &p)
 	if nil != err {
 		return nil, err
 	}
@@ -486,4 +487,12 @@ func findStringInArray(s string, a []string) bool {
 		}
 	}
 	return false
+}
+
+func createdTimetoHuman(t string) (string, error) {
+	parsedTime, err := time.Parse(time.RFC3339, t)
+	if nil != err {
+		return "", err
+	}
+	return parsedTime.Format("02 Jan 2006 15:04:05 MST"), nil
 }
