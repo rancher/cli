@@ -83,6 +83,7 @@ func mainErr() error {
 		},
 	}
 	app.Commands = []cli.Command{
+		cmd.AppCommand(),
 		cmd.CatalogCommand(),
 		cmd.ClusterCommand(),
 		cmd.ContextCommand(),
