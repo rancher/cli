@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/types/client/management/v3"
@@ -319,7 +318,7 @@ func listProjectMembers(ctx *cli.Context) error {
 	var b []RoleTemplateBinding
 
 	for _, binding := range bindings.Data {
-		parsedTime, err := time.Parse(time.RFC3339, binding.Created)
+		parsedTime, err := createdTimetoHuman(binding.Created)
 		if nil != err {
 			return err
 		}
@@ -328,7 +327,7 @@ func listProjectMembers(ctx *cli.Context) error {
 			ID:      binding.ID,
 			User:    userMap[binding.UserId],
 			Role:    binding.RoleTemplateId,
-			Created: parsedTime.Format("02 Jan 2006 15:04:05 MST"),
+			Created: parsedTime,
 		})
 	}
 
