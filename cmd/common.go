@@ -253,20 +253,56 @@ func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
 	return mc, nil
 }
 
+// GetResourceType maps an incoming resource type to a valid one from the schema
+func GetResourceType(c *cliclient.MasterClient, resource string) (string, error) {
+	if c.ManagementClient != nil {
+		for key := range c.ManagementClient.APIBaseClient.Types {
+			if strings.ToLower(key) == strings.ToLower(resource) {
+				return key, nil
+			}
+		}
+	}
+	if c.ProjectClient != nil {
+		for key := range c.ProjectClient.APIBaseClient.Types {
+			if strings.ToLower(key) == strings.ToLower(resource) {
+				return key, nil
+			}
+		}
+	}
+	if c.ClusterClient != nil {
+		for key := range c.ClusterClient.APIBaseClient.Types {
+			if strings.ToLower(key) == strings.ToLower(resource) {
+				return key, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("unknown resource type: %s", resource)
+}
+
 func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Resource, error) {
 	var byName *ntypes.Resource
 
 	for _, schemaType := range types {
+		rt, err := GetResourceType(c, schemaType)
+		if err != nil {
+			return nil, err
+		}
 		var schemaClient clientbase.APIBaseClientInterface
 		// the schemaType dictates which client we need to use
-		if _, ok := c.ManagementClient.APIBaseClient.Types[schemaType]; ok {
-			schemaClient = c.ManagementClient
-		} else if _, ok := c.ProjectClient.APIBaseClient.Types[schemaType]; ok {
-			schemaClient = c.ProjectClient
-		} else if _, ok := c.ClusterClient.APIBaseClient.Types[schemaType]; ok {
-			schemaClient = c.ClusterClient
-		} else {
-			return nil, errors.New("unknown resource type")
+		if c.ManagementClient != nil {
+			if _, ok := c.ManagementClient.APIBaseClient.Types[rt]; ok {
+				schemaClient = c.ManagementClient
+			}
+		}
+		if c.ProjectClient != nil {
+			if _, ok := c.ProjectClient.APIBaseClient.Types[rt]; ok {
+				schemaClient = c.ProjectClient
+			}
+		}
+		if c.ClusterClient != nil {
+			if _, ok := c.ClusterClient.APIBaseClient.Types[rt]; ok {
+				schemaClient = c.ClusterClient
+			}
 		}
 
 		// Attempt to get the resource by ID
