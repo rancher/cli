@@ -56,7 +56,11 @@ func inspectResources(ctx *cli.Context) error {
 	t := ctx.String("type")
 	types := []string{}
 	if t != "" {
-		types = append(types, t)
+		rt, err := GetResourceType(c, t)
+		if err != nil {
+			return err
+		}
+		types = append(types, rt)
 	} else {
 		types = listAllRoles()
 	}
