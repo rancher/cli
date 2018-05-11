@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/types/client/management/v3"
@@ -10,6 +11,7 @@ import (
 )
 
 type NodeData struct {
+	ID   string
 	Node managementClient.Node
 	Name string
 	Pool string
@@ -33,6 +35,7 @@ func NodeCommand() cli.Command {
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.Node.ID}} {{.Node.Name}}'",
 					},
+					quietFlag,
 				},
 			},
 			{
@@ -40,7 +43,7 @@ func NodeCommand() cli.Command {
 				Aliases:   []string{"rm"},
 				Usage:     "Delete a node by ID",
 				ArgsUsage: "[NODEID NODENAME]",
-				Action:    deleteNode,
+				Action:    nodeDelete,
 			},
 		},
 	}
@@ -63,7 +66,7 @@ func nodeLs(ctx *cli.Context) error {
 	}
 
 	writer := NewTableWriter([][]string{
-		{"ID", "Node.ID"},
+		{"ID", "ID"},
 		{"NAME", "Name"},
 		{"STATE", "Node.State"},
 		{"POOL", "Pool"},
@@ -74,6 +77,7 @@ func nodeLs(ctx *cli.Context) error {
 
 	for _, item := range collection.Data {
 		writer.Write(&NodeData{
+			ID:   item.ID,
 			Node: item,
 			Name: getNodeName(item),
 			Pool: getNodePoolName(item, nodePools),
@@ -83,9 +87,9 @@ func nodeLs(ctx *cli.Context) error {
 	return writer.Err()
 }
 
-func deleteNode(ctx *cli.Context) error {
+func nodeDelete(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("node name or ID is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)
@@ -93,26 +97,28 @@ func deleteNode(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "node")
-	if nil != err {
-		return err
-	}
+	for _, arg := range ctx.Args() {
+		resource, err := Lookup(c, arg, "node")
+		if nil != err {
+			return err
+		}
 
-	node, err := getNodeByID(ctx, c, resource.ID)
-	if nil != err {
-		return err
-	}
+		node, err := getNodeByID(ctx, c, resource.ID)
+		if nil != err {
+			return err
+		}
 
-	if _, ok := node.Links["remove"]; !ok {
-		return fmt.Errorf("node %v is externally managed and must be deleted "+
-			"through the provider", getNodeName(node))
-	}
+		if _, ok := node.Links["remove"]; !ok {
+			logrus.Warnf("node %v is externally managed and must be deleted "+
+				"through the provider", getNodeName(node))
+			continue
+		}
 
-	err = c.ManagementClient.Node.Delete(&node)
-	if nil != err {
-		return err
+		err = c.ManagementClient.Node.Delete(&node)
+		if nil != err {
+			return err
+		}
 	}
-
 	return nil
 }
 

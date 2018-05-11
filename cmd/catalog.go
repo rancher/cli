@@ -26,10 +26,7 @@ type CatalogData struct {
 func CatalogCommand() cli.Command {
 	catalogLsFlags := []cli.Flag{
 		formatFlag,
-		cli.BoolFlag{
-			Name:  "quiet,q",
-			Usage: "Only display IDs",
-		},
+		quietFlag,
 	}
 
 	return cli.Command{
@@ -138,15 +135,21 @@ func catalogDelete(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "catalog")
-	if err != nil {
-		return err
-	}
+	for _, arg := range ctx.Args() {
+		resource, err := Lookup(c, arg, "catalog")
+		if err != nil {
+			return err
+		}
 
-	catalog, err := c.ManagementClient.Catalog.ByID(resource.ID)
-	if err != nil {
-		return err
-	}
+		catalog, err := c.ManagementClient.Catalog.ByID(resource.ID)
+		if err != nil {
+			return err
+		}
 
-	return c.ManagementClient.Catalog.Delete(catalog)
+		err = c.ManagementClient.Catalog.Delete(catalog)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/rancher/cli/cliclient"
@@ -10,6 +9,7 @@ import (
 )
 
 type ProjectData struct {
+	ID      string
 	Project managementClient.Project
 }
 
@@ -31,6 +31,7 @@ func ProjectCommand() cli.Command {
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.Project.ID}} {{.Project.Name}}'",
 					},
+					quietFlag,
 				},
 			},
 			{
@@ -55,7 +56,7 @@ func ProjectCommand() cli.Command {
 				Aliases:   []string{"rm"},
 				Usage:     "Delete a project by ID",
 				ArgsUsage: "[PROJECTID PROJECTNAME]",
-				Action:    deleteProject,
+				Action:    projectDelete,
 			},
 			{
 				Name:        "add-member-role",
@@ -115,7 +116,7 @@ func projectLs(ctx *cli.Context) error {
 	}
 
 	writer := NewTableWriter([][]string{
-		{"ID", "Project.ID"},
+		{"ID", "ID"},
 		{"NAME", "Project.Name"},
 		{"STATE", "Project.State"},
 		{"DESCRIPTION", "Project.Description"},
@@ -125,6 +126,7 @@ func projectLs(ctx *cli.Context) error {
 
 	for _, item := range collection.Data {
 		writer.Write(&ProjectData{
+			ID:      item.ID,
 			Project: item,
 		})
 	}
@@ -134,7 +136,7 @@ func projectLs(ctx *cli.Context) error {
 
 func projectCreate(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("project name is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)
@@ -164,9 +166,9 @@ func projectCreate(ctx *cli.Context) error {
 	return nil
 }
 
-func deleteProject(ctx *cli.Context) error {
+func projectDelete(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("project ID is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)
@@ -174,19 +176,21 @@ func deleteProject(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "project")
-	if nil != err {
-		return err
-	}
+	for _, arg := range ctx.Args() {
+		resource, err := Lookup(c, arg, "project")
+		if nil != err {
+			return err
+		}
 
-	project, err := getProjectByID(c, resource.ID)
-	if nil != err {
-		return err
-	}
+		project, err := getProjectByID(c, resource.ID)
+		if nil != err {
+			return err
+		}
 
-	err = c.ManagementClient.Project.Delete(project)
-	if nil != err {
-		return err
+		err = c.ManagementClient.Project.Delete(project)
+		if nil != err {
+			return err
+		}
 	}
 
 	return nil

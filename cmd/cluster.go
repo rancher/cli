@@ -24,6 +24,7 @@ command to run in your existing Kubernetes cluster.
 )
 
 type ClusterData struct {
+	ID       string
 	Current  string
 	Cluster  managementClient.Cluster
 	Name     string
@@ -52,6 +53,7 @@ func ClusterCommand() cli.Command {
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.Cluster.ID}} {{.Cluster.Name}}'",
 					},
+					quietFlag,
 				},
 			},
 			{
@@ -123,8 +125,8 @@ func ClusterCommand() cli.Command {
 				Name:      "delete",
 				Aliases:   []string{"rm"},
 				Usage:     "Delete a cluster",
-				ArgsUsage: "[CLUSTERID CLUSTERNAME]",
-				Action:    deleteCluster,
+				ArgsUsage: "[CLUSTERID/CLUSTERNAME...]",
+				Action:    clusterDelete,
 			},
 			{
 				Name:      "kubeconfig",
@@ -192,7 +194,7 @@ func clusterLs(ctx *cli.Context) error {
 
 	writer := NewTableWriter([][]string{
 		{"CURRENT", "Current"},
-		{"ID", "Cluster.ID"},
+		{"ID", "ID"},
 		{"STATE", "Cluster.State"},
 		{"NAME", "Name"},
 		{"PROVIDER", "Provider"},
@@ -215,6 +217,7 @@ func clusterLs(ctx *cli.Context) error {
 		}
 
 		writer.Write(&ClusterData{
+			ID:       item.ID,
 			Current:  current,
 			Cluster:  item,
 			Name:     getClusterName(&item),
@@ -231,7 +234,7 @@ func clusterLs(ctx *cli.Context) error {
 
 func clusterCreate(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("cluster name is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 	c, err := GetClient(ctx)
 	if nil != err {
@@ -273,7 +276,7 @@ func clusterCreate(ctx *cli.Context) error {
 
 func clusterImport(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("cluster name or ID is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)
@@ -308,7 +311,7 @@ func clusterImport(ctx *cli.Context) error {
 // clusterAddNode prints the command needed to add a node to a cluster
 func clusterAddNode(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("cluster name or ID is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)
@@ -374,9 +377,9 @@ func clusterAddNode(ctx *cli.Context) error {
 	return nil
 }
 
-func deleteCluster(ctx *cli.Context) error {
+func clusterDelete(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("cluster name or ID is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)
@@ -384,19 +387,22 @@ func deleteCluster(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "cluster")
-	if nil != err {
-		return err
-	}
+	for _, cluster := range ctx.Args() {
 
-	cluster, err := getClusterByID(c, resource.ID)
-	if nil != err {
-		return err
-	}
+		resource, err := Lookup(c, cluster, "cluster")
+		if nil != err {
+			return err
+		}
 
-	err = c.ManagementClient.Cluster.Delete(cluster)
-	if nil != err {
-		return err
+		cluster, err := getClusterByID(c, resource.ID)
+		if nil != err {
+			return err
+		}
+
+		err = c.ManagementClient.Cluster.Delete(cluster)
+		if nil != err {
+			return err
+		}
 	}
 
 	return nil
@@ -404,7 +410,7 @@ func deleteCluster(ctx *cli.Context) error {
 
 func clusterKubeConfig(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("cluster name or ID is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)

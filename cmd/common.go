@@ -42,6 +42,11 @@ var (
 		Name:  "format,o",
 		Usage: "'json', 'yaml' or custom format",
 	}
+
+	quietFlag = cli.BoolFlag{
+		Name:  "quiet,q",
+		Usage: "Only display IDs",
+	}
 )
 
 type RoleTemplate struct {
