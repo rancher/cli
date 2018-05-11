@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/rancher/cli/cliclient"
@@ -10,6 +9,7 @@ import (
 )
 
 type NamespaceData struct {
+	ID        string
 	Namespace clusterClient.Namespace
 }
 
@@ -35,6 +35,7 @@ func NamespaceCommand() cli.Command {
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.Namespace.ID}} {{.Namespace.Name}}'",
 					},
+					quietFlag,
 				},
 			},
 			{
@@ -93,7 +94,7 @@ func namespaceLs(ctx *cli.Context) error {
 	}
 
 	writer := NewTableWriter([][]string{
-		{"ID", "Namespace.ID"},
+		{"ID", "ID"},
 		{"NAME", "Namespace.Name"},
 		{"STATE", "Namespace.State"},
 		{"PROJECT", "Namespace.ProjectID"},
@@ -104,6 +105,7 @@ func namespaceLs(ctx *cli.Context) error {
 
 	for _, item := range collection.Data {
 		writer.Write(&NamespaceData{
+			ID:        item.ID,
 			Namespace: item,
 		})
 	}
@@ -113,7 +115,7 @@ func namespaceLs(ctx *cli.Context) error {
 
 func namespaceCreate(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("namespace name is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)
@@ -137,7 +139,7 @@ func namespaceCreate(ctx *cli.Context) error {
 
 func namespaceDelete(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("namespace name or ID is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)
@@ -145,19 +147,21 @@ func namespaceDelete(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "namespace")
-	if nil != err {
-		return err
-	}
+	for _, arg := range ctx.Args() {
+		resource, err := Lookup(c, arg, "namespace")
+		if nil != err {
+			return err
+		}
 
-	namespace, err := getNamespaceByID(c, resource.ID)
-	if nil != err {
-		return err
-	}
+		namespace, err := getNamespaceByID(c, resource.ID)
+		if nil != err {
+			return err
+		}
 
-	err = c.ClusterClient.Namespace.Delete(namespace)
-	if nil != err {
-		return err
+		err = c.ClusterClient.Namespace.Delete(namespace)
+		if nil != err {
+			return err
+		}
 	}
 
 	return nil
@@ -165,7 +169,7 @@ func namespaceDelete(ctx *cli.Context) error {
 
 func namespaceAssociate(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("namespace is required")
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	c, err := GetClient(ctx)

@@ -7,6 +7,7 @@ import (
 )
 
 type settingHolder struct {
+	ID      string
 	Setting managementClient.Setting
 }
 
@@ -29,6 +30,7 @@ func SettingsCommand() cli.Command {
 				Action:      settingsLs,
 				Flags: []cli.Flag{
 					formatFlag,
+					quietFlag,
 				},
 			},
 			{
@@ -68,7 +70,7 @@ func settingsLs(ctx *cli.Context) error {
 	}
 
 	writer := NewTableWriter([][]string{
-		{"ID", "Setting.ID"},
+		{"ID", "ID"},
 		{"NAME", "Setting.Name"},
 		{"VALUE", "Setting.Value"},
 	}, ctx)
@@ -77,6 +79,7 @@ func settingsLs(ctx *cli.Context) error {
 
 	for _, setting := range settings.Data {
 		writer.Write(&settingHolder{
+			ID:      setting.ID,
 			Setting: setting,
 		})
 	}
@@ -104,7 +107,7 @@ func settingGet(ctx *cli.Context) error {
 	}
 
 	writer := NewTableWriter([][]string{
-		{"ID", "Setting.ID"},
+		{"ID", "ID"},
 		{"NAME", "Setting.Name"},
 		{"VALUE", "Setting.Value"},
 		{"DEFAULT", "Setting.Default"},
@@ -114,6 +117,7 @@ func settingGet(ctx *cli.Context) error {
 	defer writer.Close()
 
 	writer.Write(&settingHolder{
+		ID:      setting.ID,
 		Setting: *setting,
 	})
 
