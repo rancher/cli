@@ -11,10 +11,10 @@ Add a new catalog to the Rancher server
 
 Example:
 	# Add a catalog
-	$ rancher add-catalog foo https://my.catalog
+	$ rancher catalog add foo https://my.catalog
 
 	# Add a catalog and specify the branch to use
-	$ rancher add-catalog --branch awesomebranch foo https://my.catalog
+	$ rancher catalog add --branch awesomebranch foo https://my.catalog
 `
 )
 
