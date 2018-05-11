@@ -74,6 +74,8 @@ func contextSwitch(ctx *cli.Context) error {
 
 	logrus.Infof("Setting new context to project %s", project.Name)
 
+	server.Project = project.ID
+
 	cf.Write()
 
 	return nil

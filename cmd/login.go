@@ -86,7 +86,7 @@ func loginSetup(ctx *cli.Context) error {
 
 	serverName := ctx.String("name")
 	if serverName == "" {
-		serverName = RandomName()
+		serverName = "rancherDefault"
 	}
 
 	serverConfig := &config.ServerConfig{}
