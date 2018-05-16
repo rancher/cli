@@ -51,7 +51,7 @@ func LoginCommand() cli.Command {
 			},
 			cli.StringFlag{
 				Name:  "timeout",
-				Usage: "Connection Timeout",
+				Usage: "Connection Timeout in seconds",
 			},
 			cli.StringFlag{
 				Name:  "cacert",
@@ -102,6 +102,7 @@ func loginSetup(ctx *cli.Context) error {
 	}
 	u.Path = ""
 	serverConfig.URL = u.String()
+
 	serverConfig.Timeout = 0
 	if ctx.String("timeout") != "" {
 		timeoutParameter := ctx.String("timeout")
