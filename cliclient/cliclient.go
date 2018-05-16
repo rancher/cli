@@ -146,6 +146,7 @@ func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
 		AccessKey: config.AccessKey,
 		SecretKey: config.SecretKey,
 		CACerts:   config.CACerts,
+		Timeout:   config.Timeout,
 	}
 	return options
 }

@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"time"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,6 +28,7 @@ type ServerConfig struct {
 	URL       string `json:"url"`
 	Project   string `json:"project"`
 	CACerts   string `json:"cacert"`
+	Timeout	  time.Duration	 `json:"timeout"`
 }
 
 func (c Config) Write() error {

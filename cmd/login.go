@@ -12,7 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
+	"time"
 	"github.com/sirupsen/logrus"
 
 	"github.com/grantae/certinfo"
@@ -48,6 +48,10 @@ func LoginCommand() cli.Command {
 			cli.StringFlag{
 				Name:  "token,t",
 				Usage: "Token from the Rancher UI",
+			},
+			cli.StringFlag{
+				Name:  "timeout",
+				Usage: "Connection Timeout",
 			},
 			cli.StringFlag{
 				Name:  "cacert",
@@ -98,6 +102,15 @@ func loginSetup(ctx *cli.Context) error {
 	}
 	u.Path = ""
 	serverConfig.URL = u.String()
+	serverConfig.Timeout = 0
+	if ctx.String("timeout") != "" {
+		timeoutParameter := ctx.String("timeout")
+		timeout, err := strconv.Atoi(timeoutParameter)
+		if err != nil {
+			return err
+		}
+		serverConfig.Timeout = time.Duration(timeout)*time.Second
+	}
 
 	if ctx.String("token") != "" {
 		auth := SplitOnColon(ctx.String("token"))
