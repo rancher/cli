@@ -23,6 +23,7 @@ const (
 	installAppDescription = `
 Install an app template in the current Rancher server. This defaults to the newest version of the app template.
 Specify a version using '--version' if required.
+The app will be installed into a new namespace unless '--namespace' is specified. 
 					
 Example:
 	# Install the redis template with no other options
@@ -33,6 +34,9 @@ Example:
 
 	# Install the redis template and set multiple answers and the version to install
 	$ rancher app install --set foo=bar --set baz=bunk --version 1.0.1 redis appFoo
+
+	# Install the redis template and specify the namespace for the app
+	$ rancher app install --namespace bar redis appFoo
 `
 )
 
@@ -106,6 +110,10 @@ func AppCommand() cli.Command {
 					cli.StringFlag{
 						Name:  "answers,a",
 						Usage: "Path to an answers file, the format of the file is a map with key:value. This supports JSON and YAML.",
+					},
+					cli.StringFlag{
+						Name:  "namespace,n",
+						Usage: "Namespace to install the app into",
 					},
 					cli.StringSliceFlag{
 						Name:  "set",
@@ -464,7 +472,12 @@ func templateInstall(ctx *cli.Context) error {
 		return err
 	}
 
-	err = createNamespace(c, template.Name)
+	namespace := ctx.String("namespace")
+	if namespace == "" {
+		namespace = templateName + "-" + RandomLetters(5)
+	}
+
+	err = createNamespace(c, namespace)
 	if err != nil {
 		return err
 	}
@@ -473,7 +486,7 @@ func templateInstall(ctx *cli.Context) error {
 		Answers:         answers,
 		ExternalID:      templateVersion.ExternalID,
 		Name:            appName,
-		TargetNamespace: template.Name,
+		TargetNamespace: namespace,
 	}
 
 	madeApp, err := c.ProjectClient.App.Create(app)
@@ -677,6 +690,10 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 		_, err = c.ClusterClient.Namespace.Create(newNamespace)
 		if err != nil {
 			return err
+		}
+	} else {
+		if namespaces.Data[0].ProjectID != c.UserConfig.Project {
+			return fmt.Errorf("namespace %s already exists", n)
 		}
 	}
 	return nil

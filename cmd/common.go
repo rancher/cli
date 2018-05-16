@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"strconv"
@@ -28,6 +29,8 @@ import (
 	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/urfave/cli"
 )
+
+const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
 
 var (
 	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
@@ -364,6 +367,16 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 
 func RandomName() string {
 	return strings.Replace(namesgenerator.GetRandomName(0), "_", "-", -1)
+}
+
+// RandomLetters returns a string with random letters of length n
+func RandomLetters(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
 func appendTabDelim(buf *bytes.Buffer, value string) {
