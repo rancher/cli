@@ -19,6 +19,9 @@ func NamespaceCommand() cli.Command {
 		Aliases: []string{"namespace"},
 		Usage:   "Operations on namespaces",
 		Action:  defaultAction(namespaceLs),
+		Flags: []cli.Flag{
+			quietFlag,
+		},
 		Subcommands: []cli.Command{
 			{
 				Name:        "ls",
