@@ -16,6 +16,7 @@ import (
 	clusterClient "github.com/rancher/types/client/cluster/v3"
 	managementClient "github.com/rancher/types/client/management/v3"
 	projectClient "github.com/rancher/types/client/project/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -687,9 +688,27 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 			ProjectID: c.UserConfig.Project,
 		}
 
-		_, err = c.ClusterClient.Namespace.Create(newNamespace)
+		ns, err := c.ClusterClient.Namespace.Create(newNamespace)
 		if err != nil {
 			return err
+		}
+
+		startTime := time.Now()
+		for {
+			logrus.Debug(fmt.Sprintf("Namespace create wait - Name: %s, State: %s, Transitioning: %s", ns.Name, ns.State, ns.Transitioning))
+			if time.Since(startTime)/time.Second > 30 {
+				return fmt.Errorf("timed out waiting for new namespace %s", ns.Name)
+			}
+			ns, err = c.ClusterClient.Namespace.ByID(ns.ID)
+			if err != nil {
+				return err
+			}
+
+			if ns.State == "active" {
+				break
+			}
+
+			time.Sleep(500 * time.Millisecond)
 		}
 	} else {
 		if namespaces.Data[0].ProjectID != c.UserConfig.Project {
