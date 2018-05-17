@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -18,6 +21,7 @@ import (
 	projectClient "github.com/rancher/types/client/project/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -63,6 +67,23 @@ type revision struct {
 	Name    string
 	Created time.Time
 	Human   string
+}
+
+type chartVersion struct {
+	chartMetadata `yaml:",inline"`
+	Dir           string   `json:"-" yaml:"-"`
+	URLs          []string `json:"urls" yaml:"urls"`
+	Digest        string   `json:"digest,omitempty" yaml:"digest,omitempty"`
+}
+
+type chartMetadata struct {
+	Name        string   `json:"name,omitempty" yaml:"name,omitempty"`
+	Sources     []string `json:"sources,omitempty" yaml:"sources,omitempty"`
+	Version     string   `json:"version,omitempty" yaml:"version,omitempty"`
+	KubeVersion string   `json:"kubeVersion,omitempty" yaml:"kubeVersion,omitempty"`
+	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
+	Keywords    []string `json:"keywords,omitempty" yaml:"keywords,omitempty"`
+	Icon        string   `json:"icon,omitempty" yaml:"icon,omitempty"`
 }
 
 type revSlice []revision
@@ -440,54 +461,107 @@ func templateInstall(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, templateName, "template")
-	if err != nil {
-		return err
-	}
-
-	template, err := c.ManagementClient.Template.ByID(resource.ID)
-
-	templateVersionID := templateVersionIDFromVersionLink(template.VersionLinks[template.DefaultVersion])
-	userVersion := ctx.String("version")
-	if userVersion != "" {
-		if link, ok := template.VersionLinks[userVersion]; ok {
-			templateVersionID = templateVersionIDFromVersionLink(link)
-		} else {
-			return fmt.Errorf(
-				"version %s for template %s is invalid, run 'rancher show-template %s' for a list of versions",
-				userVersion,
-				templateName,
-				templateName,
-			)
-		}
-	}
-
-	templateVersion, err := c.ManagementClient.TemplateVersion.ByID(templateVersionID)
-	if err != nil {
-		return err
-	}
-
-	answers := make(map[string]string)
-	err = processAnswers(ctx, c, templateVersion, answers, true)
-	if err != nil {
-		return err
-	}
-
-	namespace := ctx.String("namespace")
-	if namespace == "" {
-		namespace = templateName + "-" + RandomLetters(5)
-	}
-
-	err = createNamespace(c, namespace)
-	if err != nil {
-		return err
-	}
-
 	app := &projectClient.App{
-		Answers:         answers,
-		ExternalID:      templateVersion.ExternalID,
-		Name:            appName,
-		TargetNamespace: namespace,
+		Name: appName,
+	}
+	if resolveTemplatePath(templateName) {
+		// if it is a path, install charts locally
+		path, err := filepath.Abs(templateName)
+		if err != nil {
+			return err
+		}
+		if _, err := os.Stat(path); err != nil {
+			return err
+		}
+		files := map[string]string{}
+		chartName := ""
+		filepath.Walk(templateName, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+			if strings.EqualFold(info.Name(), "Chart.yaml") {
+				version := &chartVersion{}
+				content, err := ioutil.ReadFile(path)
+				if err != nil {
+					return err
+				}
+
+				if err := yaml.Unmarshal(content, version); err != nil {
+					return err
+				}
+				chartName = version.Name
+			}
+			content, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			files[path] = base64.StdEncoding.EncodeToString(content)
+			return nil
+		})
+
+		answers := make(map[string]string)
+		err = processAnswers(ctx, c, nil, answers, false)
+		if err != nil {
+			return err
+		}
+		app.Files = files
+		app.Answers = answers
+		namespace := ctx.String("namespace")
+		if namespace == "" {
+			namespace = chartName + "-" + RandomLetters(5)
+		}
+		err = createNamespace(c, namespace)
+		if err != nil {
+			return err
+		}
+		app.TargetNamespace = namespace
+	} else {
+		resource, err := Lookup(c, templateName, "template")
+		if err != nil {
+			return err
+		}
+		template, err := c.ManagementClient.Template.ByID(resource.ID)
+
+		templateVersionID := templateVersionIDFromVersionLink(template.VersionLinks[template.DefaultVersion])
+		userVersion := ctx.String("version")
+		if userVersion != "" {
+			if link, ok := template.VersionLinks[userVersion]; ok {
+				templateVersionID = templateVersionIDFromVersionLink(link)
+			} else {
+				return fmt.Errorf(
+					"version %s for template %s is invalid, run 'rancher show-template %s' for a list of versions",
+					userVersion,
+					templateName,
+					templateName,
+				)
+			}
+		}
+
+		templateVersion, err := c.ManagementClient.TemplateVersion.ByID(templateVersionID)
+		if err != nil {
+			return err
+		}
+
+		answers := make(map[string]string)
+		err = processAnswers(ctx, c, templateVersion, answers, true)
+		if err != nil {
+			return err
+		}
+
+		namespace := ctx.String("namespace")
+		if namespace == "" {
+			namespace = template.Name + "-" + RandomLetters(5)
+		}
+		err = createNamespace(c, namespace)
+		if err != nil {
+			return err
+		}
+		app.Answers = answers
+		app.ExternalID = templateVersion.ExternalID
+		app.TargetNamespace = namespace
 	}
 
 	madeApp, err := c.ProjectClient.App.Create(app)
@@ -514,6 +588,10 @@ func templateInstall(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+func resolveTemplatePath(templateName string) bool {
+	return templateName == "." || strings.Contains(templateName, "\\\\") || strings.Contains(templateName, "/")
 }
 
 func showApp(ctx *cli.Context) error {
