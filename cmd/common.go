@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -207,6 +208,57 @@ func verifyCert(caCert []byte) (string, error) {
 		return "", errors.New("CACerts is not valid")
 	}
 	return string(caCert), nil
+}
+
+func verifyPkcs1(keyBytes []byte) ([]byte, error) {
+	// replace the escaped version of the line break
+	keyBytes = bytes.Replace(keyBytes, []byte(`\n`), []byte("\n"), -1)
+
+	block, _ := pem.Decode(keyBytes)
+	if block == nil {
+		return nil, fmt.Errorf("Error decoding private key PEM block")
+	}
+	// parse private key in PKCS1
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		// parse private key in PKCS8
+		key2, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing private key: %s", err.Error())
+		}
+		key = key2.(*rsa.PrivateKey)
+		var privateKey = &pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(key),
+		}
+
+		// Return private key in PKCS1
+		return pem.EncodeToMemory(privateKey), nil
+	}
+
+	return keyBytes, nil
+}
+
+func verifyCertHostname(caCert []byte, hostname string) error {
+	// replace the escaped version of the line break
+	caCert = bytes.Replace(caCert, []byte(`\n`), []byte("\n"), -1)
+
+	block, _ := pem.Decode(caCert)
+
+	if nil == block {
+		return fmt.Errorf("No cert was found")
+	}
+
+	parsedCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return err
+	}
+
+	err = parsedCert.VerifyHostname(hostname)
+	if err != nil {
+		return fmt.Errorf("Cert CN %s is not valid for hostname %s", parsedCert.Subject.CommonName, hostname)
+	}
+	return nil
 }
 
 func loadConfig(path string) (config.Config, error) {
@@ -541,6 +593,21 @@ func findStringInArray(s string, a []string) bool {
 		}
 	}
 	return false
+}
+
+type LabelCount map[string]int
+
+func (m *LabelCount) Increment(k string) {
+	if len(k) == 0 {
+		k = "(unknown)"
+	}
+
+	cur, ok := (*m)[k]
+	if ok {
+		(*m)[k] = cur + 1
+	} else {
+		(*m)[k] = 1
+	}
 }
 
 func createdTimetoHuman(t string) (string, error) {

@@ -96,6 +96,8 @@ func mainErr() error {
 		cmd.PsCommand(),
 		cmd.SettingsCommand(),
 		cmd.SSHCommand(),
+		cmd.HACommand(),
+		cmd.RKECommand(),
 	}
 
 	env := os.Getenv("RANCHER_EXPERIMENTAL")
