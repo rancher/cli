@@ -475,6 +475,7 @@ func templateInstall(ctx *cli.Context) error {
 		}
 		files := map[string]string{}
 		chartName := ""
+		rootDir := ""
 		filepath.Walk(templateName, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -482,24 +483,39 @@ func templateInstall(ctx *cli.Context) error {
 			if info.IsDir() {
 				return nil
 			}
-			if strings.EqualFold(info.Name(), "Chart.yaml") {
-				version := &chartVersion{}
-				content, err := ioutil.ReadFile(path)
-				if err != nil {
-					return err
-				}
 
-				if err := yaml.Unmarshal(content, version); err != nil {
-					return err
-				}
-				chartName = version.Name
+			if !strings.EqualFold(info.Name(), "Chart.yaml") {
+				return nil
 			}
+			version := &chartVersion{}
 			content, err := ioutil.ReadFile(path)
 			if err != nil {
 				return err
 			}
-			files[path] = base64.StdEncoding.EncodeToString(content)
-			return nil
+
+			rootDir = filepath.Dir(path)
+			if err := yaml.Unmarshal(content, version); err != nil {
+				return err
+			}
+			chartName = version.Name
+			filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if info.IsDir() {
+					return nil
+				}
+				content, err := ioutil.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				if len(content) > 0 {
+					key := filepath.Join(version.Name, strings.TrimPrefix(path, rootDir+"/"))
+					files[key] = base64.StdEncoding.EncodeToString(content)
+				}
+				return nil
+			})
+			return filepath.SkipDir
 		})
 
 		answers := make(map[string]string)
