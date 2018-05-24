@@ -88,6 +88,10 @@ func ClusterCommand() cli.Command {
 						Name:  "psp-default-policy",
 						Usage: "Default pod security policy to apply",
 					},
+					cli.StringFlag{
+						Name:  "rke-config",
+						Usage: "Location of an rke config file to import. Can be JSON or YAML format",
+					},
 				},
 			},
 			{
@@ -252,7 +256,10 @@ func clusterCreate(ctx *cli.Context) error {
 		}
 	}
 
-	rkeConfig := getRKEConfig(ctx)
+	rkeConfig, err := getRKEConfig(ctx)
+	if err != nil {
+		return err
+	}
 
 	clusterConfig := &managementClient.Cluster{
 		Name:                          ctx.Args().First(),
@@ -688,13 +695,25 @@ func getClusterK8sOptions(c *cliclient.MasterClient) []string {
 	return options
 }
 
-func getRKEConfig(ctx *cli.Context) *managementClient.RancherKubernetesEngineConfig {
+func getRKEConfig(ctx *cli.Context) (*managementClient.RancherKubernetesEngineConfig, error) {
 	if ctx.Bool("import") {
-		return nil
+		return nil, nil
 	}
-	rkeConfig := &managementClient.RancherKubernetesEngineConfig{
-		IgnoreDockerVersion: ctx.BoolT("disable-docker-version"),
+
+	rkeConfig := &managementClient.RancherKubernetesEngineConfig{}
+
+	if ctx.String("rke-config") != "" {
+		bytes, err := readFileReturnJSON(ctx.String("rke-config"))
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(bytes, &rkeConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	rkeConfig.IgnoreDockerVersion = ctx.BoolT("disable-docker-version")
 
 	if ctx.String("k8s-version") != "" {
 		rkeConfig.Version = ctx.String("k8s-version")
@@ -713,5 +732,6 @@ func getRKEConfig(ctx *cli.Context) *managementClient.RancherKubernetesEngineCon
 			},
 		}
 	}
-	return rkeConfig
+
+	return rkeConfig, nil
 }
