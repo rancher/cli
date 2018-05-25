@@ -96,11 +96,7 @@ func mainErr() error {
 		cmd.PsCommand(),
 		cmd.SettingsCommand(),
 		cmd.SSHCommand(),
-	}
-
-	env := os.Getenv("RANCHER_EXPERIMENTAL")
-	if env != "" {
-		app.Commands = append(app.Commands, cmd.UpCommand())
+		cmd.UpCommand(),
 	}
 
 	for _, com := range app.Commands {

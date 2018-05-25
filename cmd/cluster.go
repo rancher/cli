@@ -133,6 +133,12 @@ func ClusterCommand() cli.Command {
 				Action:    clusterDelete,
 			},
 			{
+				Name:      "export",
+				Usage:     "Export a cluster",
+				ArgsUsage: "[CLUSTERID/CLUSTERNAME...]",
+				Action:    clusterExport,
+			},
+			{
 				Name:      "kubeconfig",
 				Aliases:   []string{"kf"},
 				Usage:     "Return the kube config used to access the cluster",
@@ -412,6 +418,35 @@ func clusterDelete(ctx *cli.Context) error {
 		}
 	}
 
+	return nil
+}
+
+func clusterExport(ctx *cli.Context) error {
+	if ctx.NArg() == 0 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	c, err := GetClient(ctx)
+	if nil != err {
+		return err
+	}
+
+	resource, err := Lookup(c, ctx.Args().First(), "cluster")
+	if nil != err {
+		return err
+	}
+
+	cluster, err := getClusterByID(c, resource.ID)
+	if nil != err {
+		return err
+	}
+
+	export, err := c.ManagementClient.Cluster.ActionExportYaml(cluster)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(export.YAMLOutput)
 	return nil
 }
 
