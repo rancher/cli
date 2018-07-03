@@ -1,6 +1,7 @@
 package rancher
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -91,8 +92,16 @@ func createLaunchConfig(r *RancherService, name string, serviceConfig *config.Se
 	dockerContainer.HostConfig.NetworkMode = container.NetworkMode("")
 	dockerContainer.Name = "/" + name
 
-	err = r.Context().Client.Post(scriptsUrl, dockerContainer, &result)
+	data := map[string]interface{}{}
+	err = r.Context().Client.Post(scriptsUrl, dockerContainer, &data)
 	if err != nil {
+		return result, err
+	}
+	buf, err := json.Marshal(data)
+	if err != nil {
+		return result, err
+	}
+	if err := json.Unmarshal(buf, &result); err != nil {
 		return result, err
 	}
 
