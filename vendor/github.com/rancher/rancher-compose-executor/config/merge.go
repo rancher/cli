@@ -39,7 +39,11 @@ func transferFields(from, to RawService, prefixField string, instance interface{
 func CreateRawConfig(contents []byte) (*RawConfig, error) {
 	var rawConfig RawConfig
 	if err := yaml.Unmarshal(contents, &rawConfig); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error parsing yaml, please check: %v. (Note: Only version 1 and 2 are supported)", err)
+	}
+
+	if rawConfig.Version == "3" {
+		return nil, fmt.Errorf("version 3 is not supported")
 	}
 
 	if rawConfig.Version != "2" {
