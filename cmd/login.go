@@ -92,10 +92,11 @@ func loginSetup(ctx *cli.Context) error {
 	serverConfig := &config.ServerConfig{}
 
 	// Validate the url and drop the path
-	u, err := url.Parse(ctx.Args().First())
+	u, err := url.ParseRequestURI(ctx.Args().First())
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to parse SERVERURL (%s), make sure it is a valid HTTPS URL (e.g. https://rancher.yourdomain.com or https://1.1.1.1). Error: %s", ctx.Args().First(), err)
 	}
+
 	u.Path = ""
 	serverConfig.URL = u.String()
 
