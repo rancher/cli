@@ -192,6 +192,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 			TLSClientConfig: &tls.Config{
 				RootCAs: roots,
 			},
+			Proxy: http.ProxyFromEnvironment,
 		}
 		client.Transport = tr
 	}
@@ -201,6 +202,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: opts.Insecure,
 			},
+			Proxy: http.ProxyFromEnvironment,
 		}
 		client.Transport = tr
 	}

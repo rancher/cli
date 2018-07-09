@@ -233,6 +233,7 @@ func getCertFromServer(cf *config.ServerConfig) (*cliclient.MasterClient, error)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		Proxy:           http.ProxyFromEnvironment,
 	}
 	client := &http.Client{Transport: tr}
 
