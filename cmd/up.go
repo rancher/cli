@@ -3,6 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 
+	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/types/client/management/v3"
 	"github.com/urfave/cli"
 )
@@ -22,7 +23,11 @@ func UpCommand() cli.Command {
 }
 
 func apply(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
+	cf, err := lookupConfig(ctx)
+	if err != nil {
+		return err
+	}
+	c, err := cliclient.NewManagementClient(cf)
 	if err != nil {
 		return err
 	}
