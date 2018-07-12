@@ -89,6 +89,7 @@ func mainErr() error {
 		cmd.ContextCommand(),
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
+		cmd.HelmCommand(),
 		cmd.LoginCommand(),
 		cmd.NamespaceCommand(),
 		cmd.NodeCommand(),
