@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -467,12 +468,25 @@ func SplitOnColon(s string) []string {
 	return strings.Split(s, ":")
 }
 
-func parseClusterAndProject(name string) (string, string) {
+func parseClusterAndProjectName(name string) (string, string, error) {
 	parts := strings.SplitN(name, "/", 2)
 	if len(parts) == 2 {
-		return parts[0], parts[1]
+		return parts[0], parts[1], nil
 	}
-	return "", name
+	return "", "", fmt.Errorf("Unable to extract clustername and projectname from [%s]", name)
+}
+
+func parseClusterAndProjectID(id string) (string, string, error) {
+	// Validate id
+	// Examples:
+	// c-qmpbm:p-mm62v
+	// c-qmpbm:project-mm62v
+	// See https://github.com/rancher/rancher/issues/14400
+	if match, _ := regexp.MatchString("c-[[:alnum:]]{5}:(p|project)-[[:alnum:]]{5}", id); match {
+		parts := SplitOnColon(id)
+		return parts[0], parts[1], nil
+	}
+	return "", "", fmt.Errorf("Unable to extract clusterid and projectid from [%s]", id)
 }
 
 // Return a JSON blob of the file at path

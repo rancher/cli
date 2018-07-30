@@ -41,9 +41,9 @@ func LoginCommand() cli.Command {
 		Action:    loginSetup,
 		ArgsUsage: "[SERVERURL]",
 		Flags: []cli.Flag{
-			cli.BoolFlag{
+			cli.StringFlag{
 				Name:  "context",
-				Usage: "Get the currently set context",
+				Usage: "Set the context during login",
 			},
 			cli.StringFlag{
 				Name:  "token,t",
@@ -62,14 +62,6 @@ func LoginCommand() cli.Command {
 }
 
 func loginSetup(ctx *cli.Context) error {
-	if ctx.Bool("context") {
-		err := loginContext(ctx)
-		if nil != err {
-			return err
-		}
-		return nil
-	}
-
 	if ctx.NArg() == 0 {
 		return cli.ShowCommandHelp(ctx, "login")
 	}
@@ -152,6 +144,22 @@ func loginSetup(ctx *cli.Context) error {
 }
 
 func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, error) {
+	// If context is given
+	if ctx.String("context") != "" {
+		context := ctx.String("context")
+		// Check if given context is in valid format
+		_, _, err := parseClusterAndProjectID(context)
+		if err != nil {
+			return "", fmt.Errorf("Unable to parse context (%s). Please provide context as c-xxxxx:p-xxxxx or c-xxxxx:project-xxxxx", context)
+		}
+		// Check if context exists
+		_, err = Lookup(c, context, "project")
+		if err != nil {
+			return "", fmt.Errorf("Unable to find context (%s). Make sure the context exists and you have permissions to use it. Error: %s", context, err)
+		}
+		return context, nil
+	}
+
 	projectCollection, err := c.ManagementClient.Project.List(defaultListOpts(ctx))
 	if err != nil {
 		return "", err
