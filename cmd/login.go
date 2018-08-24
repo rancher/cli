@@ -259,6 +259,9 @@ func getCertFromServer(cf *config.ServerConfig) (*cliclient.MasterClient, error)
 
 	var certReponse *CACertResponse
 	err = json.Unmarshal(content, &certReponse)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to parse response from %s/v3/settings/cacerts\nError: %s\nResponse:\n%s", cf.URL, err, content)
+	}
 
 	cert, err := verifyCert([]byte(certReponse.Value))
 	if nil != err {
