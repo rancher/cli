@@ -100,6 +100,9 @@ func ClusterCommand() cli.Command {
 				Description: importDescription,
 				ArgsUsage:   "[CLUSTERID CLUSTERNAME]",
 				Action:      clusterImport,
+				Flags: []cli.Flag{
+					quietFlag,
+				},
 			},
 			{
 				Name:      "add-node",
@@ -117,12 +120,17 @@ func ClusterCommand() cli.Command {
 					},
 					cli.BoolFlag{
 						Name:  "management",
-						Usage: "Use node for management",
+						Usage: "Use node for management (DEPRECATED, use controlplane instead)",
+					},
+					cli.BoolFlag{
+						Name:  "controlplane",
+						Usage: "Use node for controlplane",
 					},
 					cli.BoolFlag{
 						Name:  "worker",
 						Usage: "Use node as a worker",
 					},
+					quietFlag,
 				},
 			},
 			{
@@ -316,6 +324,12 @@ func clusterImport(ctx *cli.Context) error {
 		return err
 	}
 
+	if ctx.Bool("quiet") {
+		fmt.Println(clusterToken.Command)
+		fmt.Println(clusterToken.InsecureCommand)
+		return nil
+	}
+
 	fmt.Printf("Run the following command in your cluster:\n%s\n\n%s\n%s\n", clusterToken.Command, importClusterNotice, clusterToken.InsecureCommand)
 
 	return nil
@@ -368,7 +382,10 @@ func clusterAddNode(ctx *cli.Context) error {
 		roleFlags = roleFlags + " --etcd"
 	}
 
-	if ctx.Bool("management") {
+	if ctx.Bool("management") || ctx.Bool("controlplane") {
+		if ctx.Bool("management") && !ctx.Bool("quiet") {
+			logrus.Info("The flag --management is deprecated and replaced by --controlplane")
+		}
 		roleFlags = roleFlags + " --controlplane"
 	}
 
@@ -384,9 +401,13 @@ func clusterAddNode(ctx *cli.Context) error {
 		}
 	}
 
+	if ctx.Bool("quiet") {
+		fmt.Println(command)
+		return nil
+	}
+
 	fmt.Printf("Run this command on an existing machine already running a "+
 		"supported version of Docker:\n%v\n", command)
-
 	return nil
 }
 
