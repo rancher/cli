@@ -50,7 +50,7 @@ var (
 
 	quietFlag = cli.BoolFlag{
 		Name:  "quiet,q",
-		Usage: "Only display IDs",
+		Usage: "Only display IDs or suppress help text",
 	}
 )
 
