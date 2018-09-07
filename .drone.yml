@@ -7,3 +7,33 @@ pipeline:
     - /var/run/docker.sock:/var/run/docker.sock
     commands:
     - dapper ci
+
+  publish-release:
+    image: plugins/gcs
+    source: dist/artifacts/v*
+    target: releases.rancher.com/cli
+    acl:
+      - allUsers:READER
+    cache_control: public,max-age=3600
+    secrets:
+      - source: google_auth_key
+        target: GOOGLE_CREDENTIALS
+    when:
+      branch: [master, v1.6]
+      event: tag
+
+  publish-latest:
+    image: plugins/gcs
+    source: dist/artifacts/latest/
+    target: releases.rancher.com/cli/latest
+    acl:
+      - allUsers:READER
+    cache_control: public,max-age=3600
+    secrets:
+      - source: google_auth_key
+        target: GOOGLE_CREDENTIALS
+    when:
+      branch: v1.6
+      event: tag
+      ref:
+        exclude: [ refs/tags/*rc* ]
