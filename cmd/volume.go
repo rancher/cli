@@ -74,6 +74,18 @@ func volumeLs(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	collectiondata := collection.Data
+
+	for {
+		collection, _ = collection.Next()
+		if collection == nil {
+			break
+		}
+		collectiondata = append(collectiondata, collection.Data...)
+		if !collection.Pagination.Partial {
+			break
+		}
+	}
 
 	writer := NewTableWriter([][]string{
 		{"ID", "ID"},
@@ -85,7 +97,7 @@ func volumeLs(ctx *cli.Context) error {
 
 	defer writer.Close()
 
-	for _, item := range collection.Data {
+	for _, item := range collectiondata {
 		writer.Write(&VolumeData{
 			ID:     item.Id,
 			Volume: item,
