@@ -93,6 +93,19 @@ func hostLs(ctx *cli.Context) error {
 		return err
 	}
 
+	collectiondata := collection.Data
+
+	for {
+		collection, _ = collection.Next()
+		if collection == nil {
+			break
+		}
+		collectiondata = append(collectiondata, collection.Data...)
+		if !collection.Pagination.Partial {
+			break
+		}
+	}
+
 	writer := NewTableWriter([][]string{
 		{"ID", "Host.Id"},
 		{"HOSTNAME", "Host.Hostname"},
@@ -105,7 +118,7 @@ func hostLs(ctx *cli.Context) error {
 
 	defer writer.Close()
 
-	for _, item := range collection.Data {
+	for _, item := range collectiondata {
 		writer.Write(&HostsData{
 			ID:             item.Id,
 			Host:           item,

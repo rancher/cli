@@ -67,6 +67,19 @@ func secretLs(ctx *cli.Context) error {
 		return err
 	}
 
+	collectiondata := collection.Data
+
+	for {
+		collection, _ = collection.Next()
+		if collection == nil {
+			break
+		}
+		collectiondata = append(collectiondata, collection.Data...)
+		if !collection.Pagination.Partial {
+			break
+		}
+	}
+
 	writer := NewTableWriter([][]string{
 		{"ID", "ID"},
 		{"NAME", "Secret.Name"},
@@ -75,7 +88,7 @@ func secretLs(ctx *cli.Context) error {
 
 	defer writer.Close()
 
-	for _, item := range collection.Data {
+	for _, item := range collectiondata {
 		writer.Write(&SecretData{
 			ID:     item.Id,
 			Secret: item,

@@ -450,7 +450,20 @@ func (c *CatalogOperator) forEachTemplate(f func(item *catalog.Template) error) 
 		return err
 	}
 
-	for _, item := range collection.Data {
+	collectiondata := collection.Data
+
+	for {
+		collection, _ = collection.Next()
+		if collection == nil {
+			break
+		}
+		collectiondata = append(collectiondata, collection.Data...)
+		if !collection.Pagination.Partial {
+			break
+		}
+	}
+
+	for _, item := range collectiondata {
 		if !c.isSupported(&item) {
 			continue
 		}

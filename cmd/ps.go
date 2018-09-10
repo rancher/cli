@@ -86,6 +86,19 @@ func servicePs(ctx *cli.Context) error {
 		return errors.Wrap(err, "service list failed")
 	}
 
+	collectiondata := collection.Data
+
+	for {
+		collection, _ = collection.Next()
+		if collection == nil {
+			break
+		}
+		collectiondata = append(collectiondata, collection.Data...)
+		if !collection.Pagination.Partial {
+			break
+		}
+	}
+
 	writer := NewTableWriter([][]string{
 		{"ID", "Service.Id"},
 		{"TYPE", "Service.Type"},
@@ -100,7 +113,7 @@ func servicePs(ctx *cli.Context) error {
 
 	defer writer.Close()
 
-	for _, item := range collection.Data {
+	for _, item := range collectiondata {
 		if item.LaunchConfig != nil {
 			item.LaunchConfig.ImageUuid = strings.TrimPrefix(item.LaunchConfig.ImageUuid, "docker:")
 		}
@@ -164,7 +177,20 @@ func hostContainerPs(ctx *cli.Context, c *client.RancherClient) error {
 		if err != nil {
 			return err
 		}
-		return containerPs(ctx, containerList.Data)
+		collectiondata := containerList.Data
+
+		for {
+			containerList, _ = containerList.Next()
+			if containerList == nil {
+				break
+			}
+			collectiondata = append(collectiondata, containerList.Data...)
+			if !containerList.Pagination.Partial {
+				break
+			}
+		}
+
+		return containerPs(ctx, collectiondata)
 	}
 
 	containers := []client.Container{}

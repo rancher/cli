@@ -103,6 +103,19 @@ func stackLs(ctx *cli.Context) error {
 		return err
 	}
 
+	collectiondata := collection.Data
+
+	for {
+		collection, _ = collection.Next()
+		if collection == nil {
+			break
+		}
+		collectiondata = append(collectiondata, collection.Data...)
+		if !collection.Pagination.Partial {
+			break
+		}
+	}
+
 	operator, err := NewCatalogOperator(ctx)
 	if err != nil {
 		return err
@@ -121,7 +134,7 @@ func stackLs(ctx *cli.Context) error {
 
 	defer writer.Close()
 
-	for _, item := range collection.Data {
+	for _, item := range collectiondata {
 		combined := item.HealthState
 		if item.State != "active" || combined == "" {
 			combined = item.State
