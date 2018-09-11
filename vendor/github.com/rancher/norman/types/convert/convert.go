@@ -44,7 +44,7 @@ func Singular(value interface{}) interface{} {
 	return value
 }
 
-func ToString(value interface{}) string {
+func ToStringNoTrim(value interface{}) string {
 	if t, ok := value.(time.Time); ok {
 		return t.Format(time.RFC3339)
 	}
@@ -52,7 +52,11 @@ func ToString(value interface{}) string {
 	if single == nil {
 		return ""
 	}
-	return strings.TrimSpace(fmt.Sprint(single))
+	return fmt.Sprint(single)
+}
+
+func ToString(value interface{}) string {
+	return strings.TrimSpace(ToStringNoTrim(value))
 }
 
 func ToTimestamp(value interface{}) (int64, error) {
@@ -133,7 +137,7 @@ func LowerTitle(input string) string {
 	return string(runes)
 }
 
-func IsEmpty(v interface{}) bool {
+func IsAPIObjectEmpty(v interface{}) bool {
 	if v == nil || v == "" || v == 0 || v == false {
 		return true
 	}
@@ -210,4 +214,41 @@ func EncodeToMap(obj interface{}) (map[string]interface{}, error) {
 	dec := json.NewDecoder(bytes.NewBuffer(b))
 	dec.UseNumber()
 	return result, dec.Decode(&result)
+}
+
+func ToJSONKey(str string) string {
+	parts := strings.Split(str, "_")
+	for i := 1; i < len(parts); i++ {
+		parts[i] = strings.Title(parts[i])
+	}
+
+	return strings.Join(parts, "")
+}
+
+func ToYAMLKey(str string) string {
+	var result []rune
+	cap := false
+
+	for i, r := range []rune(str) {
+		if i == 0 {
+			if unicode.IsUpper(r) {
+				cap = true
+			}
+			result = append(result, unicode.ToLower(r))
+			continue
+		}
+
+		if unicode.IsUpper(r) {
+			if cap {
+				result = append(result, unicode.ToLower(r))
+			} else {
+				result = append(result, '_', unicode.ToLower(r))
+			}
+		} else {
+			cap = false
+			result = append(result, r)
+		}
+	}
+
+	return string(result)
 }

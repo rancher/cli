@@ -12,6 +12,7 @@ const (
 	PodFieldContainers                    = "containers"
 	PodFieldCreated                       = "created"
 	PodFieldCreatorID                     = "creatorId"
+	PodFieldDNSConfig                     = "dnsConfig"
 	PodFieldDNSPolicy                     = "dnsPolicy"
 	PodFieldDescription                   = "description"
 	PodFieldFsgid                         = "fsgid"
@@ -25,7 +26,7 @@ const (
 	PodFieldLabels                        = "labels"
 	PodFieldName                          = "name"
 	PodFieldNamespaceId                   = "namespaceId"
-	PodFieldNodeId                        = "nodeId"
+	PodFieldNodeID                        = "nodeId"
 	PodFieldOwnerReferences               = "ownerReferences"
 	PodFieldPriority                      = "priority"
 	PodFieldPriorityClassName             = "priorityClassName"
@@ -33,18 +34,20 @@ const (
 	PodFieldPublicEndpoints               = "publicEndpoints"
 	PodFieldRemoved                       = "removed"
 	PodFieldRestartPolicy                 = "restartPolicy"
+	PodFieldRunAsGroup                    = "runAsGroup"
 	PodFieldRunAsNonRoot                  = "runAsNonRoot"
 	PodFieldSchedulerName                 = "schedulerName"
 	PodFieldScheduling                    = "scheduling"
 	PodFieldServiceAccountName            = "serviceAccountName"
+	PodFieldShareProcessNamespace         = "shareProcessNamespace"
 	PodFieldState                         = "state"
 	PodFieldStatus                        = "status"
 	PodFieldSubdomain                     = "subdomain"
 	PodFieldTerminationGracePeriodSeconds = "terminationGracePeriodSeconds"
 	PodFieldTransitioning                 = "transitioning"
 	PodFieldTransitioningMessage          = "transitioningMessage"
+	PodFieldUUID                          = "uuid"
 	PodFieldUid                           = "uid"
-	PodFieldUuid                          = "uuid"
 	PodFieldVolumes                       = "volumes"
 	PodFieldWorkloadID                    = "workloadId"
 )
@@ -57,6 +60,7 @@ type Pod struct {
 	Containers                    []Container            `json:"containers,omitempty" yaml:"containers,omitempty"`
 	Created                       string                 `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID                     string                 `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	DNSConfig                     *PodDNSConfig          `json:"dnsConfig,omitempty" yaml:"dnsConfig,omitempty"`
 	DNSPolicy                     string                 `json:"dnsPolicy,omitempty" yaml:"dnsPolicy,omitempty"`
 	Description                   string                 `json:"description,omitempty" yaml:"description,omitempty"`
 	Fsgid                         *int64                 `json:"fsgid,omitempty" yaml:"fsgid,omitempty"`
@@ -70,7 +74,7 @@ type Pod struct {
 	Labels                        map[string]string      `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Name                          string                 `json:"name,omitempty" yaml:"name,omitempty"`
 	NamespaceId                   string                 `json:"namespaceId,omitempty" yaml:"namespaceId,omitempty"`
-	NodeId                        string                 `json:"nodeId,omitempty" yaml:"nodeId,omitempty"`
+	NodeID                        string                 `json:"nodeId,omitempty" yaml:"nodeId,omitempty"`
 	OwnerReferences               []OwnerReference       `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
 	Priority                      *int64                 `json:"priority,omitempty" yaml:"priority,omitempty"`
 	PriorityClassName             string                 `json:"priorityClassName,omitempty" yaml:"priorityClassName,omitempty"`
@@ -78,21 +82,24 @@ type Pod struct {
 	PublicEndpoints               []PublicEndpoint       `json:"publicEndpoints,omitempty" yaml:"publicEndpoints,omitempty"`
 	Removed                       string                 `json:"removed,omitempty" yaml:"removed,omitempty"`
 	RestartPolicy                 string                 `json:"restartPolicy,omitempty" yaml:"restartPolicy,omitempty"`
+	RunAsGroup                    *int64                 `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
 	RunAsNonRoot                  *bool                  `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
 	SchedulerName                 string                 `json:"schedulerName,omitempty" yaml:"schedulerName,omitempty"`
 	Scheduling                    *Scheduling            `json:"scheduling,omitempty" yaml:"scheduling,omitempty"`
 	ServiceAccountName            string                 `json:"serviceAccountName,omitempty" yaml:"serviceAccountName,omitempty"`
+	ShareProcessNamespace         *bool                  `json:"shareProcessNamespace,omitempty" yaml:"shareProcessNamespace,omitempty"`
 	State                         string                 `json:"state,omitempty" yaml:"state,omitempty"`
 	Status                        *PodStatus             `json:"status,omitempty" yaml:"status,omitempty"`
 	Subdomain                     string                 `json:"subdomain,omitempty" yaml:"subdomain,omitempty"`
 	TerminationGracePeriodSeconds *int64                 `json:"terminationGracePeriodSeconds,omitempty" yaml:"terminationGracePeriodSeconds,omitempty"`
 	Transitioning                 string                 `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 	TransitioningMessage          string                 `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
+	UUID                          string                 `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 	Uid                           *int64                 `json:"uid,omitempty" yaml:"uid,omitempty"`
-	Uuid                          string                 `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 	Volumes                       []Volume               `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	WorkloadID                    string                 `json:"workloadId,omitempty" yaml:"workloadId,omitempty"`
 }
+
 type PodCollection struct {
 	types.Collection
 	Data   []Pod `json:"data,omitempty"`
@@ -107,6 +114,7 @@ type PodOperations interface {
 	List(opts *types.ListOpts) (*PodCollection, error)
 	Create(opts *Pod) (*Pod, error)
 	Update(existing *Pod, updates interface{}) (*Pod, error)
+	Replace(existing *Pod) (*Pod, error)
 	ByID(id string) (*Pod, error)
 	Delete(container *Pod) error
 }
@@ -126,6 +134,12 @@ func (c *PodClient) Create(container *Pod) (*Pod, error) {
 func (c *PodClient) Update(existing *Pod, updates interface{}) (*Pod, error) {
 	resp := &Pod{}
 	err := c.apiClient.Ops.DoUpdate(PodType, &existing.Resource, updates, resp)
+	return resp, err
+}
+
+func (c *PodClient) Replace(obj *Pod) (*Pod, error) {
+	resp := &Pod{}
+	err := c.apiClient.Ops.DoReplace(PodType, &obj.Resource, obj, resp)
 	return resp, err
 }
 

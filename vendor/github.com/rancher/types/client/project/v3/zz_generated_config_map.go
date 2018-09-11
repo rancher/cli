@@ -7,6 +7,7 @@ import (
 const (
 	ConfigMapType                 = "configMap"
 	ConfigMapFieldAnnotations     = "annotations"
+	ConfigMapFieldBinaryData      = "binaryData"
 	ConfigMapFieldCreated         = "created"
 	ConfigMapFieldCreatorID       = "creatorId"
 	ConfigMapFieldData            = "data"
@@ -16,12 +17,13 @@ const (
 	ConfigMapFieldOwnerReferences = "ownerReferences"
 	ConfigMapFieldProjectID       = "projectId"
 	ConfigMapFieldRemoved         = "removed"
-	ConfigMapFieldUuid            = "uuid"
+	ConfigMapFieldUUID            = "uuid"
 )
 
 type ConfigMap struct {
 	types.Resource
 	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	BinaryData      map[string]string `json:"binaryData,omitempty" yaml:"binaryData,omitempty"`
 	Created         string            `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID       string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
 	Data            map[string]string `json:"data,omitempty" yaml:"data,omitempty"`
@@ -31,8 +33,9 @@ type ConfigMap struct {
 	OwnerReferences []OwnerReference  `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
 	ProjectID       string            `json:"projectId,omitempty" yaml:"projectId,omitempty"`
 	Removed         string            `json:"removed,omitempty" yaml:"removed,omitempty"`
-	Uuid            string            `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+	UUID            string            `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
+
 type ConfigMapCollection struct {
 	types.Collection
 	Data   []ConfigMap `json:"data,omitempty"`
@@ -47,6 +50,7 @@ type ConfigMapOperations interface {
 	List(opts *types.ListOpts) (*ConfigMapCollection, error)
 	Create(opts *ConfigMap) (*ConfigMap, error)
 	Update(existing *ConfigMap, updates interface{}) (*ConfigMap, error)
+	Replace(existing *ConfigMap) (*ConfigMap, error)
 	ByID(id string) (*ConfigMap, error)
 	Delete(container *ConfigMap) error
 }
@@ -66,6 +70,12 @@ func (c *ConfigMapClient) Create(container *ConfigMap) (*ConfigMap, error) {
 func (c *ConfigMapClient) Update(existing *ConfigMap, updates interface{}) (*ConfigMap, error) {
 	resp := &ConfigMap{}
 	err := c.apiClient.Ops.DoUpdate(ConfigMapType, &existing.Resource, updates, resp)
+	return resp, err
+}
+
+func (c *ConfigMapClient) Replace(obj *ConfigMap) (*ConfigMap, error) {
+	resp := &ConfigMap{}
+	err := c.apiClient.Ops.DoReplace(ConfigMapType, &obj.Resource, obj, resp)
 	return resp, err
 }
 

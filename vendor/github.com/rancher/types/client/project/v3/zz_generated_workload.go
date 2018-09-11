@@ -14,6 +14,7 @@ const (
 	WorkloadFieldCreatorID                     = "creatorId"
 	WorkloadFieldCronJobConfig                 = "cronJobConfig"
 	WorkloadFieldCronJobStatus                 = "cronJobStatus"
+	WorkloadFieldDNSConfig                     = "dnsConfig"
 	WorkloadFieldDNSPolicy                     = "dnsPolicy"
 	WorkloadFieldDaemonSetConfig               = "daemonSetConfig"
 	WorkloadFieldDaemonSetStatus               = "daemonSetStatus"
@@ -32,7 +33,7 @@ const (
 	WorkloadFieldLabels                        = "labels"
 	WorkloadFieldName                          = "name"
 	WorkloadFieldNamespaceId                   = "namespaceId"
-	WorkloadFieldNodeId                        = "nodeId"
+	WorkloadFieldNodeID                        = "nodeId"
 	WorkloadFieldOwnerReferences               = "ownerReferences"
 	WorkloadFieldPaused                        = "paused"
 	WorkloadFieldPriority                      = "priority"
@@ -45,12 +46,14 @@ const (
 	WorkloadFieldReplicationControllerConfig   = "replicationControllerConfig"
 	WorkloadFieldReplicationControllerStatus   = "replicationControllerStatus"
 	WorkloadFieldRestartPolicy                 = "restartPolicy"
+	WorkloadFieldRunAsGroup                    = "runAsGroup"
 	WorkloadFieldRunAsNonRoot                  = "runAsNonRoot"
 	WorkloadFieldScale                         = "scale"
 	WorkloadFieldSchedulerName                 = "schedulerName"
 	WorkloadFieldScheduling                    = "scheduling"
 	WorkloadFieldSelector                      = "selector"
 	WorkloadFieldServiceAccountName            = "serviceAccountName"
+	WorkloadFieldShareProcessNamespace         = "shareProcessNamespace"
 	WorkloadFieldState                         = "state"
 	WorkloadFieldStatefulSetConfig             = "statefulSetConfig"
 	WorkloadFieldStatefulSetStatus             = "statefulSetStatus"
@@ -58,8 +61,8 @@ const (
 	WorkloadFieldTerminationGracePeriodSeconds = "terminationGracePeriodSeconds"
 	WorkloadFieldTransitioning                 = "transitioning"
 	WorkloadFieldTransitioningMessage          = "transitioningMessage"
+	WorkloadFieldUUID                          = "uuid"
 	WorkloadFieldUid                           = "uid"
-	WorkloadFieldUuid                          = "uuid"
 	WorkloadFieldVolumes                       = "volumes"
 	WorkloadFieldWorkloadAnnotations           = "workloadAnnotations"
 	WorkloadFieldWorkloadLabels                = "workloadLabels"
@@ -75,6 +78,7 @@ type Workload struct {
 	CreatorID                     string                       `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
 	CronJobConfig                 *CronJobConfig               `json:"cronJobConfig,omitempty" yaml:"cronJobConfig,omitempty"`
 	CronJobStatus                 *CronJobStatus               `json:"cronJobStatus,omitempty" yaml:"cronJobStatus,omitempty"`
+	DNSConfig                     *PodDNSConfig                `json:"dnsConfig,omitempty" yaml:"dnsConfig,omitempty"`
 	DNSPolicy                     string                       `json:"dnsPolicy,omitempty" yaml:"dnsPolicy,omitempty"`
 	DaemonSetConfig               *DaemonSetConfig             `json:"daemonSetConfig,omitempty" yaml:"daemonSetConfig,omitempty"`
 	DaemonSetStatus               *DaemonSetStatus             `json:"daemonSetStatus,omitempty" yaml:"daemonSetStatus,omitempty"`
@@ -93,7 +97,7 @@ type Workload struct {
 	Labels                        map[string]string            `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Name                          string                       `json:"name,omitempty" yaml:"name,omitempty"`
 	NamespaceId                   string                       `json:"namespaceId,omitempty" yaml:"namespaceId,omitempty"`
-	NodeId                        string                       `json:"nodeId,omitempty" yaml:"nodeId,omitempty"`
+	NodeID                        string                       `json:"nodeId,omitempty" yaml:"nodeId,omitempty"`
 	OwnerReferences               []OwnerReference             `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
 	Paused                        bool                         `json:"paused,omitempty" yaml:"paused,omitempty"`
 	Priority                      *int64                       `json:"priority,omitempty" yaml:"priority,omitempty"`
@@ -106,12 +110,14 @@ type Workload struct {
 	ReplicationControllerConfig   *ReplicationControllerConfig `json:"replicationControllerConfig,omitempty" yaml:"replicationControllerConfig,omitempty"`
 	ReplicationControllerStatus   *ReplicationControllerStatus `json:"replicationControllerStatus,omitempty" yaml:"replicationControllerStatus,omitempty"`
 	RestartPolicy                 string                       `json:"restartPolicy,omitempty" yaml:"restartPolicy,omitempty"`
+	RunAsGroup                    *int64                       `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
 	RunAsNonRoot                  *bool                        `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
 	Scale                         *int64                       `json:"scale,omitempty" yaml:"scale,omitempty"`
 	SchedulerName                 string                       `json:"schedulerName,omitempty" yaml:"schedulerName,omitempty"`
 	Scheduling                    *Scheduling                  `json:"scheduling,omitempty" yaml:"scheduling,omitempty"`
 	Selector                      *LabelSelector               `json:"selector,omitempty" yaml:"selector,omitempty"`
 	ServiceAccountName            string                       `json:"serviceAccountName,omitempty" yaml:"serviceAccountName,omitempty"`
+	ShareProcessNamespace         *bool                        `json:"shareProcessNamespace,omitempty" yaml:"shareProcessNamespace,omitempty"`
 	State                         string                       `json:"state,omitempty" yaml:"state,omitempty"`
 	StatefulSetConfig             *StatefulSetConfig           `json:"statefulSetConfig,omitempty" yaml:"statefulSetConfig,omitempty"`
 	StatefulSetStatus             *StatefulSetStatus           `json:"statefulSetStatus,omitempty" yaml:"statefulSetStatus,omitempty"`
@@ -119,12 +125,13 @@ type Workload struct {
 	TerminationGracePeriodSeconds *int64                       `json:"terminationGracePeriodSeconds,omitempty" yaml:"terminationGracePeriodSeconds,omitempty"`
 	Transitioning                 string                       `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 	TransitioningMessage          string                       `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
+	UUID                          string                       `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 	Uid                           *int64                       `json:"uid,omitempty" yaml:"uid,omitempty"`
-	Uuid                          string                       `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 	Volumes                       []Volume                     `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	WorkloadAnnotations           map[string]string            `json:"workloadAnnotations,omitempty" yaml:"workloadAnnotations,omitempty"`
 	WorkloadLabels                map[string]string            `json:"workloadLabels,omitempty" yaml:"workloadLabels,omitempty"`
 }
+
 type WorkloadCollection struct {
 	types.Collection
 	Data   []Workload `json:"data,omitempty"`
@@ -139,6 +146,7 @@ type WorkloadOperations interface {
 	List(opts *types.ListOpts) (*WorkloadCollection, error)
 	Create(opts *Workload) (*Workload, error)
 	Update(existing *Workload, updates interface{}) (*Workload, error)
+	Replace(existing *Workload) (*Workload, error)
 	ByID(id string) (*Workload, error)
 	Delete(container *Workload) error
 
@@ -164,6 +172,12 @@ func (c *WorkloadClient) Create(container *Workload) (*Workload, error) {
 func (c *WorkloadClient) Update(existing *Workload, updates interface{}) (*Workload, error) {
 	resp := &Workload{}
 	err := c.apiClient.Ops.DoUpdate(WorkloadType, &existing.Resource, updates, resp)
+	return resp, err
+}
+
+func (c *WorkloadClient) Replace(obj *Workload) (*Workload, error) {
+	resp := &Workload{}
+	err := c.apiClient.Ops.DoReplace(WorkloadType, &obj.Resource, obj, resp)
 	return resp, err
 }
 

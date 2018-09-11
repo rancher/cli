@@ -12,6 +12,7 @@ const (
 	ReplicaSetFieldContainers                    = "containers"
 	ReplicaSetFieldCreated                       = "created"
 	ReplicaSetFieldCreatorID                     = "creatorId"
+	ReplicaSetFieldDNSConfig                     = "dnsConfig"
 	ReplicaSetFieldDNSPolicy                     = "dnsPolicy"
 	ReplicaSetFieldFsgid                         = "fsgid"
 	ReplicaSetFieldGids                          = "gids"
@@ -24,7 +25,7 @@ const (
 	ReplicaSetFieldLabels                        = "labels"
 	ReplicaSetFieldName                          = "name"
 	ReplicaSetFieldNamespaceId                   = "namespaceId"
-	ReplicaSetFieldNodeId                        = "nodeId"
+	ReplicaSetFieldNodeID                        = "nodeId"
 	ReplicaSetFieldOwnerReferences               = "ownerReferences"
 	ReplicaSetFieldPriority                      = "priority"
 	ReplicaSetFieldPriorityClassName             = "priorityClassName"
@@ -34,19 +35,21 @@ const (
 	ReplicaSetFieldReplicaSetConfig              = "replicaSetConfig"
 	ReplicaSetFieldReplicaSetStatus              = "replicaSetStatus"
 	ReplicaSetFieldRestartPolicy                 = "restartPolicy"
+	ReplicaSetFieldRunAsGroup                    = "runAsGroup"
 	ReplicaSetFieldRunAsNonRoot                  = "runAsNonRoot"
 	ReplicaSetFieldScale                         = "scale"
 	ReplicaSetFieldSchedulerName                 = "schedulerName"
 	ReplicaSetFieldScheduling                    = "scheduling"
 	ReplicaSetFieldSelector                      = "selector"
 	ReplicaSetFieldServiceAccountName            = "serviceAccountName"
+	ReplicaSetFieldShareProcessNamespace         = "shareProcessNamespace"
 	ReplicaSetFieldState                         = "state"
 	ReplicaSetFieldSubdomain                     = "subdomain"
 	ReplicaSetFieldTerminationGracePeriodSeconds = "terminationGracePeriodSeconds"
 	ReplicaSetFieldTransitioning                 = "transitioning"
 	ReplicaSetFieldTransitioningMessage          = "transitioningMessage"
+	ReplicaSetFieldUUID                          = "uuid"
 	ReplicaSetFieldUid                           = "uid"
-	ReplicaSetFieldUuid                          = "uuid"
 	ReplicaSetFieldVolumes                       = "volumes"
 	ReplicaSetFieldWorkloadAnnotations           = "workloadAnnotations"
 	ReplicaSetFieldWorkloadLabels                = "workloadLabels"
@@ -60,6 +63,7 @@ type ReplicaSet struct {
 	Containers                    []Container            `json:"containers,omitempty" yaml:"containers,omitempty"`
 	Created                       string                 `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID                     string                 `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	DNSConfig                     *PodDNSConfig          `json:"dnsConfig,omitempty" yaml:"dnsConfig,omitempty"`
 	DNSPolicy                     string                 `json:"dnsPolicy,omitempty" yaml:"dnsPolicy,omitempty"`
 	Fsgid                         *int64                 `json:"fsgid,omitempty" yaml:"fsgid,omitempty"`
 	Gids                          []int64                `json:"gids,omitempty" yaml:"gids,omitempty"`
@@ -72,7 +76,7 @@ type ReplicaSet struct {
 	Labels                        map[string]string      `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Name                          string                 `json:"name,omitempty" yaml:"name,omitempty"`
 	NamespaceId                   string                 `json:"namespaceId,omitempty" yaml:"namespaceId,omitempty"`
-	NodeId                        string                 `json:"nodeId,omitempty" yaml:"nodeId,omitempty"`
+	NodeID                        string                 `json:"nodeId,omitempty" yaml:"nodeId,omitempty"`
 	OwnerReferences               []OwnerReference       `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
 	Priority                      *int64                 `json:"priority,omitempty" yaml:"priority,omitempty"`
 	PriorityClassName             string                 `json:"priorityClassName,omitempty" yaml:"priorityClassName,omitempty"`
@@ -82,23 +86,26 @@ type ReplicaSet struct {
 	ReplicaSetConfig              *ReplicaSetConfig      `json:"replicaSetConfig,omitempty" yaml:"replicaSetConfig,omitempty"`
 	ReplicaSetStatus              *ReplicaSetStatus      `json:"replicaSetStatus,omitempty" yaml:"replicaSetStatus,omitempty"`
 	RestartPolicy                 string                 `json:"restartPolicy,omitempty" yaml:"restartPolicy,omitempty"`
+	RunAsGroup                    *int64                 `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
 	RunAsNonRoot                  *bool                  `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
 	Scale                         *int64                 `json:"scale,omitempty" yaml:"scale,omitempty"`
 	SchedulerName                 string                 `json:"schedulerName,omitempty" yaml:"schedulerName,omitempty"`
 	Scheduling                    *Scheduling            `json:"scheduling,omitempty" yaml:"scheduling,omitempty"`
 	Selector                      *LabelSelector         `json:"selector,omitempty" yaml:"selector,omitempty"`
 	ServiceAccountName            string                 `json:"serviceAccountName,omitempty" yaml:"serviceAccountName,omitempty"`
+	ShareProcessNamespace         *bool                  `json:"shareProcessNamespace,omitempty" yaml:"shareProcessNamespace,omitempty"`
 	State                         string                 `json:"state,omitempty" yaml:"state,omitempty"`
 	Subdomain                     string                 `json:"subdomain,omitempty" yaml:"subdomain,omitempty"`
 	TerminationGracePeriodSeconds *int64                 `json:"terminationGracePeriodSeconds,omitempty" yaml:"terminationGracePeriodSeconds,omitempty"`
 	Transitioning                 string                 `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 	TransitioningMessage          string                 `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
+	UUID                          string                 `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 	Uid                           *int64                 `json:"uid,omitempty" yaml:"uid,omitempty"`
-	Uuid                          string                 `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 	Volumes                       []Volume               `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	WorkloadAnnotations           map[string]string      `json:"workloadAnnotations,omitempty" yaml:"workloadAnnotations,omitempty"`
 	WorkloadLabels                map[string]string      `json:"workloadLabels,omitempty" yaml:"workloadLabels,omitempty"`
 }
+
 type ReplicaSetCollection struct {
 	types.Collection
 	Data   []ReplicaSet `json:"data,omitempty"`
@@ -113,6 +120,7 @@ type ReplicaSetOperations interface {
 	List(opts *types.ListOpts) (*ReplicaSetCollection, error)
 	Create(opts *ReplicaSet) (*ReplicaSet, error)
 	Update(existing *ReplicaSet, updates interface{}) (*ReplicaSet, error)
+	Replace(existing *ReplicaSet) (*ReplicaSet, error)
 	ByID(id string) (*ReplicaSet, error)
 	Delete(container *ReplicaSet) error
 }
@@ -132,6 +140,12 @@ func (c *ReplicaSetClient) Create(container *ReplicaSet) (*ReplicaSet, error) {
 func (c *ReplicaSetClient) Update(existing *ReplicaSet, updates interface{}) (*ReplicaSet, error) {
 	resp := &ReplicaSet{}
 	err := c.apiClient.Ops.DoUpdate(ReplicaSetType, &existing.Resource, updates, resp)
+	return resp, err
+}
+
+func (c *ReplicaSetClient) Replace(obj *ReplicaSet) (*ReplicaSet, error) {
+	resp := &ReplicaSet{}
+	err := c.apiClient.Ops.DoReplace(ReplicaSetType, &obj.Resource, obj, resp)
 	return resp, err
 }
 

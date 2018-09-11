@@ -12,6 +12,7 @@ const (
 	JobFieldContainers                    = "containers"
 	JobFieldCreated                       = "created"
 	JobFieldCreatorID                     = "creatorId"
+	JobFieldDNSConfig                     = "dnsConfig"
 	JobFieldDNSPolicy                     = "dnsPolicy"
 	JobFieldFsgid                         = "fsgid"
 	JobFieldGids                          = "gids"
@@ -26,7 +27,7 @@ const (
 	JobFieldLabels                        = "labels"
 	JobFieldName                          = "name"
 	JobFieldNamespaceId                   = "namespaceId"
-	JobFieldNodeId                        = "nodeId"
+	JobFieldNodeID                        = "nodeId"
 	JobFieldOwnerReferences               = "ownerReferences"
 	JobFieldPriority                      = "priority"
 	JobFieldPriorityClassName             = "priorityClassName"
@@ -34,18 +35,20 @@ const (
 	JobFieldPublicEndpoints               = "publicEndpoints"
 	JobFieldRemoved                       = "removed"
 	JobFieldRestartPolicy                 = "restartPolicy"
+	JobFieldRunAsGroup                    = "runAsGroup"
 	JobFieldRunAsNonRoot                  = "runAsNonRoot"
 	JobFieldSchedulerName                 = "schedulerName"
 	JobFieldScheduling                    = "scheduling"
 	JobFieldSelector                      = "selector"
 	JobFieldServiceAccountName            = "serviceAccountName"
+	JobFieldShareProcessNamespace         = "shareProcessNamespace"
 	JobFieldState                         = "state"
 	JobFieldSubdomain                     = "subdomain"
 	JobFieldTerminationGracePeriodSeconds = "terminationGracePeriodSeconds"
 	JobFieldTransitioning                 = "transitioning"
 	JobFieldTransitioningMessage          = "transitioningMessage"
+	JobFieldUUID                          = "uuid"
 	JobFieldUid                           = "uid"
-	JobFieldUuid                          = "uuid"
 	JobFieldVolumes                       = "volumes"
 	JobFieldWorkloadAnnotations           = "workloadAnnotations"
 	JobFieldWorkloadLabels                = "workloadLabels"
@@ -59,6 +62,7 @@ type Job struct {
 	Containers                    []Container            `json:"containers,omitempty" yaml:"containers,omitempty"`
 	Created                       string                 `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID                     string                 `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	DNSConfig                     *PodDNSConfig          `json:"dnsConfig,omitempty" yaml:"dnsConfig,omitempty"`
 	DNSPolicy                     string                 `json:"dnsPolicy,omitempty" yaml:"dnsPolicy,omitempty"`
 	Fsgid                         *int64                 `json:"fsgid,omitempty" yaml:"fsgid,omitempty"`
 	Gids                          []int64                `json:"gids,omitempty" yaml:"gids,omitempty"`
@@ -73,7 +77,7 @@ type Job struct {
 	Labels                        map[string]string      `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Name                          string                 `json:"name,omitempty" yaml:"name,omitempty"`
 	NamespaceId                   string                 `json:"namespaceId,omitempty" yaml:"namespaceId,omitempty"`
-	NodeId                        string                 `json:"nodeId,omitempty" yaml:"nodeId,omitempty"`
+	NodeID                        string                 `json:"nodeId,omitempty" yaml:"nodeId,omitempty"`
 	OwnerReferences               []OwnerReference       `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
 	Priority                      *int64                 `json:"priority,omitempty" yaml:"priority,omitempty"`
 	PriorityClassName             string                 `json:"priorityClassName,omitempty" yaml:"priorityClassName,omitempty"`
@@ -81,22 +85,25 @@ type Job struct {
 	PublicEndpoints               []PublicEndpoint       `json:"publicEndpoints,omitempty" yaml:"publicEndpoints,omitempty"`
 	Removed                       string                 `json:"removed,omitempty" yaml:"removed,omitempty"`
 	RestartPolicy                 string                 `json:"restartPolicy,omitempty" yaml:"restartPolicy,omitempty"`
+	RunAsGroup                    *int64                 `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
 	RunAsNonRoot                  *bool                  `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
 	SchedulerName                 string                 `json:"schedulerName,omitempty" yaml:"schedulerName,omitempty"`
 	Scheduling                    *Scheduling            `json:"scheduling,omitempty" yaml:"scheduling,omitempty"`
 	Selector                      *LabelSelector         `json:"selector,omitempty" yaml:"selector,omitempty"`
 	ServiceAccountName            string                 `json:"serviceAccountName,omitempty" yaml:"serviceAccountName,omitempty"`
+	ShareProcessNamespace         *bool                  `json:"shareProcessNamespace,omitempty" yaml:"shareProcessNamespace,omitempty"`
 	State                         string                 `json:"state,omitempty" yaml:"state,omitempty"`
 	Subdomain                     string                 `json:"subdomain,omitempty" yaml:"subdomain,omitempty"`
 	TerminationGracePeriodSeconds *int64                 `json:"terminationGracePeriodSeconds,omitempty" yaml:"terminationGracePeriodSeconds,omitempty"`
 	Transitioning                 string                 `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 	TransitioningMessage          string                 `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
+	UUID                          string                 `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 	Uid                           *int64                 `json:"uid,omitempty" yaml:"uid,omitempty"`
-	Uuid                          string                 `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 	Volumes                       []Volume               `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	WorkloadAnnotations           map[string]string      `json:"workloadAnnotations,omitempty" yaml:"workloadAnnotations,omitempty"`
 	WorkloadLabels                map[string]string      `json:"workloadLabels,omitempty" yaml:"workloadLabels,omitempty"`
 }
+
 type JobCollection struct {
 	types.Collection
 	Data   []Job `json:"data,omitempty"`
@@ -111,6 +118,7 @@ type JobOperations interface {
 	List(opts *types.ListOpts) (*JobCollection, error)
 	Create(opts *Job) (*Job, error)
 	Update(existing *Job, updates interface{}) (*Job, error)
+	Replace(existing *Job) (*Job, error)
 	ByID(id string) (*Job, error)
 	Delete(container *Job) error
 }
@@ -130,6 +138,12 @@ func (c *JobClient) Create(container *Job) (*Job, error) {
 func (c *JobClient) Update(existing *Job, updates interface{}) (*Job, error) {
 	resp := &Job{}
 	err := c.apiClient.Ops.DoUpdate(JobType, &existing.Resource, updates, resp)
+	return resp, err
+}
+
+func (c *JobClient) Replace(obj *Job) (*Job, error) {
+	resp := &Job{}
+	err := c.apiClient.Ops.DoReplace(JobType, &obj.Resource, obj, resp)
 	return resp, err
 }
 
