@@ -86,9 +86,6 @@ func (s *Schemas) doRemoveSchema(schema Schema) *Schemas {
 }
 
 func (s *Schemas) removeReferences(schema *Schema) {
-	fullType := convert.ToFullReference(schema.Version.Path, schema.ID)
-	delete(s.references, fullType)
-
 	for name, values := range s.references {
 		changed := false
 		var modified []BackReference
@@ -343,7 +340,28 @@ type MultiErrors struct {
 	Errors []error
 }
 
-func NewErrors(errors ...error) error {
+type Errors struct {
+	errors []error
+}
+
+func (e *Errors) Add(err error) {
+	if err != nil {
+		e.errors = append(e.errors, err)
+	}
+}
+
+func (e *Errors) Err() error {
+	return NewErrors(e.errors...)
+}
+
+func NewErrors(inErrors ...error) error {
+	var errors []error
+	for _, err := range inErrors {
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
+
 	if len(errors) == 0 {
 		return nil
 	} else if len(errors) == 1 {

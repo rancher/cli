@@ -5,44 +5,49 @@ import (
 )
 
 const (
-	RoleTemplateType                 = "roleTemplate"
-	RoleTemplateFieldAnnotations     = "annotations"
-	RoleTemplateFieldBuiltin         = "builtin"
-	RoleTemplateFieldContext         = "context"
-	RoleTemplateFieldCreated         = "created"
-	RoleTemplateFieldCreatorID       = "creatorId"
-	RoleTemplateFieldDescription     = "description"
-	RoleTemplateFieldExternal        = "external"
-	RoleTemplateFieldHidden          = "hidden"
-	RoleTemplateFieldLabels          = "labels"
-	RoleTemplateFieldLocked          = "locked"
-	RoleTemplateFieldName            = "name"
-	RoleTemplateFieldOwnerReferences = "ownerReferences"
-	RoleTemplateFieldRemoved         = "removed"
-	RoleTemplateFieldRoleTemplateIds = "roleTemplateIds"
-	RoleTemplateFieldRules           = "rules"
-	RoleTemplateFieldUuid            = "uuid"
+	RoleTemplateType                       = "roleTemplate"
+	RoleTemplateFieldAnnotations           = "annotations"
+	RoleTemplateFieldBuiltin               = "builtin"
+	RoleTemplateFieldClusterCreatorDefault = "clusterCreatorDefault"
+	RoleTemplateFieldContext               = "context"
+	RoleTemplateFieldCreated               = "created"
+	RoleTemplateFieldCreatorID             = "creatorId"
+	RoleTemplateFieldDescription           = "description"
+	RoleTemplateFieldExternal              = "external"
+	RoleTemplateFieldHidden                = "hidden"
+	RoleTemplateFieldLabels                = "labels"
+	RoleTemplateFieldLocked                = "locked"
+	RoleTemplateFieldName                  = "name"
+	RoleTemplateFieldOwnerReferences       = "ownerReferences"
+	RoleTemplateFieldProjectCreatorDefault = "projectCreatorDefault"
+	RoleTemplateFieldRemoved               = "removed"
+	RoleTemplateFieldRoleTemplateIDs       = "roleTemplateIds"
+	RoleTemplateFieldRules                 = "rules"
+	RoleTemplateFieldUUID                  = "uuid"
 )
 
 type RoleTemplate struct {
 	types.Resource
-	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Builtin         bool              `json:"builtin,omitempty" yaml:"builtin,omitempty"`
-	Context         string            `json:"context,omitempty" yaml:"context,omitempty"`
-	Created         string            `json:"created,omitempty" yaml:"created,omitempty"`
-	CreatorID       string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
-	Description     string            `json:"description,omitempty" yaml:"description,omitempty"`
-	External        bool              `json:"external,omitempty" yaml:"external,omitempty"`
-	Hidden          bool              `json:"hidden,omitempty" yaml:"hidden,omitempty"`
-	Labels          map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Locked          bool              `json:"locked,omitempty" yaml:"locked,omitempty"`
-	Name            string            `json:"name,omitempty" yaml:"name,omitempty"`
-	OwnerReferences []OwnerReference  `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
-	Removed         string            `json:"removed,omitempty" yaml:"removed,omitempty"`
-	RoleTemplateIds []string          `json:"roleTemplateIds,omitempty" yaml:"roleTemplateIds,omitempty"`
-	Rules           []PolicyRule      `json:"rules,omitempty" yaml:"rules,omitempty"`
-	Uuid            string            `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+	Annotations           map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Builtin               bool              `json:"builtin,omitempty" yaml:"builtin,omitempty"`
+	ClusterCreatorDefault bool              `json:"clusterCreatorDefault,omitempty" yaml:"clusterCreatorDefault,omitempty"`
+	Context               string            `json:"context,omitempty" yaml:"context,omitempty"`
+	Created               string            `json:"created,omitempty" yaml:"created,omitempty"`
+	CreatorID             string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	Description           string            `json:"description,omitempty" yaml:"description,omitempty"`
+	External              bool              `json:"external,omitempty" yaml:"external,omitempty"`
+	Hidden                bool              `json:"hidden,omitempty" yaml:"hidden,omitempty"`
+	Labels                map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Locked                bool              `json:"locked,omitempty" yaml:"locked,omitempty"`
+	Name                  string            `json:"name,omitempty" yaml:"name,omitempty"`
+	OwnerReferences       []OwnerReference  `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
+	ProjectCreatorDefault bool              `json:"projectCreatorDefault,omitempty" yaml:"projectCreatorDefault,omitempty"`
+	Removed               string            `json:"removed,omitempty" yaml:"removed,omitempty"`
+	RoleTemplateIDs       []string          `json:"roleTemplateIds,omitempty" yaml:"roleTemplateIds,omitempty"`
+	Rules                 []PolicyRule      `json:"rules,omitempty" yaml:"rules,omitempty"`
+	UUID                  string            `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
+
 type RoleTemplateCollection struct {
 	types.Collection
 	Data   []RoleTemplate `json:"data,omitempty"`
@@ -57,6 +62,7 @@ type RoleTemplateOperations interface {
 	List(opts *types.ListOpts) (*RoleTemplateCollection, error)
 	Create(opts *RoleTemplate) (*RoleTemplate, error)
 	Update(existing *RoleTemplate, updates interface{}) (*RoleTemplate, error)
+	Replace(existing *RoleTemplate) (*RoleTemplate, error)
 	ByID(id string) (*RoleTemplate, error)
 	Delete(container *RoleTemplate) error
 }
@@ -76,6 +82,12 @@ func (c *RoleTemplateClient) Create(container *RoleTemplate) (*RoleTemplate, err
 func (c *RoleTemplateClient) Update(existing *RoleTemplate, updates interface{}) (*RoleTemplate, error) {
 	resp := &RoleTemplate{}
 	err := c.apiClient.Ops.DoUpdate(RoleTemplateType, &existing.Resource, updates, resp)
+	return resp, err
+}
+
+func (c *RoleTemplateClient) Replace(obj *RoleTemplate) (*RoleTemplate, error) {
+	resp := &RoleTemplate{}
+	err := c.apiClient.Ops.DoReplace(RoleTemplateType, &obj.Resource, obj, resp)
 	return resp, err
 }
 

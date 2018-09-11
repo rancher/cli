@@ -15,28 +15,31 @@ const (
 	NamespaceFieldOwnerReferences      = "ownerReferences"
 	NamespaceFieldProjectID            = "projectId"
 	NamespaceFieldRemoved              = "removed"
+	NamespaceFieldResourceQuota        = "resourceQuota"
 	NamespaceFieldState                = "state"
 	NamespaceFieldTransitioning        = "transitioning"
 	NamespaceFieldTransitioningMessage = "transitioningMessage"
-	NamespaceFieldUuid                 = "uuid"
+	NamespaceFieldUUID                 = "uuid"
 )
 
 type Namespace struct {
 	types.Resource
-	Annotations          map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Created              string            `json:"created,omitempty" yaml:"created,omitempty"`
-	CreatorID            string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
-	Description          string            `json:"description,omitempty" yaml:"description,omitempty"`
-	Labels               map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Name                 string            `json:"name,omitempty" yaml:"name,omitempty"`
-	OwnerReferences      []OwnerReference  `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
-	ProjectID            string            `json:"projectId,omitempty" yaml:"projectId,omitempty"`
-	Removed              string            `json:"removed,omitempty" yaml:"removed,omitempty"`
-	State                string            `json:"state,omitempty" yaml:"state,omitempty"`
-	Transitioning        string            `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
-	TransitioningMessage string            `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
-	Uuid                 string            `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+	Annotations          map[string]string       `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Created              string                  `json:"created,omitempty" yaml:"created,omitempty"`
+	CreatorID            string                  `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	Description          string                  `json:"description,omitempty" yaml:"description,omitempty"`
+	Labels               map[string]string       `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Name                 string                  `json:"name,omitempty" yaml:"name,omitempty"`
+	OwnerReferences      []OwnerReference        `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
+	ProjectID            string                  `json:"projectId,omitempty" yaml:"projectId,omitempty"`
+	Removed              string                  `json:"removed,omitempty" yaml:"removed,omitempty"`
+	ResourceQuota        *NamespaceResourceQuota `json:"resourceQuota,omitempty" yaml:"resourceQuota,omitempty"`
+	State                string                  `json:"state,omitempty" yaml:"state,omitempty"`
+	Transitioning        string                  `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+	TransitioningMessage string                  `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
+	UUID                 string                  `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
+
 type NamespaceCollection struct {
 	types.Collection
 	Data   []Namespace `json:"data,omitempty"`
@@ -51,8 +54,11 @@ type NamespaceOperations interface {
 	List(opts *types.ListOpts) (*NamespaceCollection, error)
 	Create(opts *Namespace) (*Namespace, error)
 	Update(existing *Namespace, updates interface{}) (*Namespace, error)
+	Replace(existing *Namespace) (*Namespace, error)
 	ByID(id string) (*Namespace, error)
 	Delete(container *Namespace) error
+
+	ActionMove(resource *Namespace, input *NamespaceMove) error
 }
 
 func newNamespaceClient(apiClient *Client) *NamespaceClient {
@@ -70,6 +76,12 @@ func (c *NamespaceClient) Create(container *Namespace) (*Namespace, error) {
 func (c *NamespaceClient) Update(existing *Namespace, updates interface{}) (*Namespace, error) {
 	resp := &Namespace{}
 	err := c.apiClient.Ops.DoUpdate(NamespaceType, &existing.Resource, updates, resp)
+	return resp, err
+}
+
+func (c *NamespaceClient) Replace(obj *Namespace) (*Namespace, error) {
+	resp := &Namespace{}
+	err := c.apiClient.Ops.DoReplace(NamespaceType, &obj.Resource, obj, resp)
 	return resp, err
 }
 
@@ -98,4 +110,9 @@ func (c *NamespaceClient) ByID(id string) (*Namespace, error) {
 
 func (c *NamespaceClient) Delete(container *Namespace) error {
 	return c.apiClient.Ops.DoResourceDelete(NamespaceType, &container.Resource)
+}
+
+func (c *NamespaceClient) ActionMove(resource *Namespace, input *NamespaceMove) error {
+	err := c.apiClient.Ops.DoAction(NamespaceType, "move", &resource.Resource, input, nil)
+	return err
 }
