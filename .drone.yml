@@ -8,6 +8,42 @@ pipeline:
     commands:
     - dapper ci
 
+  stage-binaries:
+    image: rancher/dapper:1.11.2
+    commands:
+    - cp -r ./bin/* ./package/
+    when:
+      branch: [master, release/*]
+      event: [push,tag]
+
+  docker-publish-20:
+    image: plugins/docker
+    dockerfile: package/Dockerfile
+    repo: rancher/cli
+    context: package/
+    tag: ${DRONE_TAG}
+    secrets: [docker_username, docker_password]
+    build_args:
+    - VERSION=${DRONE_TAG}
+    when:
+      branch: [master]
+      event: tag
+
+  docker-publish-16:
+    image: plugins/docker
+    dockerfile: package/Dockerfile
+    repo: rancher/cli
+    context: package/
+    tag:
+    - latest
+    - ${DRONE_TAG}
+    secrets: [docker_username, docker_password]
+    build_args:
+    - VERSION=${DRONE_TAG}
+    when:
+      branch: [v1.6]
+      event: tag
+
   publish-release:
     image: plugins/gcs
     source: dist/artifacts/v*
