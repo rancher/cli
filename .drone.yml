@@ -21,9 +21,8 @@ pipeline:
     dockerfile: package/Dockerfile
     repo: rancher/cli2
     context: package/
-    tag: 
+    tag:
      - latest
-     - ${DRONE_TAG}
     secrets: [docker_username, docker_password]
     build_args:
     - VERSION=${DRONE_TAG}
@@ -53,7 +52,6 @@ pipeline:
     context: package/
     tag:
     - latest
-    - ${DRONE_TAG}
     secrets: [docker_username, docker_password]
     build_args:
     - VERSION=${DRONE_TAG}
@@ -62,7 +60,7 @@ pipeline:
       event: tag
       ref:
         exclude: [ refs/tags/*rc* ]
-       
+
   docker-publish-16-rc:
     image: plugins/docker
     dockerfile: package/Dockerfile
@@ -118,7 +116,7 @@ pipeline:
       - source: google_auth_key
         target: GOOGLE_CREDENTIALS
     when:
-      branch: master
+      branch: v1.6
       event: tag
 
   binary-publish-latest-16:
@@ -132,7 +130,34 @@ pipeline:
       - source: google_auth_key
         target: GOOGLE_CREDENTIALS
     when:
-      branch: master
+      branch: v1.6
       event: tag
       ref:
         exclude: [ refs/tags/*rc* ]
+
+  github-binary-publish-release:
+    image: plugins/github-release
+    files:
+     - dist/artifacts/${DRONE_TAG}/*
+    checksum:
+     - sha256
+    secrets: [github_token]
+    when:
+      branch: [master, v1.6]
+      event: tag
+      ref:
+        exclude: [ refs/tags/*rc* ]
+
+  github-binary-publish-prerelease:
+    image: plugins/github-release
+    prerelease: true
+    files:
+     - dist/artifacts/${DRONE_TAG}/*
+    checksum:
+     - sha256
+    secrets: [github_token]
+    when:
+      branch: [master, v1.6]
+      event: tag
+      ref:
+        include: [ refs/tags/*rc* ]
