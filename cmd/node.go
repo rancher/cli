@@ -184,7 +184,7 @@ func getNodePools(
 
 func getNodePoolName(node managementClient.Node, pools *managementClient.NodePoolCollection) string {
 	for _, pool := range pools.Data {
-		if node.NodePoolId == pool.ID {
+		if node.NodePoolID == pool.ID {
 			return pool.HostnamePrefix
 		}
 	}

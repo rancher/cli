@@ -274,7 +274,7 @@ func clusterCreate(ctx *cli.Context) error {
 	}
 
 	if ctx.String("psp-default-policy") != "" {
-		clusterConfig.DefaultPodSecurityPolicyTemplateId = ctx.String("psp-default-policy")
+		clusterConfig.DefaultPodSecurityPolicyTemplateID = ctx.String("psp-default-policy")
 	}
 
 	createdCluster, err := c.ManagementClient.Cluster.Create(clusterConfig)
@@ -504,14 +504,14 @@ func addClusterMemberRoles(ctx *cli.Context) error {
 
 	for _, role := range roles {
 		rtb := managementClient.ClusterRoleTemplateBinding{
-			ClusterId:       clusterID,
-			RoleTemplateId:  role,
-			UserPrincipalId: member.ID,
+			ClusterID:       clusterID,
+			RoleTemplateID:  role,
+			UserPrincipalID: member.ID,
 		}
 		if member.PrincipalType == "user" {
-			rtb.UserPrincipalId = member.ID
+			rtb.UserPrincipalID = member.ID
 		} else {
-			rtb.GroupPrincipalId = member.ID
+			rtb.GroupPrincipalID = member.ID
 		}
 		_, err = c.ManagementClient.ClusterRoleTemplateBinding.Create(&rtb)
 		if nil != err {
@@ -611,8 +611,8 @@ func listClusterMembers(ctx *cli.Context) error {
 
 		b = append(b, RoleTemplateBinding{
 			ID:      binding.ID,
-			User:    userMap[binding.UserId],
-			Role:    binding.RoleTemplateId,
+			User:    userMap[binding.UserID],
+			Role:    binding.RoleTemplateID,
 			Created: parsedTime,
 		})
 	}
@@ -636,7 +636,7 @@ func getClusterRegToken(
 
 	if len(clusterTokenCollection.Data) == 0 {
 		crt := &managementClient.ClusterRegistrationToken{
-			ClusterId: clusterID,
+			ClusterID: clusterID,
 		}
 		clusterToken, err := c.ManagementClient.ClusterRegistrationToken.Create(crt)
 		if nil != err {

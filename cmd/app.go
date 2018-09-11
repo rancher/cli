@@ -372,7 +372,7 @@ func appRollback(ctx *cli.Context) error {
 	}
 
 	rr := &projectClient.RollbackRevision{
-		RevisionId: revision.Name,
+		RevisionID: revision.Name,
 	}
 
 	return c.ProjectClient.App.ActionRollback(app, rr)
@@ -722,7 +722,7 @@ func outputRevisions(ctx *cli.Context, c *cliclient.MasterClient) error {
 	defer writer.Close()
 
 	for _, rev := range sorted {
-		if rev.Name == app.AppRevisionId {
+		if rev.Name == app.AppRevisionID {
 			rev.Current = "*"
 		}
 		rev.Human = rev.Created.Format("02 Jan 2006 15:04:05 MST")
