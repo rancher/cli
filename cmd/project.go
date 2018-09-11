@@ -155,7 +155,7 @@ func projectCreate(ctx *cli.Context) error {
 
 	newProj := &managementClient.Project{
 		Name:        ctx.Args().First(),
-		ClusterId:   clusterID,
+		ClusterID:   clusterID,
 		Description: ctx.String("description"),
 	}
 
@@ -222,14 +222,14 @@ func addProjectMemberRoles(ctx *cli.Context) error {
 
 	for _, role := range roles {
 		rtb := managementClient.ProjectRoleTemplateBinding{
-			ProjectId:       projectID,
-			RoleTemplateId:  role,
-			UserPrincipalId: member.ID,
+			ProjectID:       projectID,
+			RoleTemplateID:  role,
+			UserPrincipalID: member.ID,
 		}
 		if member.PrincipalType == "user" {
-			rtb.UserPrincipalId = member.ID
+			rtb.UserPrincipalID = member.ID
 		} else {
-			rtb.GroupPrincipalId = member.ID
+			rtb.GroupPrincipalID = member.ID
 		}
 		_, err = c.ManagementClient.ProjectRoleTemplateBinding.Create(&rtb)
 		if nil != err {
@@ -329,8 +329,8 @@ func listProjectMembers(ctx *cli.Context) error {
 
 		b = append(b, RoleTemplateBinding{
 			ID:      binding.ID,
-			User:    userMap[binding.UserId],
-			Role:    binding.RoleTemplateId,
+			User:    userMap[binding.UserID],
+			Role:    binding.RoleTemplateID,
 			Created: parsedTime,
 		})
 	}

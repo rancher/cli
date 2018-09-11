@@ -192,7 +192,7 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 		writer.Write(&LoginData{
 			Project:     item,
 			Index:       i + 1,
-			ClusterName: clusterNames[item.ClusterId],
+			ClusterName: clusterNames[item.ClusterID],
 		})
 	}
 

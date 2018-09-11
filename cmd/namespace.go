@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
 	clusterClient "github.com/rancher/types/client/cluster/v3"
 	"github.com/urfave/cli"
@@ -62,12 +63,10 @@ func NamespaceCommand() cli.Command {
 				Action:    namespaceDelete,
 			},
 			{
-				Name:  "associate",
-				Usage: "Associate a namespace with a project",
-				Description: "\nAssociates a namespace with a project. If no " +
-					"[PROJECTID] is provided the namespace will be unassociated from all projects",
+				Name:      "move",
+				Usage:     "Move a namespace to a different project",
 				ArgsUsage: "[NAMESPACEID/NAMESPACENAME PROJECTID]",
-				Action:    namespaceAssociate,
+				Action:    namespaceMove,
 			},
 		},
 	}
@@ -170,8 +169,8 @@ func namespaceDelete(ctx *cli.Context) error {
 	return nil
 }
 
-func namespaceAssociate(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
+func namespaceMove(ctx *cli.Context) error {
+	if ctx.NArg() < 2 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
@@ -190,8 +189,29 @@ func namespaceAssociate(ctx *cli.Context) error {
 		return err
 	}
 
+	projResource, err := Lookup(c, ctx.Args().Get(1), "project")
+	if nil != err {
+		return err
+	}
+
+	proj, err := getProjectByID(c, projResource.ID)
+	if nil != err {
+		return err
+	}
+
+	if anno, ok := namespace.Annotations["cattle.io/appIds"]; ok && anno != "" {
+		return errors.Errorf("Namespace %v cannot be moved", namespace.Name)
+	}
+
+	if _, ok := namespace.Actions["move"]; ok {
+		move := &clusterClient.NamespaceMove{
+			ProjectID: proj.ID,
+		}
+		return c.ClusterClient.Namespace.ActionMove(namespace, move)
+	}
+
 	update := make(map[string]string)
-	update["projectId"] = ctx.Args().Get(1)
+	update["projectId"] = proj.ID
 
 	_, err = c.ClusterClient.Namespace.Update(namespace, update)
 	if nil != err {
