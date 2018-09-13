@@ -166,7 +166,7 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 	}
 
 	if len(projectCollection.Data) == 0 {
-		logrus.Warn("There are no projects in the cluster, please create one and try again")
+		logrus.Warn("No projects found, context could not be set. Please create a project and run `rancher login` again.")
 		return "", nil
 	}
 
