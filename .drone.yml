@@ -92,7 +92,7 @@ pipeline:
   binary-publish-release-2:
     image: plugins/gcs
     source: dist/artifacts/${DRONE_TAG}
-    target: releases.rancher.com/cli2/
+    target: releases.rancher.com/cli2/${DRONE_TAG}
     acl:
       - allUsers:READER
     cache_control: public,max-age=3600
@@ -122,7 +122,7 @@ pipeline:
   binary-publish-release-16:
     image: plugins/gcs
     source: dist/artifacts/${DRONE_TAG}
-    target: releases.rancher.com/cli/
+    target: releases.rancher.com/cli/${DRONE_TAG}
     acl:
       - allUsers:READER
     cache_control: public,max-age=3600
