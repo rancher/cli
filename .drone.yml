@@ -7,3 +7,157 @@ pipeline:
     - /var/run/docker.sock:/var/run/docker.sock
     commands:
     - dapper ci
+
+  stage-binaries:
+    image: rancher/dapper:1.11.2
+    commands:
+    - cp -r ./bin/* ./package/
+    when:
+      branch: [master, v1.6]
+      event: [push,tag]
+
+  docker-publish-20-release:
+    image: plugins/docker
+    dockerfile: package/Dockerfile
+    repo: rancher/cli2
+    context: package/
+    tag:
+     - latest
+    secrets: [docker_username, docker_password]
+    build_args:
+    - VERSION=${DRONE_TAG}
+    when:
+      branch: [master]
+      event: tag
+      ref:
+        exclude: [ refs/tags/*rc* ]
+
+  docker-publish-20-rc:
+    image: plugins/docker
+    dockerfile: package/Dockerfile
+    repo: rancher/cli2
+    context: package/
+    tag: ${DRONE_TAG}
+    secrets: [docker_username, docker_password]
+    build_args:
+    - VERSION=${DRONE_TAG}
+    when:
+      branch: [master]
+      event: tag
+
+  docker-publish-16-release:
+    image: plugins/docker
+    dockerfile: package/Dockerfile
+    repo: rancher/cli
+    context: package/
+    tag:
+    - latest
+    secrets: [docker_username, docker_password]
+    build_args:
+    - VERSION=${DRONE_TAG}
+    when:
+      branch: [v1.6]
+      event: tag
+      ref:
+        exclude: [ refs/tags/*rc* ]
+
+  docker-publish-16-rc:
+    image: plugins/docker
+    dockerfile: package/Dockerfile
+    repo: rancher/cli
+    context: package/
+    tag:
+    - ${DRONE_TAG}
+    secrets: [docker_username, docker_password]
+    build_args:
+    - VERSION=${DRONE_TAG}
+    when:
+      branch: [v1.6]
+      event: tag
+
+  binary-publish-release-2:
+    image: plugins/gcs
+    source: dist/artifacts/v*
+    target: releases.rancher.com/cli2
+    acl:
+      - allUsers:READER
+    cache_control: public,max-age=3600
+    secrets:
+      - source: google_auth_key
+        target: GOOGLE_CREDENTIALS
+    when:
+      branch: master
+      event: tag
+
+  binary-publish-latest-2:
+    image: plugins/gcs
+    source: dist/artifacts/latest/
+    target: releases.rancher.com/cli2/latest
+    acl:
+      - allUsers:READER
+    cache_control: public,max-age=3600
+    secrets:
+      - source: google_auth_key
+        target: GOOGLE_CREDENTIALS
+    when:
+      branch: master
+      event: tag
+      ref:
+        exclude: [ refs/tags/*rc* ]
+
+  binary-publish-release-16:
+    image: plugins/gcs
+    source: dist/artifacts/v*
+    target: releases.rancher.com/cli
+    acl:
+      - allUsers:READER
+    cache_control: public,max-age=3600
+    secrets:
+      - source: google_auth_key
+        target: GOOGLE_CREDENTIALS
+    when:
+      branch: v1.6
+      event: tag
+
+  binary-publish-latest-16:
+    image: plugins/gcs
+    source: dist/artifacts/latest/
+    target: releases.rancher.com/cli/latest
+    acl:
+      - allUsers:READER
+    cache_control: public,max-age=3600
+    secrets:
+      - source: google_auth_key
+        target: GOOGLE_CREDENTIALS
+    when:
+      branch: v1.6
+      event: tag
+      ref:
+        exclude: [ refs/tags/*rc* ]
+
+  github-binary-publish-release:
+    image: plugins/github-release
+    files:
+     - dist/artifacts/${DRONE_TAG}/*
+    checksum:
+     - sha256
+    secrets: [github_token]
+    when:
+      branch: [master, v1.6]
+      event: tag
+      ref:
+        exclude: [ refs/tags/*rc* ]
+
+  github-binary-publish-prerelease:
+    image: plugins/github-release
+    prerelease: true
+    files:
+     - dist/artifacts/${DRONE_TAG}/*
+    checksum:
+     - sha256
+    secrets: [github_token]
+    when:
+      branch: [master, v1.6]
+      event: tag
+      ref:
+        include: [ refs/tags/*rc* ]
