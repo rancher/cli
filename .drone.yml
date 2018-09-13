@@ -8,6 +8,21 @@ pipeline:
     commands:
     - dapper ci
 
+  build-all-binaries:
+    privileged: true
+    image: rancher/dapper:1.10.3
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+    - CROSS=1
+    commands:
+    - dapper build
+    - dapper package
+    - ls -lR dist/artifacts
+    when:
+      branch: [master, v1.6]
+      event: tag
+
   stage-binaries:
     image: rancher/dapper:1.11.2
     commands:
@@ -77,7 +92,7 @@ pipeline:
 
   binary-publish-release-2:
     image: plugins/gcs
-    source: dist/artifacts/v*
+    source: dist/artifacts/${DRONE_TAG}
     target: releases.rancher.com/cli2
     acl:
       - allUsers:READER
@@ -107,7 +122,7 @@ pipeline:
 
   binary-publish-release-16:
     image: plugins/gcs
-    source: dist/artifacts/v*
+    source: dist/artifacts/${DRONE_TAG}
     target: releases.rancher.com/cli
     acl:
       - allUsers:READER
@@ -138,7 +153,7 @@ pipeline:
   github-binary-publish-release:
     image: plugins/github-release
     files:
-     - dist/artifacts/${DRONE_TAG}/*
+     - dist/artifacts/${DRONE_TAG}/rancher*
     checksum:
      - sha256
     secrets: [github_token]
@@ -152,7 +167,7 @@ pipeline:
     image: plugins/github-release
     prerelease: true
     files:
-     - dist/artifacts/${DRONE_TAG}/*
+     - dist/artifacts/${DRONE_TAG}/rancher*
     checksum:
      - sha256
     secrets: [github_token]
