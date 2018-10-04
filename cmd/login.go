@@ -57,6 +57,10 @@ func LoginCommand() cli.Command {
 				Name:  "name",
 				Usage: "Name of the Server",
 			},
+			cli.BoolFlag{
+				Name:  "skip-verify",
+				Usage: "Skip verification of the CACerts presented by the Server",
+			},
 		},
 	}
 }
@@ -119,7 +123,7 @@ func loginSetup(ctx *cli.Context) error {
 		if _, ok := err.(*url.Error); ok && strings.Contains(err.Error(), "certificate signed by unknown authority") {
 			// no cert was provided and it's most likely a self signed cert if
 			// we get here so grab the cacert and see if the user accepts the server
-			c, err = getCertFromServer(serverConfig)
+			c, err = getCertFromServer(ctx, serverConfig)
 			if nil != err {
 				return err
 			}
@@ -165,14 +169,32 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 		return "", err
 	}
 
-	if len(projectCollection.Data) == 0 {
+	projDataLen := len(projectCollection.Data)
+
+	if projDataLen == 0 {
 		logrus.Warn("No projects found, context could not be set. Please create a project and run `rancher login` again.")
 		return "", nil
 	}
 
-	if len(projectCollection.Data) == 1 {
+	if projDataLen == 1 {
 		logrus.Infof("Only 1 project available: %s", projectCollection.Data[0].Name)
 		return projectCollection.Data[0].ID, nil
+	}
+
+	if projDataLen == 2 {
+		var sysProj bool
+		var defaultID string
+		for _, proj := range projectCollection.Data {
+			if proj.Name == "Default" {
+				defaultID = proj.ID
+			}
+			if proj.Name == "System" {
+				sysProj = true
+			}
+			if sysProj && defaultID != "" {
+				return defaultID, nil
+			}
+		}
 	}
 
 	clusterNames, err := getClusterNames(ctx, c)
@@ -232,7 +254,7 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 	return projectCollection.Data[selection].ID, nil
 }
 
-func getCertFromServer(cf *config.ServerConfig) (*cliclient.MasterClient, error) {
+func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.MasterClient, error) {
 	req, err := http.NewRequest("GET", cf.URL+"/v3/settings/cacerts", nil)
 	if nil != err {
 		return nil, err
@@ -274,11 +296,13 @@ func getCertFromServer(cf *config.ServerConfig) (*cliclient.MasterClient, error)
 		return nil, err
 	}
 
-	if ok := verifyUserAcceptsCert(serverCerts, cf.URL); ok {
-		cf.CACerts = cert
-	} else {
-		return nil, errors.New("CACert of server was not accepted, unable to login")
+	if !ctx.Bool("skip-verify") {
+		if ok := verifyUserAcceptsCert(serverCerts, cf.URL); !ok {
+			return nil, errors.New("CACert of server was not accepted, unable to login")
+		}
 	}
+
+	cf.CACerts = cert
 
 	return cliclient.NewManagementClient(cf)
 }

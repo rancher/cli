@@ -28,6 +28,7 @@ import (
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
 	managementClient "github.com/rancher/types/client/management/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -294,6 +295,7 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 	for _, schemaType := range types {
 		rt, err := GetResourceType(c, schemaType)
 		if err != nil {
+			logrus.Debugf("Error GetResourceType: %v", err)
 			return nil, err
 		}
 		var schemaClient clientbase.APIBaseClientInterface
@@ -318,6 +320,7 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 		var resource ntypes.Resource
 
 		if err := schemaClient.ByID(schemaType, name, &resource); !clientbase.IsNotFound(err) && err != nil {
+			logrus.Debugf("Error schemaClient.ByID: %v", err)
 			return nil, err
 		} else if err == nil && resource.ID == name {
 			return &resource, nil
@@ -333,7 +336,8 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 			},
 		}
 
-		if err := schemaClient.List(schemaType, listOpts, &collection); err != nil {
+		if err := schemaClient.List(schemaType, listOpts, &collection); !clientbase.IsNotFound(err) && err != nil {
+			logrus.Debugf("Error schemaClient.List: %v", err)
 			return nil, err
 		}
 
