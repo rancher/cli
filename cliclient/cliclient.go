@@ -6,6 +6,7 @@ import (
 
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
+	ntypes "github.com/rancher/norman/types"
 	clusterClient "github.com/rancher/types/client/cluster/v3"
 	managementClient "github.com/rancher/types/client/management/v3"
 	projectClient "github.com/rancher/types/client/project/v3"
@@ -132,6 +133,26 @@ func (mc *MasterClient) newProjectClient() error {
 	mc.ProjectClient = pc
 
 	return nil
+}
+
+func (mc *MasterClient) ByID(resource *ntypes.Resource, respObject interface{}) error {
+	if _, ok := mc.ManagementClient.APIBaseClient.Types[resource.Type]; ok {
+		err := mc.ManagementClient.ByID(resource.Type, resource.ID, &respObject)
+		if err != nil {
+			return err
+		}
+	} else if _, ok := mc.ProjectClient.APIBaseClient.Types[resource.Type]; ok {
+		err := mc.ProjectClient.ByID(resource.Type, resource.ID, &respObject)
+		if err != nil {
+			return err
+		}
+	} else if _, ok := mc.ClusterClient.APIBaseClient.Types[resource.Type]; ok {
+		err := mc.ClusterClient.ByID(resource.Type, resource.ID, &respObject)
+		if err != nil {
+			return err
+		}
+	}
+	return errors.New("unknown resource type")
 }
 
 func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
