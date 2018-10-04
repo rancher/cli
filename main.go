@@ -97,6 +97,7 @@ func mainErr() error {
 		cmd.SettingsCommand(),
 		cmd.SSHCommand(),
 		cmd.UpCommand(),
+		cmd.WaitCommand(),
 	}
 
 	for _, com := range app.Commands {

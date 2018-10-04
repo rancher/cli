@@ -3,7 +3,6 @@ package cmd
 import (
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -71,23 +70,9 @@ func inspectResources(ctx *cli.Context) error {
 	}
 	mapResource := map[string]interface{}{}
 
-	if _, ok := c.ManagementClient.APIBaseClient.Types[resource.Type]; ok {
-		err = c.ManagementClient.ByID(resource.Type, resource.ID, &mapResource)
-		if err != nil {
-			return err
-		}
-	} else if _, ok := c.ProjectClient.APIBaseClient.Types[resource.Type]; ok {
-		err = c.ProjectClient.ByID(resource.Type, resource.ID, &mapResource)
-		if err != nil {
-			return err
-		}
-	} else if _, ok := c.ClusterClient.APIBaseClient.Types[resource.Type]; ok {
-		err = c.ClusterClient.ByID(resource.Type, resource.ID, &mapResource)
-		if err != nil {
-			return err
-		}
-	} else {
-		return errors.New("unknown resource type")
+	err = c.ByID(resource, &mapResource)
+	if err != nil {
+		return err
 	}
 
 	if !ctx.Bool("links") {
