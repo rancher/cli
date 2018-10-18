@@ -18,8 +18,10 @@ import (
 )
 
 type logOptions struct {
-	Follow bool `json:"follow"`
-	Lines  int  `json:"lines"`
+	Follow     bool   `json:"follow"`
+	Lines      int    `json:"lines"`
+	Timestamps bool   `json:"timestamps"`
+	Since      string `json:"since"`
 }
 
 var loggerFactory = logger.NewColorLoggerFactory()
@@ -196,8 +198,10 @@ func logsCommand(ctx *cli.Context) error {
 	}
 
 	payload := logOptions{
-		Follow: ctx.Bool("follow"),
-		Lines:  ctx.Int("tail"),
+		Follow:     ctx.Bool("follow"),
+		Lines:      ctx.Int("tail"),
+		Timestamps: ctx.Bool("timestamps"),
+		Since:      ctx.String("since"),
 	}
 
 	payloadJSON, err := json.Marshal(payload)
@@ -241,7 +245,18 @@ func doLog(wsURL string) error {
 		if nil != err {
 			return err
 		}
-		fmt.Println(string(buf))
+		// The websocket frame has "0* " to start the log, drop that to match UI
+		pieces := strings.SplitN(string(buf), " ", 2)
+		var log string
+		if len(pieces) == 2 {
+			log = pieces[1]
+		} else {
+			log = pieces[0]
+		}
+		if !strings.HasSuffix(log, "\n") {
+			log = log + "\n"
+		}
+		fmt.Print(log)
 	}
 }
 
