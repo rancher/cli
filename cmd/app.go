@@ -145,6 +145,10 @@ func AppCommand() cli.Command {
 						Name:  "version",
 						Usage: "Version of the template to use",
 					},
+					cli.BoolFlag{
+						Name:  "no-prompt",
+						Usage: "Suppress asking questions and use the default values when required answers are not provided",
+					},
 				},
 			},
 			cli.Command{
@@ -561,8 +565,9 @@ func templateInstall(ctx *cli.Context) error {
 			return err
 		}
 
+		interactive := !ctx.Bool("no-prompt")
 		answers := make(map[string]string)
-		err = processAnswers(ctx, c, templateVersion, answers, true)
+		err = processAnswers(ctx, c, templateVersion, answers, interactive)
 		if err != nil {
 			return err
 		}
