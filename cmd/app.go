@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	gover "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
+	"github.com/rancher/norman/clientbase"
 	clusterClient "github.com/rancher/types/client/cluster/v3"
 	managementClient "github.com/rancher/types/client/management/v3"
 	projectClient "github.com/rancher/types/client/project/v3"
@@ -792,14 +794,19 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 			return err
 		}
 
+		nsID := ns.ID
 		startTime := time.Now()
 		for {
 			logrus.Debug(fmt.Sprintf("Namespace create wait - Name: %s, State: %s, Transitioning: %s", ns.Name, ns.State, ns.Transitioning))
 			if time.Since(startTime)/time.Second > 30 {
 				return fmt.Errorf("timed out waiting for new namespace %s", ns.Name)
 			}
-			ns, err = c.ClusterClient.Namespace.ByID(ns.ID)
+			ns, err = c.ClusterClient.Namespace.ByID(nsID)
 			if err != nil {
+				if e, ok := err.(*clientbase.APIError); ok && e.StatusCode == http.StatusForbidden {
+					//the new namespace is created successfully but cannot be got when RBAC rules are not ready.
+					continue
+				}
 				return err
 			}
 
