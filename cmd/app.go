@@ -832,7 +832,7 @@ func processAnswers(
 	}
 
 	for _, answer := range ctx.StringSlice("set") {
-		parts := strings.Split(answer, "=")
+		parts := strings.SplitN(answer, "=", 2)
 		if len(parts) == 2 {
 			answers[parts[0]] = parts[1]
 		}
