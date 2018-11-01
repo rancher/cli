@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	gover "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
+	"github.com/rancher/norman/clientbase"
 	clusterClient "github.com/rancher/types/client/cluster/v3"
 	managementClient "github.com/rancher/types/client/management/v3"
 	projectClient "github.com/rancher/types/client/project/v3"
@@ -144,6 +146,10 @@ func AppCommand() cli.Command {
 					cli.StringFlag{
 						Name:  "version",
 						Usage: "Version of the template to use",
+					},
+					cli.BoolFlag{
+						Name:  "no-prompt",
+						Usage: "Suppress asking questions and use the default values when required answers are not provided",
 					},
 				},
 			},
@@ -561,8 +567,9 @@ func templateInstall(ctx *cli.Context) error {
 			return err
 		}
 
+		interactive := !ctx.Bool("no-prompt")
 		answers := make(map[string]string)
-		err = processAnswers(ctx, c, templateVersion, answers, true)
+		err = processAnswers(ctx, c, templateVersion, answers, interactive)
 		if err != nil {
 			return err
 		}
@@ -787,14 +794,19 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 			return err
 		}
 
+		nsID := ns.ID
 		startTime := time.Now()
 		for {
 			logrus.Debug(fmt.Sprintf("Namespace create wait - Name: %s, State: %s, Transitioning: %s", ns.Name, ns.State, ns.Transitioning))
 			if time.Since(startTime)/time.Second > 30 {
 				return fmt.Errorf("timed out waiting for new namespace %s", ns.Name)
 			}
-			ns, err = c.ClusterClient.Namespace.ByID(ns.ID)
+			ns, err = c.ClusterClient.Namespace.ByID(nsID)
 			if err != nil {
+				if e, ok := err.(*clientbase.APIError); ok && e.StatusCode == http.StatusForbidden {
+					//the new namespace is created successfully but cannot be got when RBAC rules are not ready.
+					continue
+				}
 				return err
 			}
 
@@ -827,7 +839,7 @@ func processAnswers(
 	}
 
 	for _, answer := range ctx.StringSlice("set") {
-		parts := strings.Split(answer, "=")
+		parts := strings.SplitN(answer, "=", 2)
 		if len(parts) == 2 {
 			answers[parts[0]] = parts[1]
 		}
