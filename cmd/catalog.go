@@ -16,6 +16,20 @@ Example:
 	# Add a catalog and specify the branch to use
 	$ rancher catalog add --branch awesomebranch foo https://my.catalog
 `
+
+	refreshCatalogDescription = `
+Refresh a catalog on the Rancher server
+
+Example:
+	# Refresh a catalog
+	$ rancher catalog refresh foo
+
+	# Refresh multiple catalogs
+	$ rancher catalog refresh foo bar baz
+
+	# Refresh all catalogs
+	$ rancher catalog refresh --all
+`
 )
 
 type CatalogData struct {
@@ -63,6 +77,19 @@ func CatalogCommand() cli.Command {
 				Description: "\nDelete a catalog from the Rancher server",
 				ArgsUsage:   "[CATALOG_NAME/CATALOG_ID]",
 				Action:      catalogDelete,
+			},
+			cli.Command{
+				Name:        "refresh",
+				Usage:       "Refresh catalog templates",
+				Description: refreshCatalogDescription,
+				ArgsUsage:   "[CATALOG_NAME/CATALOG_ID]...",
+				Action:      catalogRefresh,
+				Flags: []cli.Flag{
+					cli.BoolFlag{
+						Name:  "all",
+						Usage: "Refresh all catalogs",
+					},
+				},
 			},
 		},
 	}
@@ -151,5 +178,48 @@ func catalogDelete(ctx *cli.Context) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func catalogRefresh(ctx *cli.Context) error {
+	if len(ctx.Args()) < 1 && !ctx.Bool("all") {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	if ctx.Bool("all") {
+		opts := baseListOpts()
+
+		// just interested in the actions, not the actual catalogs
+		opts.Filters["limit"] = 0
+
+		collection, err := c.ManagementClient.Catalog.List(opts)
+		if err != nil {
+			return err
+		}
+		return c.ManagementClient.Catalog.CollectionActionRefresh(collection)
+	}
+
+	for _, arg := range ctx.Args() {
+		resource, err := Lookup(c, arg, "catalog")
+		if err != nil {
+			return err
+		}
+
+		catalog, err := c.ManagementClient.Catalog.ByID(resource.ID)
+		if err != nil {
+			return err
+		}
+
+		err = c.ManagementClient.Catalog.ActionRefresh(catalog)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
