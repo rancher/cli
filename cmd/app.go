@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -136,6 +137,10 @@ func AppCommand() cli.Command {
 						Usage: "Path to an answers file, the format of the file is a map with key:value. This supports JSON and YAML.",
 					},
 					cli.StringFlag{
+						Name:  "values",
+						Usage: "Path to a helm values file.",
+					},
+					cli.StringFlag{
 						Name:  "namespace,n",
 						Usage: "Namespace to install the app into",
 					},
@@ -174,6 +179,10 @@ func AppCommand() cli.Command {
 					cli.StringFlag{
 						Name:  "answers,a",
 						Usage: "Path to an answers file, the format of the file is a map with key:value. Supports JSON and YAML",
+					},
+					cli.StringFlag{
+						Name:  "values",
+						Usage: "Path to a helm values file.",
 					},
 					cli.StringSliceFlag{
 						Name:  "set",
@@ -831,6 +840,12 @@ func processAnswers(
 	answers map[string]string,
 	interactive bool,
 ) error {
+	if ctx.String("values") != "" {
+		if err := getValuesFile(ctx.String("values"), answers); err != nil {
+			return err
+		}
+	}
+
 	if ctx.String("answers") != "" {
 		err := getAnswersFile(ctx.String("answers"), answers)
 		if err != nil {
@@ -876,6 +891,51 @@ func getAnswersFile(location string, answers map[string]string) error {
 		}
 	}
 	return nil
+}
+
+// getValuesFile reads a values file and parse it to answers in helm strvals format
+func getValuesFile(location string, answers map[string]string) error {
+	bytes, err := readFileReturnJSON(location)
+	if err != nil {
+		return err
+	}
+	values := make(map[string]interface{})
+	if err := json.Unmarshal(bytes, &values); err != nil {
+		return err
+	}
+	valuesToAnswers(values, answers)
+	return nil
+}
+
+func valuesToAnswers(values map[string]interface{}, answers map[string]string) {
+	for k, v := range values {
+		traverseValuesToAnswers(k, v, answers)
+	}
+}
+
+func traverseValuesToAnswers(key string, obj interface{}, answers map[string]string) {
+	if obj == nil {
+		return
+	}
+	raw := reflect.ValueOf(obj)
+	switch raw.Kind() {
+	case reflect.Map:
+		for _, subKey := range raw.MapKeys() {
+			v := raw.MapIndex(subKey).Interface()
+			nextKey := fmt.Sprintf("%s.%s", key, subKey)
+			traverseValuesToAnswers(nextKey, v, answers)
+		}
+	case reflect.Slice:
+		a, ok := obj.([]interface{})
+		if ok {
+			for i, v := range a {
+				nextKey := fmt.Sprintf("%s[%d]", key, i)
+				traverseValuesToAnswers(nextKey, v, answers)
+			}
+		}
+	default:
+		answers[key] = fmt.Sprintf("%v", obj)
+	}
 }
 
 func askQuestions(tv *managementClient.TemplateVersion, answers map[string]string) error {
