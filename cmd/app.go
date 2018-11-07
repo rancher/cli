@@ -290,7 +290,7 @@ func appUpgrade(ctx *cli.Context) error {
 		return err
 	}
 
-	if ctx.Bool("versions") {
+	if ctx.Bool("show-versions") {
 		return outputVersions(ctx, c)
 	}
 
