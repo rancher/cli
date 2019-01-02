@@ -20,6 +20,7 @@ const (
 	GlobalDNSFieldRemoved              = "removed"
 	GlobalDNSFieldState                = "state"
 	GlobalDNSFieldStatus               = "status"
+	GlobalDNSFieldTTL                  = "ttl"
 	GlobalDNSFieldTransitioning        = "transitioning"
 	GlobalDNSFieldTransitioningMessage = "transitioningMessage"
 	GlobalDNSFieldUUID                 = "uuid"
@@ -41,6 +42,7 @@ type GlobalDNS struct {
 	Removed              string            `json:"removed,omitempty" yaml:"removed,omitempty"`
 	State                string            `json:"state,omitempty" yaml:"state,omitempty"`
 	Status               *GlobalDNSStatus  `json:"status,omitempty" yaml:"status,omitempty"`
+	TTL                  int64             `json:"ttl,omitempty" yaml:"ttl,omitempty"`
 	Transitioning        string            `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 	TransitioningMessage string            `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
 	UUID                 string            `json:"uuid,omitempty" yaml:"uuid,omitempty"`
@@ -63,6 +65,10 @@ type GlobalDNSOperations interface {
 	Replace(existing *GlobalDNS) (*GlobalDNS, error)
 	ByID(id string) (*GlobalDNS, error)
 	Delete(container *GlobalDNS) error
+
+	ActionAddProjects(resource *GlobalDNS, input *UpdateGlobalDNSTargetsInput) error
+
+	ActionRemoveProjects(resource *GlobalDNS, input *UpdateGlobalDNSTargetsInput) error
 }
 
 func newGlobalDNSClient(apiClient *Client) *GlobalDNSClient {
@@ -114,4 +120,14 @@ func (c *GlobalDNSClient) ByID(id string) (*GlobalDNS, error) {
 
 func (c *GlobalDNSClient) Delete(container *GlobalDNS) error {
 	return c.apiClient.Ops.DoResourceDelete(GlobalDNSType, &container.Resource)
+}
+
+func (c *GlobalDNSClient) ActionAddProjects(resource *GlobalDNS, input *UpdateGlobalDNSTargetsInput) error {
+	err := c.apiClient.Ops.DoAction(GlobalDNSType, "addProjects", &resource.Resource, input, nil)
+	return err
+}
+
+func (c *GlobalDNSClient) ActionRemoveProjects(resource *GlobalDNS, input *UpdateGlobalDNSTargetsInput) error {
+	err := c.apiClient.Ops.DoAction(GlobalDNSType, "removeProjects", &resource.Resource, input, nil)
+	return err
 }
