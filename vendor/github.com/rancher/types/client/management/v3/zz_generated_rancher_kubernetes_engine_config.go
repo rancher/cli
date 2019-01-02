@@ -10,6 +10,7 @@ const (
 	RancherKubernetesEngineConfigFieldBastionHost         = "bastionHost"
 	RancherKubernetesEngineConfigFieldCloudProvider       = "cloudProvider"
 	RancherKubernetesEngineConfigFieldClusterName         = "clusterName"
+	RancherKubernetesEngineConfigFieldDNS                 = "dns"
 	RancherKubernetesEngineConfigFieldIgnoreDockerVersion = "ignoreDockerVersion"
 	RancherKubernetesEngineConfigFieldIngress             = "ingress"
 	RancherKubernetesEngineConfigFieldMonitoring          = "monitoring"
@@ -20,6 +21,7 @@ const (
 	RancherKubernetesEngineConfigFieldRestore             = "restore"
 	RancherKubernetesEngineConfigFieldRotateCertificates  = "rotateCertificates"
 	RancherKubernetesEngineConfigFieldSSHAgentAuth        = "sshAgentAuth"
+	RancherKubernetesEngineConfigFieldSSHCertPath         = "sshCertPath"
 	RancherKubernetesEngineConfigFieldSSHKeyPath          = "sshKeyPath"
 	RancherKubernetesEngineConfigFieldServices            = "services"
 	RancherKubernetesEngineConfigFieldVersion             = "kubernetesVersion"
@@ -34,6 +36,7 @@ type RancherKubernetesEngineConfig struct {
 	BastionHost         *BastionHost        `json:"bastionHost,omitempty" yaml:"bastionHost,omitempty"`
 	CloudProvider       *CloudProvider      `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 	ClusterName         string              `json:"clusterName,omitempty" yaml:"clusterName,omitempty"`
+	DNS                 *DNSConfig          `json:"dns,omitempty" yaml:"dns,omitempty"`
 	IgnoreDockerVersion bool                `json:"ignoreDockerVersion,omitempty" yaml:"ignoreDockerVersion,omitempty"`
 	Ingress             *IngressConfig      `json:"ingress,omitempty" yaml:"ingress,omitempty"`
 	Monitoring          *MonitoringConfig   `json:"monitoring,omitempty" yaml:"monitoring,omitempty"`
@@ -44,6 +47,7 @@ type RancherKubernetesEngineConfig struct {
 	Restore             *RestoreConfig      `json:"restore,omitempty" yaml:"restore,omitempty"`
 	RotateCertificates  *RotateCertificates `json:"rotateCertificates,omitempty" yaml:"rotateCertificates,omitempty"`
 	SSHAgentAuth        bool                `json:"sshAgentAuth,omitempty" yaml:"sshAgentAuth,omitempty"`
+	SSHCertPath         string              `json:"sshCertPath,omitempty" yaml:"sshCertPath,omitempty"`
 	SSHKeyPath          string              `json:"sshKeyPath,omitempty" yaml:"sshKeyPath,omitempty"`
 	Services            *RKEConfigServices  `json:"services,omitempty" yaml:"services,omitempty"`
 	Version             string              `json:"kubernetesVersion,omitempty" yaml:"kubernetesVersion,omitempty"`
