@@ -307,7 +307,10 @@ func appUpgrade(ctx *cli.Context) error {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "app")
+	appName := ctx.Args().First()
+	appVersionOrLocalTemplatePath := ctx.Args().Get(1)
+
+	resource, err := Lookup(c, appName, "app")
 	if err != nil {
 		return err
 	}
@@ -323,26 +326,38 @@ func appUpgrade(ctx *cli.Context) error {
 		return err
 	}
 
-	externalID, err := updateExternalIDVersion(app.ExternalID, ctx.Args().Get(1))
-	if err != nil {
-		return err
-	}
-
-	filter := defaultListOpts(ctx)
-	filter.Filters["externalId"] = externalID
-
-	template, err := c.ManagementClient.TemplateVersion.List(filter)
-	if err != nil {
-		return err
-	}
-
-	if len(template.Data) == 0 {
-		return fmt.Errorf("version %s not valid for app", ctx.Args().Get(1))
-	}
-
 	au := &projectClient.AppUpgradeConfig{
-		Answers:    answers,
-		ExternalID: template.Data[0].ExternalID,
+		Answers: answers,
+	}
+
+	if resolveTemplatePath(appVersionOrLocalTemplatePath) {
+		// if it is a path, upgrade install charts locally
+		localTemplatePath := appVersionOrLocalTemplatePath
+		_, files, err := walkTemplateDirectory(localTemplatePath)
+		if err != nil {
+			return err
+		}
+
+		au.Files = files
+	} else {
+		appVersion := appVersionOrLocalTemplatePath
+		externalID, err := updateExternalIDVersion(app.ExternalID, appVersion)
+		if err != nil {
+			return err
+		}
+
+		filter := defaultListOpts(ctx)
+		filter.Filters["externalId"] = externalID
+
+		template, err := c.ManagementClient.TemplateVersion.List(filter)
+		if err != nil {
+			return err
+		}
+		if len(template.Data) == 0 {
+			return fmt.Errorf("version %s is not valid", appVersion)
+		}
+
+		au.ExternalID = template.Data[0].ExternalID
 	}
 
 	return c.ProjectClient.App.ActionUpgrade(app, au)
@@ -493,57 +508,10 @@ func templateInstall(ctx *cli.Context) error {
 	}
 	if resolveTemplatePath(templateName) {
 		// if it is a path, install charts locally
-		path, err := filepath.Abs(templateName)
+		chartName, files, err := walkTemplateDirectory(templateName)
 		if err != nil {
 			return err
 		}
-		if _, err := os.Stat(path); err != nil {
-			return err
-		}
-		files := map[string]string{}
-		chartName := ""
-		rootDir := ""
-		filepath.Walk(templateName, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				return nil
-			}
-
-			if !strings.EqualFold(info.Name(), "Chart.yaml") {
-				return nil
-			}
-			version := &chartVersion{}
-			content, err := ioutil.ReadFile(path)
-			if err != nil {
-				return err
-			}
-
-			rootDir = filepath.Dir(path)
-			if err := yaml.Unmarshal(content, version); err != nil {
-				return err
-			}
-			chartName = version.Name
-			filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if info.IsDir() {
-					return nil
-				}
-				content, err := ioutil.ReadFile(path)
-				if err != nil {
-					return err
-				}
-				if len(content) > 0 {
-					key := filepath.Join(version.Name, strings.TrimPrefix(path, rootDir+"/"))
-					files[key] = base64.StdEncoding.EncodeToString(content)
-				}
-				return nil
-			})
-			return filepath.SkipDir
-		})
 
 		answers := make(map[string]string)
 		err = processAnswers(ctx, c, nil, answers, false)
@@ -647,6 +615,69 @@ func templateInstall(ctx *cli.Context) error {
 
 func resolveTemplatePath(templateName string) bool {
 	return templateName == "." || strings.Contains(templateName, "\\\\") || strings.Contains(templateName, "/")
+}
+
+func walkTemplateDirectory(templatePath string) (string, map[string]string, error) {
+	templateAbsPath, parsedErr := filepath.Abs(templatePath)
+	if parsedErr != nil {
+		return "", nil, parsedErr
+	}
+	if _, statErr := os.Stat(templateAbsPath); statErr != nil {
+		return "", nil, statErr
+	}
+
+	var (
+		chartName string
+		files     = make(map[string]string)
+		err       error
+	)
+	err = filepath.Walk(templateAbsPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		if !strings.EqualFold(info.Name(), "Chart.yaml") {
+			return nil
+		}
+		version := &chartVersion{}
+		content, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		rootDir := filepath.Dir(path)
+		if err := yaml.Unmarshal(content, version); err != nil {
+			return err
+		}
+		chartName = version.Name
+		err = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+			content, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			if len(content) > 0 {
+				key := filepath.Join(chartName, strings.TrimPrefix(path, rootDir+"/"))
+				files[key] = base64.StdEncoding.EncodeToString(content)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		return filepath.SkipDir
+	})
+
+	return chartName, files, err
 }
 
 func showApp(ctx *cli.Context) error {
