@@ -34,8 +34,11 @@ Specify a version using '--version' if required.
 The app will be installed into a new namespace unless '--namespace' is specified.
 
 Example:
-	# Install the redis template with no other options
+	# Install the redis template without any options
 	$ rancher app install redis appFoo
+
+	# Install the local redis template folder without any options
+	$ rancher app install ./redis appFoo
 
 	# Install the redis template and specify an answers file location
 	$ rancher app install --answers /example/answers.yaml redis appFoo
@@ -46,12 +49,27 @@ Example:
 	# Install the redis template and specify the namespace for the app
 	$ rancher app install --namespace bar redis appFoo
 `
+	upgradeAppDescription = `
+Upgrade an existing app to a newer version via app template or app version in the current Rancher server.
+					
+Example:
+	# Upgrade the 'appFoo' app to latest version without any options
+	$ rancher app upgrade appFoo latest
+
+	# Upgrade the 'appFoo' app by local template folder without any options
+	$ rancher app upgrade appFoo ./redis
+
+	# Upgrade the 'appFoo' app and set multiple answers and the 0.2.0 version to install
+	$ rancher app upgrade --set foo=bar --set baz=bunk appFoo 0.2.0
+`
 )
 
 type AppData struct {
-	ID      string
-	App     projectClient.App
-	Version string
+	ID       string
+	App      projectClient.App
+	Catalog  string
+	Template string
+	Version  string
 }
 
 type TemplateData struct {
@@ -66,10 +84,13 @@ type VersionData struct {
 }
 
 type revision struct {
-	Current string
-	Name    string
-	Created time.Time
-	Human   string
+	Current  string
+	Name     string
+	Created  time.Time
+	Human    string
+	Catalog  string
+	Template string
+	Version  string
 }
 
 type chartVersion struct {
@@ -130,7 +151,7 @@ func AppCommand() cli.Command {
 				Usage:       "Install an app template",
 				Description: installAppDescription,
 				Action:      templateInstall,
-				ArgsUsage:   "[TEMPLATE_NAME, APP_NAME]...",
+				ArgsUsage:   "[TEMPLATE_NAME/TEMPLATE_PATH, APP_NAME]",
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "answers,a",
@@ -171,10 +192,11 @@ func AppCommand() cli.Command {
 				},
 			},
 			cli.Command{
-				Name:      "upgrade",
-				Usage:     "Upgrade an app to a newer version",
-				Action:    appUpgrade,
-				ArgsUsage: "[APP_NAME/APP_ID VERSION]",
+				Name:        "upgrade",
+				Usage:       "Upgrade an existing app to a newer version",
+				Description: upgradeAppDescription,
+				Action:      appUpgrade,
+				ArgsUsage:   "[APP_NAME/APP_ID VERSION/TEMPLATE_PATH]",
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "answers,a",
@@ -238,28 +260,86 @@ func appLs(ctx *cli.Context) error {
 	}
 
 	collection, err := c.ProjectClient.App.List(defaultListOpts(ctx))
+	if err != nil {
+		return err
+	}
+
 	writer := NewTableWriter([][]string{
 		{"ID", "ID"},
 		{"NAME", "App.Name"},
 		{"STATE", "App.State"},
+		{"CATALOG", "Catalog"},
+		{"TEMPLATE", "Template"},
 		{"VERSION", "Version"},
 	}, ctx)
 
 	defer writer.Close()
 
 	for _, item := range collection.Data {
-		parsedExternal, err := parseExternalID(item.ExternalID)
+		appExternalID := item.ExternalID
+		appTemplateFiles := make(map[string]string)
+		if appExternalID == "" {
+			// add namespace prefix to AppRevisionID to create a Rancher API style ID
+			appRevisionID := strings.Replace(item.ID, item.Name, item.AppRevisionID, -1)
+
+			appRevision, err := c.ProjectClient.AppRevision.ByID(appRevisionID)
+			if err != nil {
+				return err
+			}
+
+			appTemplateFiles = appRevision.Status.Files
+		}
+
+		parsedInfo, err := parseTemplateInfo(appExternalID, appTemplateFiles)
 		if err != nil {
 			return err
 		}
-		writer.Write(&AppData{
-			ID:      item.ID,
-			App:     item,
-			Version: parsedExternal["version"],
-		})
+
+		appData := &AppData{
+			ID:       item.ID,
+			App:      item,
+			Catalog:  parsedInfo["catalog"],
+			Template: parsedInfo["template"],
+			Version:  parsedInfo["version"],
+		}
+		writer.Write(appData)
 	}
 	return writer.Err()
 
+}
+
+func parseTemplateInfo(appExternalID string, appTemplateFiles map[string]string) (map[string]string, error) {
+	if appExternalID != "" {
+		parsedExternal, parseErr := parseExternalID(appExternalID)
+		if parseErr != nil {
+			return nil, errors.Wrap(parseErr, "failed to parse ExternalID from app")
+		}
+
+		return parsedExternal, nil
+	}
+
+	for fileName, fileContent := range appTemplateFiles {
+		if strings.HasSuffix(fileName, "/Chart.yaml") || strings.HasSuffix(fileName, "/Chart.yml") {
+			content, decodeErr := base64.StdEncoding.DecodeString(fileContent)
+			if decodeErr != nil {
+				return nil, errors.Wrap(decodeErr, "failed to decode Chart.yaml from app")
+			}
+
+			version := &chartVersion{}
+			unmarshalErr := yaml.Unmarshal(content, version)
+			if unmarshalErr != nil {
+				return nil, errors.Wrap(unmarshalErr, "failed to parse Chart.yaml from app")
+			}
+
+			return map[string]string{
+				"catalog":  "local directory",
+				"template": version.Name,
+				"version":  version.Version,
+			}, nil
+		}
+	}
+
+	return nil, errors.New("can't parse info from app")
 }
 
 func appDelete(ctx *cli.Context) error {
@@ -719,7 +799,13 @@ func outputVersions(ctx *cli.Context, c *cliclient.MasterClient) error {
 		return err
 	}
 
-	externalInfo, err := parseExternalID(app.ExternalID)
+	externalID := app.ExternalID
+	if externalID == "" {
+		// local folder app doesn't show any version information
+		return nil
+	}
+
+	externalInfo, err := parseExternalID(externalID)
 	if err != nil {
 		return err
 	}
@@ -778,7 +864,20 @@ func outputRevisions(ctx *cli.Context, c *cliclient.MasterClient) error {
 		if nil != err {
 			return err
 		}
-		sorted = append(sorted, revision{Name: rev.Name, Created: parsedTime})
+
+		parsedInfo, err := parseTemplateInfo(rev.Status.ExternalID, rev.Status.Files)
+		if err != nil {
+			return err
+		}
+
+		reversionData := revision{
+			Name:     rev.Name,
+			Created:  parsedTime,
+			Catalog:  parsedInfo["catalog"],
+			Template: parsedInfo["template"],
+			Version:  parsedInfo["version"],
+		}
+		sorted = append(sorted, reversionData)
 	}
 
 	sort.Sort(sorted)
@@ -786,6 +885,9 @@ func outputRevisions(ctx *cli.Context, c *cliclient.MasterClient) error {
 	writer := NewTableWriter([][]string{
 		{"CURRENT", "Current"},
 		{"REVISION", "Name"},
+		{"CATALOG", "Catalog"},
+		{"TEMPLATE", "Template"},
+		{"VERSION", "Version"},
 		{"CREATED", "Human"},
 	}, ctx)
 
@@ -796,8 +898,8 @@ func outputRevisions(ctx *cli.Context, c *cliclient.MasterClient) error {
 			rev.Current = "*"
 		}
 		rev.Human = rev.Created.Format("02 Jan 2006 15:04:05 MST")
-		writer.Write(rev)
 
+		writer.Write(rev)
 	}
 	return writer.Err()
 }
