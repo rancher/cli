@@ -33,10 +33,12 @@ const (
 	CronJobFieldPriorityClassName             = "priorityClassName"
 	CronJobFieldProjectID                     = "projectId"
 	CronJobFieldPublicEndpoints               = "publicEndpoints"
+	CronJobFieldReadinessGates                = "readinessGates"
 	CronJobFieldRemoved                       = "removed"
 	CronJobFieldRestartPolicy                 = "restartPolicy"
 	CronJobFieldRunAsGroup                    = "runAsGroup"
 	CronJobFieldRunAsNonRoot                  = "runAsNonRoot"
+	CronJobFieldRuntimeClassName              = "runtimeClassName"
 	CronJobFieldSchedulerName                 = "schedulerName"
 	CronJobFieldScheduling                    = "scheduling"
 	CronJobFieldSelector                      = "selector"
@@ -44,6 +46,8 @@ const (
 	CronJobFieldShareProcessNamespace         = "shareProcessNamespace"
 	CronJobFieldState                         = "state"
 	CronJobFieldSubdomain                     = "subdomain"
+	CronJobFieldSysctls                       = "sysctls"
+	CronJobFieldTTLSecondsAfterFinished       = "ttlSecondsAfterFinished"
 	CronJobFieldTerminationGracePeriodSeconds = "terminationGracePeriodSeconds"
 	CronJobFieldTransitioning                 = "transitioning"
 	CronJobFieldTransitioningMessage          = "transitioningMessage"
@@ -52,6 +56,7 @@ const (
 	CronJobFieldVolumes                       = "volumes"
 	CronJobFieldWorkloadAnnotations           = "workloadAnnotations"
 	CronJobFieldWorkloadLabels                = "workloadLabels"
+	CronJobFieldWorkloadMetrics               = "workloadMetrics"
 )
 
 type CronJob struct {
@@ -83,10 +88,12 @@ type CronJob struct {
 	PriorityClassName             string                 `json:"priorityClassName,omitempty" yaml:"priorityClassName,omitempty"`
 	ProjectID                     string                 `json:"projectId,omitempty" yaml:"projectId,omitempty"`
 	PublicEndpoints               []PublicEndpoint       `json:"publicEndpoints,omitempty" yaml:"publicEndpoints,omitempty"`
+	ReadinessGates                []PodReadinessGate     `json:"readinessGates,omitempty" yaml:"readinessGates,omitempty"`
 	Removed                       string                 `json:"removed,omitempty" yaml:"removed,omitempty"`
 	RestartPolicy                 string                 `json:"restartPolicy,omitempty" yaml:"restartPolicy,omitempty"`
 	RunAsGroup                    *int64                 `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
 	RunAsNonRoot                  *bool                  `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
+	RuntimeClassName              string                 `json:"runtimeClassName,omitempty" yaml:"runtimeClassName,omitempty"`
 	SchedulerName                 string                 `json:"schedulerName,omitempty" yaml:"schedulerName,omitempty"`
 	Scheduling                    *Scheduling            `json:"scheduling,omitempty" yaml:"scheduling,omitempty"`
 	Selector                      *LabelSelector         `json:"selector,omitempty" yaml:"selector,omitempty"`
@@ -94,6 +101,8 @@ type CronJob struct {
 	ShareProcessNamespace         *bool                  `json:"shareProcessNamespace,omitempty" yaml:"shareProcessNamespace,omitempty"`
 	State                         string                 `json:"state,omitempty" yaml:"state,omitempty"`
 	Subdomain                     string                 `json:"subdomain,omitempty" yaml:"subdomain,omitempty"`
+	Sysctls                       []Sysctl               `json:"sysctls,omitempty" yaml:"sysctls,omitempty"`
+	TTLSecondsAfterFinished       *int64                 `json:"ttlSecondsAfterFinished,omitempty" yaml:"ttlSecondsAfterFinished,omitempty"`
 	TerminationGracePeriodSeconds *int64                 `json:"terminationGracePeriodSeconds,omitempty" yaml:"terminationGracePeriodSeconds,omitempty"`
 	Transitioning                 string                 `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
 	TransitioningMessage          string                 `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
@@ -102,6 +111,7 @@ type CronJob struct {
 	Volumes                       []Volume               `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	WorkloadAnnotations           map[string]string      `json:"workloadAnnotations,omitempty" yaml:"workloadAnnotations,omitempty"`
 	WorkloadLabels                map[string]string      `json:"workloadLabels,omitempty" yaml:"workloadLabels,omitempty"`
+	WorkloadMetrics               []WorkloadMetric       `json:"workloadMetrics,omitempty" yaml:"workloadMetrics,omitempty"`
 }
 
 type CronJobCollection struct {

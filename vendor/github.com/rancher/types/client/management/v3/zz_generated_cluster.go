@@ -9,13 +9,13 @@ const (
 	ClusterFieldAPIEndpoint                          = "apiEndpoint"
 	ClusterFieldAgentImage                           = "agentImage"
 	ClusterFieldAllocatable                          = "allocatable"
-	ClusterFieldAmazonElasticContainerServiceConfig  = "amazonElasticContainerServiceConfig"
 	ClusterFieldAnnotations                          = "annotations"
 	ClusterFieldAppliedEnableNetworkPolicy           = "appliedEnableNetworkPolicy"
 	ClusterFieldAppliedPodSecurityPolicyTemplateName = "appliedPodSecurityPolicyTemplateId"
 	ClusterFieldAppliedSpec                          = "appliedSpec"
-	ClusterFieldAzureKubernetesServiceConfig         = "azureKubernetesServiceConfig"
+	ClusterFieldAuthImage                            = "authImage"
 	ClusterFieldCACert                               = "caCert"
+	ClusterFieldCapabilities                         = "capabilities"
 	ClusterFieldCapacity                             = "capacity"
 	ClusterFieldComponentStatuses                    = "componentStatuses"
 	ClusterFieldConditions                           = "conditions"
@@ -25,15 +25,19 @@ const (
 	ClusterFieldDefaultPodSecurityPolicyTemplateID   = "defaultPodSecurityPolicyTemplateId"
 	ClusterFieldDescription                          = "description"
 	ClusterFieldDesiredAgentImage                    = "desiredAgentImage"
+	ClusterFieldDesiredAuthImage                     = "desiredAuthImage"
 	ClusterFieldDockerRootDir                        = "dockerRootDir"
 	ClusterFieldDriver                               = "driver"
+	ClusterFieldEnableClusterAlerting                = "enableClusterAlerting"
+	ClusterFieldEnableClusterMonitoring              = "enableClusterMonitoring"
 	ClusterFieldEnableNetworkPolicy                  = "enableNetworkPolicy"
 	ClusterFieldFailedSpec                           = "failedSpec"
-	ClusterFieldGoogleKubernetesEngineConfig         = "googleKubernetesEngineConfig"
 	ClusterFieldImportedConfig                       = "importedConfig"
 	ClusterFieldInternal                             = "internal"
 	ClusterFieldLabels                               = "labels"
 	ClusterFieldLimits                               = "limits"
+	ClusterFieldLocalClusterAuthEndpoint             = "localClusterAuthEndpoint"
+	ClusterFieldMonitoringStatus                     = "monitoringStatus"
 	ClusterFieldName                                 = "name"
 	ClusterFieldOwnerReferences                      = "ownerReferences"
 	ClusterFieldRancherKubernetesEngineConfig        = "rancherKubernetesEngineConfig"
@@ -48,44 +52,48 @@ const (
 
 type Cluster struct {
 	types.Resource
-	APIEndpoint                          string                               `json:"apiEndpoint,omitempty" yaml:"apiEndpoint,omitempty"`
-	AgentImage                           string                               `json:"agentImage,omitempty" yaml:"agentImage,omitempty"`
-	Allocatable                          map[string]string                    `json:"allocatable,omitempty" yaml:"allocatable,omitempty"`
-	AmazonElasticContainerServiceConfig  *AmazonElasticContainerServiceConfig `json:"amazonElasticContainerServiceConfig,omitempty" yaml:"amazonElasticContainerServiceConfig,omitempty"`
-	Annotations                          map[string]string                    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	AppliedEnableNetworkPolicy           bool                                 `json:"appliedEnableNetworkPolicy,omitempty" yaml:"appliedEnableNetworkPolicy,omitempty"`
-	AppliedPodSecurityPolicyTemplateName string                               `json:"appliedPodSecurityPolicyTemplateId,omitempty" yaml:"appliedPodSecurityPolicyTemplateId,omitempty"`
-	AppliedSpec                          *ClusterSpec                         `json:"appliedSpec,omitempty" yaml:"appliedSpec,omitempty"`
-	AzureKubernetesServiceConfig         *AzureKubernetesServiceConfig        `json:"azureKubernetesServiceConfig,omitempty" yaml:"azureKubernetesServiceConfig,omitempty"`
-	CACert                               string                               `json:"caCert,omitempty" yaml:"caCert,omitempty"`
-	Capacity                             map[string]string                    `json:"capacity,omitempty" yaml:"capacity,omitempty"`
-	ComponentStatuses                    []ClusterComponentStatus             `json:"componentStatuses,omitempty" yaml:"componentStatuses,omitempty"`
-	Conditions                           []ClusterCondition                   `json:"conditions,omitempty" yaml:"conditions,omitempty"`
-	Created                              string                               `json:"created,omitempty" yaml:"created,omitempty"`
-	CreatorID                            string                               `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
-	DefaultClusterRoleForProjectMembers  string                               `json:"defaultClusterRoleForProjectMembers,omitempty" yaml:"defaultClusterRoleForProjectMembers,omitempty"`
-	DefaultPodSecurityPolicyTemplateID   string                               `json:"defaultPodSecurityPolicyTemplateId,omitempty" yaml:"defaultPodSecurityPolicyTemplateId,omitempty"`
-	Description                          string                               `json:"description,omitempty" yaml:"description,omitempty"`
-	DesiredAgentImage                    string                               `json:"desiredAgentImage,omitempty" yaml:"desiredAgentImage,omitempty"`
-	DockerRootDir                        string                               `json:"dockerRootDir,omitempty" yaml:"dockerRootDir,omitempty"`
-	Driver                               string                               `json:"driver,omitempty" yaml:"driver,omitempty"`
-	EnableNetworkPolicy                  *bool                                `json:"enableNetworkPolicy,omitempty" yaml:"enableNetworkPolicy,omitempty"`
-	FailedSpec                           *ClusterSpec                         `json:"failedSpec,omitempty" yaml:"failedSpec,omitempty"`
-	GoogleKubernetesEngineConfig         *GoogleKubernetesEngineConfig        `json:"googleKubernetesEngineConfig,omitempty" yaml:"googleKubernetesEngineConfig,omitempty"`
-	ImportedConfig                       *ImportedConfig                      `json:"importedConfig,omitempty" yaml:"importedConfig,omitempty"`
-	Internal                             bool                                 `json:"internal,omitempty" yaml:"internal,omitempty"`
-	Labels                               map[string]string                    `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Limits                               map[string]string                    `json:"limits,omitempty" yaml:"limits,omitempty"`
-	Name                                 string                               `json:"name,omitempty" yaml:"name,omitempty"`
-	OwnerReferences                      []OwnerReference                     `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
-	RancherKubernetesEngineConfig        *RancherKubernetesEngineConfig       `json:"rancherKubernetesEngineConfig,omitempty" yaml:"rancherKubernetesEngineConfig,omitempty"`
-	Removed                              string                               `json:"removed,omitempty" yaml:"removed,omitempty"`
-	Requested                            map[string]string                    `json:"requested,omitempty" yaml:"requested,omitempty"`
-	State                                string                               `json:"state,omitempty" yaml:"state,omitempty"`
-	Transitioning                        string                               `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
-	TransitioningMessage                 string                               `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
-	UUID                                 string                               `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-	Version                              *Info                                `json:"version,omitempty" yaml:"version,omitempty"`
+	APIEndpoint                          string                         `json:"apiEndpoint,omitempty" yaml:"apiEndpoint,omitempty"`
+	AgentImage                           string                         `json:"agentImage,omitempty" yaml:"agentImage,omitempty"`
+	Allocatable                          map[string]string              `json:"allocatable,omitempty" yaml:"allocatable,omitempty"`
+	Annotations                          map[string]string              `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	AppliedEnableNetworkPolicy           bool                           `json:"appliedEnableNetworkPolicy,omitempty" yaml:"appliedEnableNetworkPolicy,omitempty"`
+	AppliedPodSecurityPolicyTemplateName string                         `json:"appliedPodSecurityPolicyTemplateId,omitempty" yaml:"appliedPodSecurityPolicyTemplateId,omitempty"`
+	AppliedSpec                          *ClusterSpec                   `json:"appliedSpec,omitempty" yaml:"appliedSpec,omitempty"`
+	AuthImage                            string                         `json:"authImage,omitempty" yaml:"authImage,omitempty"`
+	CACert                               string                         `json:"caCert,omitempty" yaml:"caCert,omitempty"`
+	Capabilities                         *Capabilities                  `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
+	Capacity                             map[string]string              `json:"capacity,omitempty" yaml:"capacity,omitempty"`
+	ComponentStatuses                    []ClusterComponentStatus       `json:"componentStatuses,omitempty" yaml:"componentStatuses,omitempty"`
+	Conditions                           []ClusterCondition             `json:"conditions,omitempty" yaml:"conditions,omitempty"`
+	Created                              string                         `json:"created,omitempty" yaml:"created,omitempty"`
+	CreatorID                            string                         `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	DefaultClusterRoleForProjectMembers  string                         `json:"defaultClusterRoleForProjectMembers,omitempty" yaml:"defaultClusterRoleForProjectMembers,omitempty"`
+	DefaultPodSecurityPolicyTemplateID   string                         `json:"defaultPodSecurityPolicyTemplateId,omitempty" yaml:"defaultPodSecurityPolicyTemplateId,omitempty"`
+	Description                          string                         `json:"description,omitempty" yaml:"description,omitempty"`
+	DesiredAgentImage                    string                         `json:"desiredAgentImage,omitempty" yaml:"desiredAgentImage,omitempty"`
+	DesiredAuthImage                     string                         `json:"desiredAuthImage,omitempty" yaml:"desiredAuthImage,omitempty"`
+	DockerRootDir                        string                         `json:"dockerRootDir,omitempty" yaml:"dockerRootDir,omitempty"`
+	Driver                               string                         `json:"driver,omitempty" yaml:"driver,omitempty"`
+	EnableClusterAlerting                bool                           `json:"enableClusterAlerting,omitempty" yaml:"enableClusterAlerting,omitempty"`
+	EnableClusterMonitoring              bool                           `json:"enableClusterMonitoring,omitempty" yaml:"enableClusterMonitoring,omitempty"`
+	EnableNetworkPolicy                  *bool                          `json:"enableNetworkPolicy,omitempty" yaml:"enableNetworkPolicy,omitempty"`
+	FailedSpec                           *ClusterSpec                   `json:"failedSpec,omitempty" yaml:"failedSpec,omitempty"`
+	ImportedConfig                       *ImportedConfig                `json:"importedConfig,omitempty" yaml:"importedConfig,omitempty"`
+	Internal                             bool                           `json:"internal,omitempty" yaml:"internal,omitempty"`
+	Labels                               map[string]string              `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Limits                               map[string]string              `json:"limits,omitempty" yaml:"limits,omitempty"`
+	LocalClusterAuthEndpoint             *LocalClusterAuthEndpoint      `json:"localClusterAuthEndpoint,omitempty" yaml:"localClusterAuthEndpoint,omitempty"`
+	MonitoringStatus                     *MonitoringStatus              `json:"monitoringStatus,omitempty" yaml:"monitoringStatus,omitempty"`
+	Name                                 string                         `json:"name,omitempty" yaml:"name,omitempty"`
+	OwnerReferences                      []OwnerReference               `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
+	RancherKubernetesEngineConfig        *RancherKubernetesEngineConfig `json:"rancherKubernetesEngineConfig,omitempty" yaml:"rancherKubernetesEngineConfig,omitempty"`
+	Removed                              string                         `json:"removed,omitempty" yaml:"removed,omitempty"`
+	Requested                            map[string]string              `json:"requested,omitempty" yaml:"requested,omitempty"`
+	State                                string                         `json:"state,omitempty" yaml:"state,omitempty"`
+	Transitioning                        string                         `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+	TransitioningMessage                 string                         `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
+	UUID                                 string                         `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+	Version                              *Info                          `json:"version,omitempty" yaml:"version,omitempty"`
 }
 
 type ClusterCollection struct {
@@ -106,11 +114,21 @@ type ClusterOperations interface {
 	ByID(id string) (*Cluster, error)
 	Delete(container *Cluster) error
 
+	ActionBackupEtcd(resource *Cluster) error
+
+	ActionDisableMonitoring(resource *Cluster) error
+
+	ActionEnableMonitoring(resource *Cluster, input *MonitoringInput) error
+
 	ActionExportYaml(resource *Cluster) (*ExportOutput, error)
 
 	ActionGenerateKubeconfig(resource *Cluster) (*GenerateKubeConfigOutput, error)
 
 	ActionImportYaml(resource *Cluster, input *ImportClusterYamlInput) (*ImportYamlOutput, error)
+
+	ActionRestoreFromEtcdBackup(resource *Cluster, input *RestoreFromEtcdBackupInput) error
+
+	ActionRotateCertificates(resource *Cluster, input *RotateCertificateInput) error
 }
 
 func newClusterClient(apiClient *Client) *ClusterClient {
@@ -164,6 +182,21 @@ func (c *ClusterClient) Delete(container *Cluster) error {
 	return c.apiClient.Ops.DoResourceDelete(ClusterType, &container.Resource)
 }
 
+func (c *ClusterClient) ActionBackupEtcd(resource *Cluster) error {
+	err := c.apiClient.Ops.DoAction(ClusterType, "backupEtcd", &resource.Resource, nil, nil)
+	return err
+}
+
+func (c *ClusterClient) ActionDisableMonitoring(resource *Cluster) error {
+	err := c.apiClient.Ops.DoAction(ClusterType, "disableMonitoring", &resource.Resource, nil, nil)
+	return err
+}
+
+func (c *ClusterClient) ActionEnableMonitoring(resource *Cluster, input *MonitoringInput) error {
+	err := c.apiClient.Ops.DoAction(ClusterType, "enableMonitoring", &resource.Resource, input, nil)
+	return err
+}
+
 func (c *ClusterClient) ActionExportYaml(resource *Cluster) (*ExportOutput, error) {
 	resp := &ExportOutput{}
 	err := c.apiClient.Ops.DoAction(ClusterType, "exportYaml", &resource.Resource, nil, resp)
@@ -180,4 +213,14 @@ func (c *ClusterClient) ActionImportYaml(resource *Cluster, input *ImportCluster
 	resp := &ImportYamlOutput{}
 	err := c.apiClient.Ops.DoAction(ClusterType, "importYaml", &resource.Resource, input, resp)
 	return resp, err
+}
+
+func (c *ClusterClient) ActionRestoreFromEtcdBackup(resource *Cluster, input *RestoreFromEtcdBackupInput) error {
+	err := c.apiClient.Ops.DoAction(ClusterType, "restoreFromEtcdBackup", &resource.Resource, input, nil)
+	return err
+}
+
+func (c *ClusterClient) ActionRotateCertificates(resource *Cluster, input *RotateCertificateInput) error {
+	err := c.apiClient.Ops.DoAction(ClusterType, "rotateCertificates", &resource.Resource, input, nil)
+	return err
 }
