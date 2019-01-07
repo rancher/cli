@@ -8,10 +8,12 @@ const (
 	TokenType                 = "token"
 	TokenFieldAnnotations     = "annotations"
 	TokenFieldAuthProvider    = "authProvider"
+	TokenFieldClusterID       = "clusterId"
 	TokenFieldCreated         = "created"
 	TokenFieldCreatorID       = "creatorId"
 	TokenFieldCurrent         = "current"
 	TokenFieldDescription     = "description"
+	TokenFieldEnabled         = "enabled"
 	TokenFieldExpired         = "expired"
 	TokenFieldExpiresAt       = "expiresAt"
 	TokenFieldGroupPrincipals = "groupPrincipals"
@@ -33,10 +35,12 @@ type Token struct {
 	types.Resource
 	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	AuthProvider    string            `json:"authProvider,omitempty" yaml:"authProvider,omitempty"`
+	ClusterID       string            `json:"clusterId,omitempty" yaml:"clusterId,omitempty"`
 	Created         string            `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID       string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
 	Current         bool              `json:"current,omitempty" yaml:"current,omitempty"`
 	Description     string            `json:"description,omitempty" yaml:"description,omitempty"`
+	Enabled         *bool             `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Expired         bool              `json:"expired,omitempty" yaml:"expired,omitempty"`
 	ExpiresAt       string            `json:"expiresAt,omitempty" yaml:"expiresAt,omitempty"`
 	GroupPrincipals []string          `json:"groupPrincipals,omitempty" yaml:"groupPrincipals,omitempty"`

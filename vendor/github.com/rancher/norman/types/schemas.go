@@ -29,6 +29,7 @@ type BackReference struct {
 
 type Schemas struct {
 	sync.Mutex
+	processingTypes    map[reflect.Type]*Schema
 	typeNames          map[reflect.Type]string
 	schemasByPath      map[string]map[string]*Schema
 	mappers            map[string]map[string][]Mapper
@@ -44,11 +45,12 @@ type Schemas struct {
 
 func NewSchemas() *Schemas {
 	return &Schemas{
-		typeNames:     map[reflect.Type]string{},
-		schemasByPath: map[string]map[string]*Schema{},
-		mappers:       map[string]map[string][]Mapper{},
-		references:    map[string][]BackReference{},
-		embedded:      map[string]*Schema{},
+		processingTypes: map[reflect.Type]*Schema{},
+		typeNames:       map[reflect.Type]string{},
+		schemasByPath:   map[string]map[string]*Schema{},
+		mappers:         map[string]map[string][]Mapper{},
+		references:      map[string][]BackReference{},
+		embedded:        map[string]*Schema{},
 	}
 }
 
@@ -170,7 +172,12 @@ func (s *Schemas) embed(schema *Schema) {
 	newSchema.ResourceFields = map[string]Field{}
 
 	for k, v := range target.ResourceFields {
-		newSchema.ResourceFields[k] = v
+		// We remove the dynamic fields off the existing schema in case
+		// they've been removed from the dynamic schema so they won't
+		// be accidentally left over
+		if !v.DynamicField {
+			newSchema.ResourceFields[k] = v
+		}
 	}
 	for k, v := range schema.ResourceFields {
 		newSchema.ResourceFields[k] = v
