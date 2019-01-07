@@ -90,6 +90,7 @@ func mainErr() error {
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
 		cmd.LoginCommand(),
+		cmd.MultiClusterAppCommand(),
 		cmd.NamespaceCommand(),
 		cmd.NodeCommand(),
 		cmd.ProjectCommand(),
