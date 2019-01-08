@@ -601,17 +601,28 @@ func templateInstall(ctx *cli.Context) error {
 		return err
 	}
 
-	// wait for the app's notes to be populated so we can print them
-	var timeout int
-	for len(madeApp.Notes) == 0 {
+	// wait for the app to be installed to print the notes
+	var (
+		timeout   int
+		installed bool
+	)
+	for !installed {
 		if timeout == 60 {
-			return errors.New("timed out waiting for app notes, the app could still be installing. Run 'rancher apps' to verify")
+			return errors.New("timed out waiting for app to install. Run 'rancher apps' to verify status")
 		}
 		timeout++
 		time.Sleep(2 * time.Second)
 		madeApp, err = c.ProjectClient.App.ByID(madeApp.ID)
 		if err != nil {
 			return err
+		}
+		for _, condition := range madeApp.Conditions {
+			condType := strings.ToLower(condition.Type)
+			condStatus := strings.ToLower(condition.Status)
+			if condType == "installed" && condStatus == "true" {
+				installed = true
+				break
+			}
 		}
 	}
 
