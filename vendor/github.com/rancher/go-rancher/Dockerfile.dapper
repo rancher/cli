@@ -16,8 +16,8 @@ ENV DOCKER_URL_amd64=https://get.docker.com/builds/Linux/x86_64/docker-1.10.3 \
     DOCKER_URL=DOCKER_URL_${ARCH}
 RUN wget -O - ${!DOCKER_URL} > /usr/bin/docker && chmod +x /usr/bin/docker
 
-RUN wget -O - https://storage.googleapis.com/golang/go1.7.1.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
-    go get github.com/rancher/trash && go get github.com/golang/lint/golint
+RUN wget -O - https://storage.googleapis.com/golang/go1.11.1.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
+    go get github.com/rancher/trash && go get golang.org/x/lint/golint
 
 ENV DAPPER_SOURCE /go/src/github.com/rancher/go-rancher/
 ENV DAPPER_OUTPUT ./bin
