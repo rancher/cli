@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -154,7 +155,7 @@ func setupRancherBaseClient(rancherClient *RancherBaseClientImpl, opts *ClientOp
 	}
 
 	if opts.Timeout == 0 {
-		opts.Timeout = time.Second * 10
+		opts.Timeout = time.Second * time.Duration(defaultTimeout())
 	}
 	client := &http.Client{Timeout: opts.Timeout}
 	req, err := http.NewRequest("GET", opts.Url, nil)
@@ -232,7 +233,7 @@ func (rancherClient *RancherBaseClientImpl) setupRequest(req *http.Request) {
 
 func (rancherClient *RancherBaseClientImpl) newHttpClient() *http.Client {
 	if rancherClient.Opts.Timeout == 0 {
-		rancherClient.Opts.Timeout = time.Second * 10
+		rancherClient.Opts.Timeout = time.Second * time.Duration(defaultTimeout())
 	}
 	return &http.Client{Timeout: rancherClient.Opts.Timeout}
 }
@@ -617,4 +618,12 @@ func init() {
 	if debug {
 		fmt.Println("Rancher client debug on")
 	}
+}
+
+func defaultTimeout() int {
+	defaultTimeout, _ := strconv.Atoi(os.Getenv("RANCHER_CLIENT_TIMEOUT"))
+	if defaultTimeout == 0 {
+		defaultTimeout = 10
+	}
+	return defaultTimeout
 }
