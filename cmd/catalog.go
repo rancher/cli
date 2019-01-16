@@ -36,6 +36,9 @@ Example:
 
 	# Refresh is asynchronous unless you specify '--wait'
 	$ rancher catalog refresh --all --wait --wait-timeout=60
+
+	# Default wait timeout is 60 seconds, set to 0 to remove the timeout
+	$ rancher catalog refresh --all --wait --wait-timeout=0
 `
 )
 
@@ -107,7 +110,7 @@ func CatalogCommand() cli.Command {
 					cli.IntFlag{
 						Name:  "wait-timeout",
 						Usage: "Wait timeout duration in seconds",
-						Value: 0,
+						Value: 60,
 					},
 				},
 			},
@@ -278,6 +281,7 @@ func catalogRefresh(ctx *cli.Context) error {
 			}
 
 			for catalog.State != "active" {
+				time.Sleep(time.Second)
 				catalog, err = c.ManagementClient.Catalog.ByID(resource.ID)
 				if err != nil {
 					return err
