@@ -31,8 +31,8 @@ const (
 	installAppDescription = `
 Install an app template in the current Rancher server. This defaults to the newest version of the app template.
 Specify a version using '--version' if required.
-The app will be installed into a new namespace unless '--namespace' is specified. 
-					
+The app will be installed into a new namespace unless '--namespace' is specified.
+
 Example:
 	# Install the redis template with no other options
 	$ rancher app install redis appFoo
@@ -817,7 +817,7 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 		nsID := ns.ID
 		startTime := time.Now()
 		for {
-			logrus.Debug(fmt.Sprintf("Namespace create wait - Name: %s, State: %s, Transitioning: %s", ns.Name, ns.State, ns.Transitioning))
+			logrus.Debugf("Namespace create wait - Name: %s, State: %s, Transitioning: %s", ns.Name, ns.State, ns.Transitioning)
 			if time.Since(startTime)/time.Second > 30 {
 				return fmt.Errorf("timed out waiting for new namespace %s", ns.Name)
 			}
