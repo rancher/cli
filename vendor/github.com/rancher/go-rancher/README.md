@@ -1,4 +1,6 @@
-# Go Bindings for Rancher API
+# Go Bindings for Rancher 1.x API
+
+> Looking for Rancher 2.x API bindings?  [Click here](https://github.com/rancher/types)
 
 # Generating Code
 First, you must have a master version of Rancher running. The best way to do this is:
