@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/types/client/management/v3"
@@ -107,7 +108,21 @@ func ProjectCommand() cli.Command {
 func projectLs(ctx *cli.Context) error {
 	c, err := GetClient(ctx)
 	if err != nil {
-		return err
+		path := ctx.GlobalString("cf")
+		if path == "" {
+			path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
+		}
+		config, err := loadConfig(path)
+		if err != nil {
+			return err
+		}
+		currServer := config.CurrentServer
+		config.Servers[currServer].Project = ""
+		config.Write()
+		c, err = GetClient(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	collection, err := getProjectList(ctx, c)
