@@ -323,17 +323,13 @@ func appUpgrade(ctx *cli.Context) error {
 		return err
 	}
 
-	u, err := url.Parse(app.ExternalID)
+	externalID, err := updateExternalIDVersion(app.ExternalID, ctx.Args().Get(1))
 	if err != nil {
 		return err
 	}
 
-	q := u.Query()
-
-	q.Set("version", ctx.Args().Get(1))
-
 	filter := defaultListOpts(ctx)
-	filter.Filters["externalId"] = "catalog://?" + q.Encode()
+	filter.Filters["externalId"] = externalID
 
 	template, err := c.ManagementClient.TemplateVersion.List(filter)
 	if err != nil {
@@ -350,6 +346,22 @@ func appUpgrade(ctx *cli.Context) error {
 	}
 
 	return c.ProjectClient.App.ActionUpgrade(app, au)
+}
+
+func updateExternalIDVersion(externalID string, version string) (string, error) {
+	u, err := url.Parse(externalID)
+	if err != nil {
+		return "", err
+	}
+
+	q := u.Query()
+	q.Set("version", version)
+	// Need to unescape here to get the raw string for the externalId filter
+	catalogQuery, err := url.QueryUnescape(q.Encode())
+	if err != nil {
+		return "", err
+	}
+	return "catalog://?" + catalogQuery, nil
 }
 
 func appRollback(ctx *cli.Context) error {
