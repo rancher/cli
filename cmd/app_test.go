@@ -1,8 +1,10 @@
 package cmd
 
 import (
-	"gopkg.in/yaml.v2"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 )
 
 const redisSample = `## Redis values examples
@@ -55,43 +57,36 @@ configmap: |-
 `
 
 func TestValuesToAnswers(t *testing.T) {
+	assert := assert.New(t)
+
 	answers := map[string]string{}
 	values := map[string]interface{}{}
 	if err := yaml.Unmarshal([]byte(redisSample), &values); err != nil {
 		t.Error(err)
 	}
 	valuesToAnswers(values, answers)
-	if got, want := answers["image.registry"], "docker.io"; got != want {
-		t.Errorf("Want image.registry %q, got %q", want, got)
-	}
-	if got, want := answers["cluster.enabled"], "true"; got != want {
-		t.Errorf("Want cluster.enabled %q, got %q", want, got)
-	}
-	if got, want := answers["cluster.slaveCount"], "1"; got != want {
-		t.Errorf("Want cluster.slaveCount %q, got %q", want, got)
-	}
-	if got, want := answers["rbac.role.rules"], ""; got != want {
-		t.Errorf("Want rbac.role.rules %q, got %q", want, got)
-	}
-	if got, want := answers["persistence"], ""; got != want {
-		t.Errorf("Want persistence %q, got %q", want, got)
-	}
-	if got, want := answers["master.args[0]"], "redis-server"; got != want {
-		t.Errorf("Want master.args[0] %q, got %q", want, got)
-	}
-	if got, want := answers["master.args[1]"], "--maxmemory-policy volatile-ttl"; got != want {
-		t.Errorf("Want master.args[1] %q, got %q", want, got)
-	}
-	if got, want := answers["master.disableCommands"], "FLUSHDB,FLUSHALL"; got != want {
-		t.Errorf("Want master.disableCommands %q, got %q", want, got)
-	}
-	if got, want := answers["master.service.loadBalancerIP"], ""; got != want {
-		t.Errorf("Want master.service.loadBalancerIP %q, got %q", want, got)
-	}
-	if got, want := answers["master.persistence.accessModes[0]"], "ReadWriteOnce"; got != want {
-		t.Errorf("Want master.persistence.accessModes[0] %q, got %q", want, got)
-	}
-	if got, want := answers["configmap"], "# Redis configuration file\nbind 127.0.0.1\nport 6379"; got != want {
-		t.Errorf("Want configmap %q, got %q", want, got)
-	}
+
+	assert.Equal("docker.io", answers["image.registry"], "unexpected image.registry")
+	assert.Equal("true", answers["cluster.enabled"], "unexpected cluster.enabled")
+	assert.Equal("1", answers["cluster.slaveCount"], "unexpected cluster.slaveCount")
+	assert.Equal("", answers["rbac.role.rules"], "unexpected rbac.role.rules")
+	assert.Equal("", answers["persistence"], "unexpected persistence")
+	assert.Equal("redis-server", answers["master.args[0]"], "unexpected master.args[0]")
+	assert.Equal("--maxmemory-policy volatile-ttl", answers["master.args[1]"], "unexpected master.args[1]")
+	assert.Equal("FLUSHDB,FLUSHALL", answers["master.disableCommands"], "unexpected master.disableCommands")
+	assert.Equal("", answers["master.service.loadBalancerIP"], "unexpected master.service.loadBalancerIP")
+	assert.Equal("ReadWriteOnce", answers["master.persistence.accessModes[0]"], "unexpected master.persistence.accessModes[0]")
+	assert.Equal("# Redis configuration file\nbind 127.0.0.1\nport 6379", answers["configmap"], "unexpected configmap")
+}
+
+func TestGetExternalIDInVersion(t *testing.T) {
+	assert := assert.New(t)
+
+	got, err := updateExternalIDVersion("catalog://?catalog=library&template=cert-manager&version=v0.5.2", "v1.2.3")
+	assert.Nil(err)
+	assert.Equal(got, "catalog://?catalog=library&template=cert-manager&version=v1.2.3")
+
+	got, err = updateExternalIDVersion("catalog://?catalog=p-826f4/pcatalog&template=mysql&version=0.3.8", "0.3.9")
+	assert.Nil(err)
+	assert.Equal(got, "catalog://?catalog=p-826f4/pcatalog&template=mysql&version=0.3.9")
 }
