@@ -154,7 +154,7 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 		// Check if given context is in valid format
 		_, _, err := parseClusterAndProjectID(context)
 		if err != nil {
-			return "", fmt.Errorf("Unable to parse context (%s). Please provide context as c-xxxxx:p-xxxxx or c-xxxxx:project-xxxxx", context)
+			return "", fmt.Errorf("Unable to parse context (%s). Please provide context as local:p-xxxxx, c-xxxxx:p-xxxxx, or c-xxxxx:project-xxxxx", context)
 		}
 		// Check if context exists
 		_, err = Lookup(c, context, "project")
