@@ -486,7 +486,7 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 	// c-qmpbm:p-mm62v
 	// c-qmpbm:project-mm62v
 	// See https://github.com/rancher/rancher/issues/14400
-	if match, _ := regexp.MatchString("c-[[:alnum:]]{5}:(p|project)-[[:alnum:]]{5}", id); match {
+	if match, _ := regexp.MatchString("((local)|(c-[[:alnum:]]{5})):(p|project)-[[:alnum:]]{5}", id); match {
 		parts := SplitOnColon(id)
 		return parts[0], parts[1], nil
 	}
