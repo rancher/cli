@@ -2,6 +2,7 @@ package cliclient
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	errorsPkg "github.com/pkg/errors"
@@ -144,22 +145,13 @@ func (mc *MasterClient) newProjectClient() error {
 
 func (mc *MasterClient) ByID(resource *ntypes.Resource, respObject interface{}) error {
 	if _, ok := mc.ManagementClient.APIBaseClient.Types[resource.Type]; ok {
-		err := mc.ManagementClient.ByID(resource.Type, resource.ID, &respObject)
-		if err != nil {
-			return err
-		}
+		return mc.ManagementClient.ByID(resource.Type, resource.ID, &respObject)
 	} else if _, ok := mc.ProjectClient.APIBaseClient.Types[resource.Type]; ok {
-		err := mc.ProjectClient.ByID(resource.Type, resource.ID, &respObject)
-		if err != nil {
-			return err
-		}
+		return mc.ProjectClient.ByID(resource.Type, resource.ID, &respObject)
 	} else if _, ok := mc.ClusterClient.APIBaseClient.Types[resource.Type]; ok {
-		err := mc.ClusterClient.ByID(resource.Type, resource.ID, &respObject)
-		if err != nil {
-			return err
-		}
+		return mc.ClusterClient.ByID(resource.Type, resource.ID, &respObject)
 	}
-	return errors.New("unknown resource type")
+	return fmt.Errorf("MasterClient - unknown resource type %v", resource.Type)
 }
 
 func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
