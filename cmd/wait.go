@@ -46,13 +46,28 @@ func wait(ctx *cli.Context) error {
 	}
 
 	mapResource := map[string]interface{}{}
+
+	// Initial check shortcut
+	err = c.ByID(resource, &mapResource)
+	if err != nil {
+		return err
+	}
+
+	ok, err := checkDone(resource, mapResource)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+
 	timeout := time.After(time.Duration(ctx.Int("timeout")) * time.Second)
-	every := time.Tick(10 * time.Second)
+	every := time.Tick(1 * time.Second)
 
 	for {
 		select {
 		case <-timeout:
-			return fmt.Errorf("Timeout reached %s:%s failed: %s", resource.Type, resource.ID, mapResource["transitioningMessage"])
+			return fmt.Errorf("Timeout reached %v:%v transitioningMessage: %v", resource.Type, resource.ID, mapResource["transitioningMessage"])
 		case <-every:
 			err = c.ByID(resource, &mapResource)
 			if err != nil {
@@ -82,7 +97,7 @@ func checkDone(resource *ntypes.Resource, data map[string]interface{}) (bool, er
 		if data["state"] == "provisioning" {
 			break
 		}
-		return false, fmt.Errorf("%s:%s failed: %s", resource.Type, resource.ID, data["transitioningMessage"])
+		return false, fmt.Errorf("%v:%v failed, transitioningMessage: %v", resource.Type, resource.ID, data["transitioningMessage"])
 	}
 
 	return data["state"] == "active", nil
