@@ -704,35 +704,44 @@ func getClusterNodeCount(ctx *cli.Context, c *cliclient.MasterClient, clusterID 
 }
 
 func getClusterCPU(cluster managementClient.Cluster) string {
-	cpu, err := strconv.ParseFloat(strings.Replace(cluster.Requested["cpu"], "m", "", -1), 64)
-	if nil != err {
-		fmt.Println(err)
-	}
-	cpu = cpu / 1000
-	cpu2 := strconv.FormatFloat(cpu, 'f', 2, 32)
-	return cpu2 + "/" + cluster.Allocatable["cpu"]
+	req := parseResourceString(cluster.Requested["cpu"])
+	alloc := parseResourceString(cluster.Allocatable["cpu"])
+	return req + "/" + alloc
 }
 
 func getClusterRAM(cluster managementClient.Cluster) string {
-	allo := strings.Replace(cluster.Allocatable["memory"], "Ki", "", -1)
-	alloInt, err := strconv.ParseFloat(allo, 64)
-	if nil != err {
-		fmt.Println(err)
-	}
-	alloInt = alloInt / 1024 / 1024
-	alloString := fmt.Sprintf("%.2f", alloInt)
-	alloString = strings.TrimSuffix(alloString, ".0")
+	req := parseResourceString(cluster.Requested["memory"])
+	alloc := parseResourceString(cluster.Allocatable["memory"])
+	return req + "/" + alloc + " GB"
+}
 
-	requested := strings.Replace(cluster.Requested["memory"], "Mi", "", -1)
-	requestedInt, err := strconv.ParseFloat(requested, 64)
-	if nil != err {
-		fmt.Println(err)
+// parseResourceString returns GB for Ki and Mi and CPU cores from 'm'
+func parseResourceString(mem string) string {
+	if strings.HasSuffix(mem, "Ki") {
+		num, err := strconv.ParseFloat(strings.Replace(mem, "Ki", "", -1), 64)
+		if nil != err {
+			return mem
+		}
+		num = num / 1024 / 1024
+		return strings.TrimSuffix(fmt.Sprintf("%.2f", num), ".0")
 	}
-	requestedInt = requestedInt / 1024
-	requestedString := fmt.Sprintf("%.2f", requestedInt)
-	requestedString = strings.TrimSuffix(requestedString, ".0")
-
-	return requestedString + "/" + alloString + " GB"
+	if strings.HasSuffix(mem, "Mi") {
+		num, err := strconv.ParseFloat(strings.Replace(mem, "Mi", "", -1), 64)
+		if nil != err {
+			return mem
+		}
+		num = num / 1024
+		return strings.TrimSuffix(fmt.Sprintf("%.2f", num), ".0")
+	}
+	if strings.HasSuffix(mem, "m") {
+		num, err := strconv.ParseFloat(strings.Replace(mem, "m", "", -1), 64)
+		if nil != err {
+			return mem
+		}
+		num = num / 1000
+		return strconv.FormatFloat(num, 'f', 2, 32)
+	}
+	return mem
 }
 
 func getClusterPods(cluster managementClient.Cluster) string {
