@@ -3,12 +3,14 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/norman/types"
+	"github.com/rancher/norman/types/slice"
 	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -34,10 +36,19 @@ Example:
 `
 )
 
+var memberAccessTypes = []string{"owner", "member", "read-only"}
+
 type MultiClusterAppData struct {
+	ID      string
 	App     managementClient.MultiClusterApp
 	Version string
 	Targets string
+}
+
+type MemberData struct {
+	Name       string
+	MemberType string
+	AccessType string
 }
 
 func MultiClusterAppCommand() cli.Command {
@@ -101,6 +112,19 @@ func MultiClusterAppCommand() cli.Command {
 						Name:  "target,t",
 						Usage: "Target project names/ids to install the app into",
 					},
+					cli.StringSliceFlag{
+						Name:  "role",
+						Usage: "Set roles required to launch/manage the apps in target projects",
+					},
+					cli.StringSliceFlag{
+						Name:  "member",
+						Usage: "Set members of the app, with the same access type defined by --member-access-type",
+					},
+					cli.StringFlag{
+						Name:  "member-access-type",
+						Usage: "Access type of the members. Specify only one value, and it applies to all members defined by --member. Valid options are 'owner', 'member' and 'read-only'",
+						Value: "owner",
+					},
 					cli.IntFlag{
 						Name:  "timeout",
 						Usage: "Time in seconds to wait until the app is in a ready state",
@@ -138,15 +162,67 @@ func MultiClusterAppCommand() cli.Command {
 						Name:  "set",
 						Usage: "Set answers for the template, can be used multiple times. Example: --set foo=bar",
 					},
+					cli.StringSliceFlag{
+						Name: "role,r",
+						Usage: "Set roles required to launch/manage the apps in target projects. Specified roles on upgrade will override all the original roles. " +
+							"For example, provide all existing roles if you want to add additional roles. Leave it empty to keep current roles",
+					},
 					cli.BoolFlag{
 						Name:  "show-versions,v",
 						Usage: "Display versions available to upgrade to",
 					},
-					cli.StringSliceFlag{
-						Name: "target,t",
-						Usage: "Target project names/ids to upgrade. Specified targets on upgrade will override all " +
-							"the original targets. Leave it empty to keep current targets",
+				},
+			},
+			cli.Command{
+				Name:        "add-project",
+				Usage:       "Add target projects to a multi-cluster app",
+				Action:      addMcappTargetProject,
+				Description: "Examples:\n #Add 'p1' project in cluster 'mycluster' to target projects of a multi-cluster app named 'myapp'\n rancher multiclusterapp add-project myapp mycluster:p1\n",
+				ArgsUsage:   "[APP_NAME/APP_ID, CLUSTER_NAME:PROJECT_NAME/PROJECT_ID...]",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "answers,a",
+						Usage: "Path to an answers file that provides overrided answers for the new target projects, the format of the file is a map with key:value. Supports JSON and YAML",
 					},
+					cli.StringFlag{
+						Name:  "values",
+						Usage: "Path to a helm values file that provides overrided answers for the new target projects",
+					},
+					cli.StringSliceFlag{
+						Name:  "set",
+						Usage: "Set overrided answers for the new target projects",
+					},
+				},
+			},
+			cli.Command{
+				Name:        "delete-project",
+				Usage:       "Delete target projects from a multi-cluster app",
+				Action:      deleteMcappTargetProject,
+				Description: "Examples:\n #Delete 'p1' project in cluster 'mycluster' from target projects of a multi-cluster app named 'myapp'\n rancher multiclusterapp delete-project myapp mycluster:p1\n",
+				ArgsUsage:   "[APP_NAME/APP_ID, CLUSTER_NAME:PROJECT_NAME/PROJECT_ID...]",
+			},
+			cli.Command{
+				Name:        "add-member",
+				Usage:       "Add members to a multi-cluster app",
+				Action:      addMcappMember,
+				Description: "Examples:\n #Add 'user1' and 'user2' as the owners of a multi-cluster app named 'myapp'\n rancher multiclusterapp add-member myapp owner user1 user2\n",
+				ArgsUsage:   "[APP_NAME/APP_ID, ACCESS_TYPE, USER_NAME/USER_ID...]",
+			},
+			cli.Command{
+				Name:        "delete-member",
+				Usage:       "Delete members from a multi-cluster app",
+				Action:      deleteMcappMember,
+				Description: "Examples:\n #Delete the membership of a user named 'user1' from a multi-cluster app named 'myapp'\n rancher multiclusterapp delete-member myapp user1\n",
+				ArgsUsage:   "[APP_NAME/APP_ID, USER_NAME/USER_ID...]",
+			},
+			cli.Command{
+				Name:      "list-members",
+				Aliases:   []string{"lm"},
+				Usage:     "List current members of a multi-cluster app",
+				ArgsUsage: "[APP_NAME/APP_ID]",
+				Action:    listMultiClusterAppMembers,
+				Flags: []cli.Flag{
+					formatFlag,
 				},
 			},
 			cli.Command{
@@ -180,6 +256,10 @@ func MultiClusterAppCommand() cli.Command {
 				Action:    showMultiClusterApp,
 				Flags: []cli.Flag{
 					formatFlag,
+					cli.BoolFlag{
+						Name:  "show-roles",
+						Usage: "Show roles required to manage the app",
+					},
 				},
 			},
 		},
@@ -215,6 +295,7 @@ func multiClusterAppLs(ctx *cli.Context) error {
 		}
 		targetNames := getReadableTargetNames(clusterCache, projectCache, item.Targets)
 		writer.Write(&MultiClusterAppData{
+			ID:      item.ID,
 			App:     item,
 			Version: version,
 			Targets: strings.Join(targetNames, ","),
@@ -334,13 +415,8 @@ func multiClusterAppDelete(ctx *cli.Context) error {
 		return err
 	}
 
-	for _, arg := range ctx.Args() {
-		resource, err := Lookup(c, arg, managementClient.MultiClusterAppType)
-		if err != nil {
-			return err
-		}
-
-		app, err := c.ManagementClient.MultiClusterApp.ByID(resource.ID)
+	for _, name := range ctx.Args() {
+		_, app, err := searchForMcapp(c, name)
 		if err != nil {
 			return err
 		}
@@ -361,19 +437,23 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 	}
 
 	if ctx.Bool("show-versions") {
-		return outputMultiClusterAppVersions(ctx, c)
+		if ctx.NArg() == 0 {
+			return cli.ShowSubcommandHelp(ctx)
+		}
+
+		_, app, err := searchForMcapp(c, ctx.Args().First())
+		if err != nil {
+			return err
+		}
+
+		return outputMultiClusterAppVersions(ctx, c, app)
 	}
 
 	if ctx.NArg() < 2 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), managementClient.MultiClusterAppType)
-	if err != nil {
-		return err
-	}
-
-	app, err := c.ManagementClient.MultiClusterApp.ByID(resource.ID)
+	_, app, err := searchForMcapp(c, ctx.Args().First())
 	if err != nil {
 		return err
 	}
@@ -395,17 +475,9 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 	}
 	app.TemplateVersionID = strings.TrimSuffix(templateVersion.ID, templateVersion.Version) + version
 
-	projectIDs, err := lookupProjectIDsFromTargets(c, ctx.StringSlice("target"))
-	if err != nil {
-		return err
-	}
-	if len(projectIDs) > 0 {
-		app.Targets = nil
-		for _, target := range projectIDs {
-			app.Targets = append(app.Targets, managementClient.Target{
-				ProjectID: target,
-			})
-		}
+	roles := ctx.StringSlice("role")
+	if len(roles) > 0 {
+		app.Roles = roles
 	}
 
 	_, err = c.ManagementClient.MultiClusterApp.Update(app, app)
@@ -413,27 +485,26 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 }
 
 func multiClusterAppRollback(ctx *cli.Context) error {
+	if ctx.NArg() == 0 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
 	}
 
+	resource, app, err := searchForMcapp(c, ctx.Args().First())
+	if err != nil {
+		return err
+	}
+
 	if ctx.Bool("show-revisions") {
-		return outputMultiClusterAppRevisions(ctx, c)
+		return outputMultiClusterAppRevisions(ctx, c, resource, app)
 	}
 
 	if ctx.NArg() < 2 {
 		return cli.ShowSubcommandHelp(ctx)
-	}
-
-	resource, err := Lookup(c, ctx.Args().First(), managementClient.MultiClusterAppType)
-	if err != nil {
-		return err
-	}
-
-	app, err := c.ManagementClient.MultiClusterApp.ByID(resource.ID)
-	if err != nil {
-		return err
 	}
 
 	revisionResource, err := Lookup(c, ctx.Args().Get(1), managementClient.MultiClusterAppRevisionType)
@@ -521,6 +592,33 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 		return err
 	}
 	app.TemplateVersionID = templateVersionID
+
+	roles := ctx.StringSlice("role")
+	if len(roles) > 0 {
+		app.Roles = roles
+	}
+
+	members := ctx.StringSlice("member")
+	accessType := strings.ToLower(ctx.String("member-access-type"))
+	if !slice.ContainsString(memberAccessTypes, accessType) {
+		return fmt.Errorf("invalid access type %q, supported values are \"owner\",\"member\" and \"read-only\"", accessType)
+	}
+	for _, m := range members {
+		member, err := searchForMember(ctx, c, m)
+		if err != nil {
+			return err
+		}
+
+		toAddMember := managementClient.Member{
+			AccessType: accessType,
+		}
+		if member.PrincipalType == "user" {
+			toAddMember.UserPrincipalID = member.ID
+		} else {
+			toAddMember.GroupPrincipalID = member.ID
+		}
+		app.Members = append(app.Members, toAddMember)
+	}
 
 	madeApp, err := c.ManagementClient.MultiClusterApp.Create(app)
 	if err != nil {
@@ -679,6 +777,156 @@ func fromMultiClusterAppAnswers(answers []managementClient.Answer) map[string]st
 	return answerMap
 }
 
+func addMcappTargetProject(ctx *cli.Context) error {
+	if len(ctx.Args()) < 2 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, app, err := searchForMcapp(c, ctx.Args().First())
+	if err != nil {
+		return err
+	}
+
+	input, err := getTargetInput(ctx, c)
+	if err != nil {
+		return err
+	}
+	return c.ManagementClient.MultiClusterApp.ActionAddProjects(app, input)
+}
+
+func deleteMcappTargetProject(ctx *cli.Context) error {
+	if len(ctx.Args()) < 2 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, app, err := searchForMcapp(c, ctx.Args().First())
+	if err != nil {
+		return err
+	}
+
+	input, err := getTargetInput(ctx, c)
+	if err != nil {
+		return err
+	}
+	return c.ManagementClient.MultiClusterApp.ActionRemoveProjects(app, input)
+}
+
+func getTargetInput(ctx *cli.Context, c *cliclient.MasterClient) (*managementClient.UpdateMultiClusterAppTargetsInput, error) {
+	targets := ctx.Args()[1:]
+	projectIDs, err := lookupProjectIDsFromTargets(c, targets)
+	if err != nil {
+		return nil, err
+	}
+
+	answers := make(map[string]string)
+	err = processAnswers(ctx, c, nil, answers, false)
+	if err != nil {
+		return nil, err
+	}
+	mcaAnswers, err := toMultiClusterAppAnswers(c, answers)
+	if err != nil {
+		return nil, err
+	}
+	input := &managementClient.UpdateMultiClusterAppTargetsInput{
+		Projects: projectIDs,
+		Answers:  mcaAnswers,
+	}
+	return input, nil
+}
+
+func addMcappMember(ctx *cli.Context) error {
+	if len(ctx.Args()) < 3 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	appName := ctx.Args().First()
+	accessType := strings.ToLower(ctx.Args().Get(1))
+	memberNames := ctx.Args()[2:]
+
+	if !slice.ContainsString(memberAccessTypes, accessType) {
+		return fmt.Errorf("invalid access type %q, supported values are \"owner\",\"member\" and \"read-only\"", accessType)
+	}
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, app, err := searchForMcapp(c, appName)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range memberNames {
+		member, err := searchForMember(ctx, c, name)
+		if err != nil {
+			return err
+		}
+
+		toAddMember := managementClient.Member{
+			AccessType: accessType,
+		}
+		if member.PrincipalType == "user" {
+			toAddMember.UserPrincipalID = member.ID
+		} else {
+			toAddMember.GroupPrincipalID = member.ID
+		}
+
+		app.Members = append(app.Members, toAddMember)
+	}
+
+	_, err = c.ManagementClient.MultiClusterApp.Update(app, app)
+	return err
+}
+
+func deleteMcappMember(ctx *cli.Context) error {
+	if len(ctx.Args()) < 2 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	appName := ctx.Args().First()
+	memberNames := ctx.Args()[1:]
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, app, err := searchForMcapp(c, appName)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range memberNames {
+		member, err := searchForMember(ctx, c, name)
+		if err != nil {
+			return err
+		}
+
+		memberID := member.ID
+		var toKeepMembers []managementClient.Member
+		for _, m := range app.Members {
+			if m.GroupPrincipalID != memberID && m.UserPrincipalID != memberID {
+				toKeepMembers = append(toKeepMembers, m)
+			}
+		}
+		app.Members = toKeepMembers
+	}
+
+	_, err = c.ManagementClient.MultiClusterApp.Update(app, app)
+	return err
+}
+
 func showMultiClusterApp(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
 		return cli.ShowSubcommandHelp(ctx)
@@ -689,35 +937,88 @@ func showMultiClusterApp(ctx *cli.Context) error {
 		return err
 	}
 
-	err = outputMultiClusterAppRevisions(ctx, c)
+	resource, app, err := searchForMcapp(c, ctx.Args().First())
+	if err != nil {
+		return err
+	}
+
+	err = outputMultiClusterAppRevisions(ctx, c, resource, app)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println()
 
-	err = outputMultiClusterAppVersions(ctx, c)
+	err = outputMultiClusterAppVersions(ctx, c, app)
 	if err != nil {
 		return err
+	}
+
+	if ctx.Bool("show-roles") {
+		fmt.Println()
+
+		err = outputMultiClusterAppRoles(ctx, c, app)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func outputMultiClusterAppVersions(ctx *cli.Context, c *cliclient.MasterClient) error {
+func listMultiClusterAppMembers(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), managementClient.MultiClusterAppType)
+	c, err := GetClient(ctx)
 	if err != nil {
 		return err
 	}
 
+	_, app, err := searchForMcapp(c, ctx.Args().First())
+	if err != nil {
+		return err
+	}
+
+	writer := NewTableWriter([][]string{
+		{"NAME", "Name"},
+		{"MEMBER_TYPE", "MemberType"},
+		{"ACCESS_TYPE", "AccessType"},
+	}, ctx)
+
+	defer writer.Close()
+
+	for _, m := range app.Members {
+		principalID := m.UserPrincipalID
+		if m.UserPrincipalID == "" {
+			principalID = m.GroupPrincipalID
+		}
+		principal, err := c.ManagementClient.Principal.ByID(url.PathEscape(principalID))
+		if err != nil {
+			return err
+		}
+		writer.Write(&MemberData{
+			Name:       principal.Name,
+			MemberType: strings.Title(fmt.Sprintf("%s %s", principal.Provider, principal.PrincipalType)),
+			AccessType: m.AccessType,
+		})
+	}
+	return writer.Err()
+}
+
+func searchForMcapp(c *cliclient.MasterClient, name string) (*types.Resource, *managementClient.MultiClusterApp, error) {
+	resource, err := Lookup(c, name, managementClient.MultiClusterAppType)
+	if err != nil {
+		return nil, nil, err
+	}
 	app, err := c.ManagementClient.MultiClusterApp.ByID(resource.ID)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
+	return resource, app, nil
+}
 
+func outputMultiClusterAppVersions(ctx *cli.Context, c *cliclient.MasterClient, app *managementClient.MultiClusterApp) error {
 	templateVersion, err := c.ManagementClient.TemplateVersion.ByID(app.TemplateVersionID)
 	if err != nil {
 		return err
@@ -752,24 +1053,9 @@ func outputMultiClusterAppVersions(ctx *cli.Context, c *cliclient.MasterClient) 
 	return writer.Err()
 }
 
-func outputMultiClusterAppRevisions(ctx *cli.Context, c *cliclient.MasterClient) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowSubcommandHelp(ctx)
-	}
-
-	resource, err := Lookup(c, ctx.Args().First(), managementClient.MultiClusterAppType)
-	if err != nil {
-		return err
-	}
-
-	app, err := c.ManagementClient.MultiClusterApp.ByID(resource.ID)
-	if err != nil {
-		return err
-	}
-
+func outputMultiClusterAppRevisions(ctx *cli.Context, c *cliclient.MasterClient, resource *types.Resource, app *managementClient.MultiClusterApp) error {
 	revisions := &managementClient.MultiClusterAppRevisionCollection{}
-	err = c.ManagementClient.GetLink(*resource, "revisions", revisions)
-	if err != nil {
+	if err := c.ManagementClient.GetLink(*resource, "revisions", revisions); err != nil {
 		return err
 	}
 
@@ -799,6 +1085,19 @@ func outputMultiClusterAppRevisions(ctx *cli.Context, c *cliclient.MasterClient)
 		rev.Human = rev.Created.Format("02 Jan 2006 15:04:05 MST")
 		writer.Write(rev)
 
+	}
+	return writer.Err()
+}
+
+func outputMultiClusterAppRoles(ctx *cli.Context, c *cliclient.MasterClient, app *managementClient.MultiClusterApp) error {
+	writer := NewTableWriter([][]string{
+		{"ROLE_NAME", "Name"},
+	}, ctx)
+
+	defer writer.Close()
+
+	for _, r := range app.Roles {
+		writer.Write(map[string]string{"Name": r})
 	}
 	return writer.Err()
 }
