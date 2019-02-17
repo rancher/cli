@@ -165,7 +165,7 @@ func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (
 	dataLength := len(results.Data)
 	switch {
 	case dataLength == 0:
-		return nil, errors.New("no results found")
+		return nil, fmt.Errorf("no results found for %q", name)
 	case dataLength == 1:
 		return &results.Data[0], nil
 	case dataLength >= 10:
