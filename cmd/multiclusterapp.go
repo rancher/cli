@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -43,12 +42,6 @@ type MultiClusterAppData struct {
 	App     managementClient.MultiClusterApp
 	Version string
 	Targets string
-}
-
-type MemberData struct {
-	Name       string
-	MemberType string
-	AccessType string
 }
 
 func MultiClusterAppCommand() cli.Command {
@@ -598,27 +591,16 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 		app.Roles = roles
 	}
 
-	members := ctx.StringSlice("member")
 	accessType := strings.ToLower(ctx.String("member-access-type"))
 	if !slice.ContainsString(memberAccessTypes, accessType) {
 		return fmt.Errorf("invalid access type %q, supported values are \"owner\",\"member\" and \"read-only\"", accessType)
 	}
-	for _, m := range members {
-		member, err := searchForMember(ctx, c, m)
-		if err != nil {
-			return err
-		}
 
-		toAddMember := managementClient.Member{
-			AccessType: accessType,
-		}
-		if member.PrincipalType == "user" {
-			toAddMember.UserPrincipalID = member.ID
-		} else {
-			toAddMember.GroupPrincipalID = member.ID
-		}
-		app.Members = append(app.Members, toAddMember)
+	members, err := addMembersByNames(ctx, c, app.Members, ctx.StringSlice("member"), accessType)
+	if err != nil {
+		return err
 	}
+	app.Members = members
 
 	madeApp, err := c.ManagementClient.MultiClusterApp.Create(app)
 	if err != nil {
@@ -867,25 +849,15 @@ func addMcappMember(ctx *cli.Context) error {
 		return err
 	}
 
-	for _, name := range memberNames {
-		member, err := searchForMember(ctx, c, name)
-		if err != nil {
-			return err
-		}
-
-		toAddMember := managementClient.Member{
-			AccessType: accessType,
-		}
-		if member.PrincipalType == "user" {
-			toAddMember.UserPrincipalID = member.ID
-		} else {
-			toAddMember.GroupPrincipalID = member.ID
-		}
-
-		app.Members = append(app.Members, toAddMember)
+	members, err := addMembersByNames(ctx, c, app.Members, memberNames, accessType)
+	if err != nil {
+		return err
 	}
 
-	_, err = c.ManagementClient.MultiClusterApp.Update(app, app)
+	update := make(map[string]interface{})
+	update["members"] = members
+
+	_, err = c.ManagementClient.MultiClusterApp.Update(app, update)
 	return err
 }
 
@@ -907,23 +879,15 @@ func deleteMcappMember(ctx *cli.Context) error {
 		return err
 	}
 
-	for _, name := range memberNames {
-		member, err := searchForMember(ctx, c, name)
-		if err != nil {
-			return err
-		}
-
-		memberID := member.ID
-		var toKeepMembers []managementClient.Member
-		for _, m := range app.Members {
-			if m.GroupPrincipalID != memberID && m.UserPrincipalID != memberID {
-				toKeepMembers = append(toKeepMembers, m)
-			}
-		}
-		app.Members = toKeepMembers
+	members, err := deleteMembersByNames(ctx, c, app.Members, memberNames)
+	if err != nil {
+		return err
 	}
 
-	_, err = c.ManagementClient.MultiClusterApp.Update(app, app)
+	update := make(map[string]interface{})
+	update["members"] = members
+
+	_, err = c.ManagementClient.MultiClusterApp.Update(app, update)
 	return err
 }
 
@@ -980,30 +944,7 @@ func listMultiClusterAppMembers(ctx *cli.Context) error {
 		return err
 	}
 
-	writer := NewTableWriter([][]string{
-		{"NAME", "Name"},
-		{"MEMBER_TYPE", "MemberType"},
-		{"ACCESS_TYPE", "AccessType"},
-	}, ctx)
-
-	defer writer.Close()
-
-	for _, m := range app.Members {
-		principalID := m.UserPrincipalID
-		if m.UserPrincipalID == "" {
-			principalID = m.GroupPrincipalID
-		}
-		principal, err := c.ManagementClient.Principal.ByID(url.PathEscape(principalID))
-		if err != nil {
-			return err
-		}
-		writer.Write(&MemberData{
-			Name:       principal.Name,
-			MemberType: strings.Title(fmt.Sprintf("%s %s", principal.Provider, principal.PrincipalType)),
-			AccessType: m.AccessType,
-		})
-	}
-	return writer.Err()
+	return outputMembers(ctx, c, app.Members)
 }
 
 func searchForMcapp(c *cliclient.MasterClient, name string) (*types.Resource, *managementClient.MultiClusterApp, error) {
