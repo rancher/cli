@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
@@ -53,6 +54,12 @@ var (
 		Usage: "Only display IDs or suppress help text",
 	}
 )
+
+type MemberData struct {
+	Name       string
+	MemberType string
+	AccessType string
+}
 
 type RoleTemplate struct {
 	ID          string
@@ -567,4 +574,69 @@ func createdTimetoHuman(t string) (string, error) {
 		return "", err
 	}
 	return parsedTime.Format("02 Jan 2006 15:04:05 MST"), nil
+}
+
+func outputMembers(ctx *cli.Context, c *cliclient.MasterClient, members []managementClient.Member) error {
+	writer := NewTableWriter([][]string{
+		{"NAME", "Name"},
+		{"MEMBER_TYPE", "MemberType"},
+		{"ACCESS_TYPE", "AccessType"},
+	}, ctx)
+
+	defer writer.Close()
+
+	for _, m := range members {
+		principalID := m.UserPrincipalID
+		if m.UserPrincipalID == "" {
+			principalID = m.GroupPrincipalID
+		}
+		principal, err := c.ManagementClient.Principal.ByID(url.PathEscape(principalID))
+		if err != nil {
+			return err
+		}
+		writer.Write(&MemberData{
+			Name:       principal.Name,
+			MemberType: strings.Title(fmt.Sprintf("%s %s", principal.Provider, principal.PrincipalType)),
+			AccessType: m.AccessType,
+		})
+	}
+	return writer.Err()
+}
+
+func addMembersByNames(ctx *cli.Context, c *cliclient.MasterClient, members []managementClient.Member, toAddMembers []string, accessType string) ([]managementClient.Member, error) {
+	for _, name := range toAddMembers {
+		member, err := searchForMember(ctx, c, name)
+		if nil != err {
+			return nil, err
+		}
+
+		toAddMember := managementClient.Member{
+			AccessType: accessType,
+		}
+		if member.PrincipalType == "user" {
+			toAddMember.UserPrincipalID = member.ID
+		} else {
+			toAddMember.GroupPrincipalID = member.ID
+		}
+		members = append(members, toAddMember)
+	}
+	return members, nil
+}
+
+func deleteMembersByNames(ctx *cli.Context, c *cliclient.MasterClient, members []managementClient.Member, todeleteMembers []string) ([]managementClient.Member, error) {
+	for _, name := range todeleteMembers {
+		member, err := searchForMember(ctx, c, name)
+		if err != nil {
+			return nil, err
+		}
+
+		var toKeepMembers []managementClient.Member
+		for _, m := range members {
+			if m.GroupPrincipalID != member.ID && m.UserPrincipalID != member.ID {
+				toKeepMembers = append(toKeepMembers, m)
+			}
+		}
+		members = toKeepMembers
+	}
+	return members, nil
 }
