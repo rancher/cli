@@ -106,8 +106,10 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Target project names/ids to install the app into",
 					},
 					cli.StringSliceFlag{
-						Name:  "role",
-						Usage: "Set roles required to launch/manage the apps in target projects",
+						Name: "role",
+						Usage: "Set roles required to launch/manage the apps in target projects. For example, set \"project-member\" role when the app needs to manage resources " +
+							"in the projects in which it is deployed. Or set \"cluster-owner\" role when the app needs to manage resources in the clusters in which it is deployed. " +
+							"(default: \"project-member\")",
 					},
 					cli.StringSliceFlag{
 						Name:  "member",
@@ -175,15 +177,15 @@ func MultiClusterAppCommand() cli.Command {
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "answers,a",
-						Usage: "Path to an answers file that provides overrided answers for the new target projects, the format of the file is a map with key:value. Supports JSON and YAML",
+						Usage: "Path to an answers file that provides overriding answers for the new target projects, the format of the file is a map with key:value. Supports JSON and YAML",
 					},
 					cli.StringFlag{
 						Name:  "values",
-						Usage: "Path to a helm values file that provides overrided answers for the new target projects",
+						Usage: "Path to a helm values file that provides overriding answers for the new target projects",
 					},
 					cli.StringSliceFlag{
 						Name:  "set",
-						Usage: "Set overrided answers for the new target projects",
+						Usage: "Set overriding answers for the new target projects",
 					},
 				},
 			},
@@ -524,8 +526,15 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 		return err
 	}
 
+	roles := ctx.StringSlice("role")
+	if len(roles) == 0 {
+		// Handle the default here because the cli default value for stringSlice do not get overridden.
+		roles = []string{"project-member"}
+	}
+
 	app := &managementClient.MultiClusterApp{
-		Name: appName,
+		Name:  appName,
+		Roles: roles,
 	}
 
 	resource, err := Lookup(c, templateName, managementClient.TemplateType)
@@ -585,11 +594,6 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 		return err
 	}
 	app.TemplateVersionID = templateVersionID
-
-	roles := ctx.StringSlice("role")
-	if len(roles) > 0 {
-		app.Roles = roles
-	}
 
 	accessType := strings.ToLower(ctx.String("member-access-type"))
 	if !slice.ContainsString(memberAccessTypes, accessType) {
