@@ -622,6 +622,10 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+		if madeApp.Status == nil {
+			// The status can be nil before any condition is initialized. Wait for conditions to be available in this case.
+			continue
+		}
 		for _, condition := range madeApp.Status.Conditions {
 			condType := strings.ToLower(condition.Type)
 			condStatus := strings.ToLower(condition.Status)
