@@ -90,8 +90,9 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Path to a helm values file.",
 					},
 					cli.StringSliceFlag{
-						Name:  "set",
-						Usage: "Set answers for the template, can be used multiple times. Example: --set foo=bar",
+						Name: "set",
+						Usage: "Set answers for the template, can be used multiple times. You can set overriding answers for specific clusters or projects " +
+							"by providing cluster ID or project ID as the prefix. Example: --set foo=bar --set c-rvcrl:foo=bar --set c-rvcrl:p-8w2x8:foo=bar",
 					},
 					cli.StringFlag{
 						Name:  "version",
@@ -154,8 +155,9 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Path to a helm values file.",
 					},
 					cli.StringSliceFlag{
-						Name:  "set",
-						Usage: "Set answers for the template, can be used multiple times. Example: --set foo=bar",
+						Name: "set",
+						Usage: "Set answers for the template, can be used multiple times. You can set overriding answers for specific clusters or projects " +
+							"by providing cluster ID or project ID as the prefix. Example: --set foo=bar --set c-rvcrl:foo=bar --set c-rvcrl:p-8w2x8:foo=bar",
 					},
 					cli.StringSliceFlag{
 						Name: "role,r",
@@ -216,6 +218,16 @@ func MultiClusterAppCommand() cli.Command {
 				Usage:     "List current members of a multi-cluster app",
 				ArgsUsage: "[APP_NAME/APP_ID]",
 				Action:    listMultiClusterAppMembers,
+				Flags: []cli.Flag{
+					formatFlag,
+				},
+			},
+			cli.Command{
+				Name:      "list-answers",
+				Aliases:   []string{"la"},
+				Usage:     "List current answers of a multi-cluster app",
+				ArgsUsage: "[APP_NAME/APP_ID]",
+				Action:    listMultiClusterAppAnswers,
 				Flags: []cli.Flag{
 					formatFlag,
 				},
@@ -936,6 +948,7 @@ func showMultiClusterApp(ctx *cli.Context) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -955,6 +968,24 @@ func listMultiClusterAppMembers(ctx *cli.Context) error {
 	}
 
 	return outputMembers(ctx, c, app.Members)
+}
+
+func listMultiClusterAppAnswers(ctx *cli.Context) error {
+	if ctx.NArg() == 0 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, app, err := searchForMcapp(c, ctx.Args().First())
+	if err != nil {
+		return err
+	}
+
+	return outputMultiClusterAppAnswers(ctx, c, app)
 }
 
 func searchForMcapp(c *cliclient.MasterClient, name string) (*types.Resource, *managementClient.MultiClusterApp, error) {
@@ -1049,6 +1080,53 @@ func outputMultiClusterAppRoles(ctx *cli.Context, c *cliclient.MasterClient, app
 
 	for _, r := range app.Roles {
 		writer.Write(map[string]string{"Name": r})
+	}
+	return writer.Err()
+}
+
+func outputMultiClusterAppAnswers(ctx *cli.Context, c *cliclient.MasterClient, app *managementClient.MultiClusterApp) error {
+	writer := NewTableWriter([][]string{
+		{"SCOPE", "Scope"},
+		{"QUESTION", "Question"},
+		{"ANSWER", "Answer"},
+	}, ctx)
+
+	defer writer.Close()
+
+	answers := app.Answers
+	// Sort answers by scope in the Global-Cluster-Project order
+	sort.Slice(answers, func(i, j int) bool {
+		if answers[i].ClusterID == "" && answers[i].ProjectID == "" {
+			return true
+		} else if answers[i].ClusterID != "" && answers[j].ProjectID != "" {
+			return true
+		}
+		return false
+	})
+
+	var scope string
+	for _, r := range answers {
+		scope = "Global"
+		if r.ClusterID != "" {
+			cluster, err := getClusterByID(c, r.ClusterID)
+			if err != nil {
+				return err
+			}
+			scope = fmt.Sprintf("All projects in cluster %s", cluster.Name)
+		} else if r.ProjectID != "" {
+			project, err := getProjectByID(c, r.ProjectID)
+			if err != nil {
+				return err
+			}
+			scope = fmt.Sprintf("Project %s", project.Name)
+		}
+		for key, value := range r.Values {
+			writer.Write(map[string]string{
+				"Scope":    scope,
+				"Question": key,
+				"Answer":   value,
+			})
+		}
 	}
 	return writer.Err()
 }
