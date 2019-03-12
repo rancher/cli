@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -639,4 +640,13 @@ func deleteMembersByNames(ctx *cli.Context, c *cliclient.MasterClient, members [
 		members = toKeepMembers
 	}
 	return members, nil
+}
+
+func tickerContext(ctx context.Context, duration time.Duration) <-chan time.Time {
+	ticker := time.NewTicker(duration)
+	go func() {
+		<-ctx.Done()
+		ticker.Stop()
+	}()
+	return ticker.C
 }
