@@ -33,9 +33,17 @@ Example:
 	# Install the redis template and set target projects to install
 	$ rancher multiclusterapp install --target mycluster:Default --target c-98pjr:p-w6c5f redis appFoo
 `
+	upgradeStrategySimultaneously = "simultaneously"
+	upgradeStrategyRollingUpdate  = "rolling-update"
+	argUpgradeStrategy            = "upgrade-strategy"
+	argUpgradeBatchSize           = "upgrade-batch-size"
+	argUpgradeBatchInterval       = "upgrade-batch-interval"
 )
 
-var memberAccessTypes = []string{"owner", "member", "read-only"}
+var (
+	memberAccessTypes = []string{"owner", "member", "read-only"}
+	upgradeStrategies = []string{upgradeStrategySimultaneously, upgradeStrategyRollingUpdate}
+)
 
 type MultiClusterAppData struct {
 	ID      string
@@ -126,6 +134,21 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Time in seconds to wait until the app is in a ready state",
 						Value: 60,
 					},
+					cli.StringFlag{
+						Name:  argUpgradeStrategy,
+						Usage: "Strategy for upgrade. Valid options are \"rolling-update\" and \"simultaneously\"",
+						Value: upgradeStrategySimultaneously,
+					},
+					cli.Int64Flag{
+						Name:  argUpgradeBatchSize,
+						Usage: "The number of apps in target projects to be upgraded at a time.  Only used if --upgrade-strategy is rolling-update.",
+						Value: 1,
+					},
+					cli.Int64Flag{
+						Name:  argUpgradeBatchInterval,
+						Usage: "The number of seconds between updating the next app during upgrade.  Only used if --upgrade-strategy is rolling-update.",
+						Value: 1,
+					},
 				},
 			},
 			cli.Command{
@@ -167,6 +190,18 @@ func MultiClusterAppCommand() cli.Command {
 					cli.BoolFlag{
 						Name:  "show-versions,v",
 						Usage: "Display versions available to upgrade to",
+					},
+					cli.StringFlag{
+						Name:  argUpgradeStrategy,
+						Usage: "Strategy for upgrade. Valid options are \"rolling-update\" and \"simultaneously\"",
+					},
+					cli.Int64Flag{
+						Name:  argUpgradeBatchSize,
+						Usage: "The number of apps in target projects to be upgraded at a time.  Only used if --upgrade-strategy is rolling-update.",
+					},
+					cli.Int64Flag{
+						Name:  argUpgradeBatchInterval,
+						Usage: "The number of seconds between updating the next app during upgrade.  Only used if --upgrade-strategy is rolling-update.",
 					},
 				},
 			},
@@ -460,17 +495,23 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
+	upgradeStrategy := strings.ToLower(ctx.String(argUpgradeStrategy))
+	if ctx.IsSet(argUpgradeStrategy) && !slice.ContainsString(upgradeStrategies, upgradeStrategy) {
+		return fmt.Errorf("invalid upgrade-strategy %q, supported values are \"rolling-update\" and \"simultaneously\"", upgradeStrategy)
+	}
+
 	_, app, err := searchForMcapp(c, ctx.Args().First())
 	if err != nil {
 		return err
 	}
 
+	update := make(map[string]interface{})
 	answers := fromMultiClusterAppAnswers(app.Answers)
 	err = processAnswers(ctx, c, nil, answers, false)
 	if err != nil {
 		return err
 	}
-	app.Answers, err = toMultiClusterAppAnswers(c, answers)
+	update["answers"], err = toMultiClusterAppAnswers(c, answers)
 	if err != nil {
 		return err
 	}
@@ -480,14 +521,27 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	app.TemplateVersionID = strings.TrimSuffix(templateVersion.ID, templateVersion.Version) + version
+	update["templateVersionId"] = strings.TrimSuffix(templateVersion.ID, templateVersion.Version) + version
 
 	roles := ctx.StringSlice("role")
 	if len(roles) > 0 {
-		app.Roles = roles
+		update["roles"] = roles
+	} else {
+		update["roles"] = app.Roles
 	}
 
-	_, err = c.ManagementClient.MultiClusterApp.Update(app, app)
+	if upgradeStrategy == upgradeStrategyRollingUpdate {
+		update["upgradeStrategy"] = &managementClient.UpgradeStrategy{
+			RollingUpdate: &managementClient.RollingUpdate{
+				BatchSize: ctx.Int64(argUpgradeBatchSize),
+				Interval:  ctx.Int64(argUpgradeBatchInterval),
+			},
+		}
+	} else if upgradeStrategy == upgradeStrategySimultaneously {
+		update["upgradeStrategy"] = nil
+	}
+
+	_, err = c.ManagementClient.MultiClusterApp.Update(app, update)
 	return err
 }
 
@@ -547,6 +601,18 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 	app := &managementClient.MultiClusterApp{
 		Name:  appName,
 		Roles: roles,
+	}
+
+	upgradeStrategy := strings.ToLower(ctx.String(argUpgradeStrategy))
+	if !slice.ContainsString(upgradeStrategies, upgradeStrategy) {
+		return fmt.Errorf("invalid upgrade-strategy %q, supported values are \"rolling-update\" and \"simultaneously\"", upgradeStrategy)
+	} else if upgradeStrategy == upgradeStrategyRollingUpdate {
+		app.UpgradeStrategy = &managementClient.UpgradeStrategy{
+			RollingUpdate: &managementClient.RollingUpdate{
+				BatchSize: ctx.Int64(argUpgradeBatchSize),
+				Interval:  ctx.Int64(argUpgradeBatchInterval),
+			},
+		}
 	}
 
 	resource, err := Lookup(c, templateName, managementClient.TemplateType)
