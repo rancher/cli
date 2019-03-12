@@ -491,7 +491,7 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 		return outputMultiClusterAppVersions(ctx, c, app)
 	}
 
-	if ctx.NArg() < 2 {
+	if ctx.NArg() != 2 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
@@ -521,7 +521,19 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	update["templateVersionId"] = strings.TrimSuffix(templateVersion.ID, templateVersion.Version) + version
+	toUpgradeTemplateversionID := strings.TrimSuffix(templateVersion.ID, templateVersion.Version) + version
+	// Check if the template version is valid before applying it
+	templateVersion, err = c.ManagementClient.TemplateVersion.ByID(toUpgradeTemplateversionID)
+	if err != nil {
+		templateName := strings.TrimSuffix(toUpgradeTemplateversionID, "-"+version)
+		return fmt.Errorf(
+			"version %s for template %s is invalid, run 'rancher mcapp show-template %s' for available versions",
+			version,
+			templateName,
+			templateName,
+		)
+	}
+	update["templateVersionId"] = toUpgradeTemplateversionID
 
 	roles := ctx.StringSlice("role")
 	if len(roles) > 0 {
@@ -564,7 +576,7 @@ func multiClusterAppRollback(ctx *cli.Context) error {
 		return outputMultiClusterAppRevisions(ctx, c, resource, app)
 	}
 
-	if ctx.NArg() < 2 {
+	if ctx.NArg() != 2 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
@@ -581,7 +593,7 @@ func multiClusterAppRollback(ctx *cli.Context) error {
 }
 
 func multiClusterAppTemplateInstall(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
+	if ctx.NArg() != 2 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 	templateName := ctx.Args().First()
