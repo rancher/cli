@@ -864,6 +864,7 @@ func addMcappMember(ctx *cli.Context) error {
 
 	update := make(map[string]interface{})
 	update["members"] = members
+	update["roles"] = app.Roles
 
 	_, err = c.ManagementClient.MultiClusterApp.Update(app, update)
 	return err
@@ -894,6 +895,7 @@ func deleteMcappMember(ctx *cli.Context) error {
 
 	update := make(map[string]interface{})
 	update["members"] = members
+	update["roles"] = app.Roles
 
 	_, err = c.ManagementClient.MultiClusterApp.Update(app, update)
 	return err
