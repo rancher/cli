@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -38,11 +39,18 @@ Example:
 	argUpgradeStrategy            = "upgrade-strategy"
 	argUpgradeBatchSize           = "upgrade-batch-size"
 	argUpgradeBatchInterval       = "upgrade-batch-interval"
+	argTimeout                    = "timeout"
 )
 
 var (
 	memberAccessTypes = []string{"owner", "member", "read-only"}
 	upgradeStrategies = []string{upgradeStrategySimultaneously, upgradeStrategyRollingUpdate}
+
+	timeoutFlag = cli.IntFlag{
+		Name:  argTimeout,
+		Usage: "Time in seconds to wait until the multi-cluster app is in an active state",
+		Value: 60,
+	}
 )
 
 type MultiClusterAppData struct {
@@ -129,11 +137,6 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Access type of the members. Specify only one value, and it applies to all members defined by --member. Valid options are 'owner', 'member' and 'read-only'",
 						Value: "owner",
 					},
-					cli.IntFlag{
-						Name:  "timeout",
-						Usage: "Time in seconds to wait until the app is in a ready state",
-						Value: 60,
-					},
 					cli.StringFlag{
 						Name:  argUpgradeStrategy,
 						Usage: "Strategy for upgrade. Valid options are \"rolling-update\" and \"simultaneously\"",
@@ -149,6 +152,7 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "The number of seconds between updating the next app during upgrade.  Only used if --upgrade-strategy is rolling-update.",
 						Value: 1,
 					},
+					timeoutFlag,
 				},
 			},
 			cli.Command{
@@ -161,6 +165,7 @@ func MultiClusterAppCommand() cli.Command {
 						Name:  "show-revisions,r",
 						Usage: "Show revisions available to rollback to",
 					},
+					timeoutFlag,
 				},
 			},
 			cli.Command{
@@ -203,6 +208,7 @@ func MultiClusterAppCommand() cli.Command {
 						Name:  argUpgradeBatchInterval,
 						Usage: "The number of seconds between updating the next app during upgrade.  Only used if --upgrade-strategy is rolling-update.",
 					},
+					timeoutFlag,
 				},
 			},
 			cli.Command{
@@ -224,6 +230,7 @@ func MultiClusterAppCommand() cli.Command {
 						Name:  "set",
 						Usage: "Set overriding answers for the new target projects",
 					},
+					timeoutFlag,
 				},
 			},
 			cli.Command{
@@ -553,8 +560,10 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 		update["upgradeStrategy"] = nil
 	}
 
-	_, err = c.ManagementClient.MultiClusterApp.Update(app, update)
-	return err
+	if _, err := c.ManagementClient.MultiClusterApp.Update(app, update); err != nil {
+		return err
+	}
+	return waitUntilMultiClusterAppActive(c, app.ID, ctx.Int(argTimeout))
 }
 
 func multiClusterAppRollback(ctx *cli.Context) error {
@@ -588,8 +597,12 @@ func multiClusterAppRollback(ctx *cli.Context) error {
 	rr := &managementClient.MultiClusterAppRollbackInput{
 		RevisionID: revisionResource.ID,
 	}
-	err = c.ManagementClient.MultiClusterApp.ActionRollback(app, rr)
-	return err
+
+	if err := c.ManagementClient.MultiClusterApp.ActionRollback(app, rr); err != nil {
+		return err
+	}
+
+	return waitUntilMultiClusterAppActive(c, app.ID, ctx.Int(argTimeout))
 }
 
 func multiClusterAppTemplateInstall(ctx *cli.Context) error {
@@ -701,38 +714,32 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 		return err
 	}
 
-	var (
-		timewait  int
-		installed bool
-	)
-	timeout := ctx.Int("timeout")
-	for !installed {
-		if timewait*2 >= timeout {
+	fmt.Printf("Installing multi-cluster app %q...\n", appName)
+
+	return waitUntilMultiClusterAppActive(c, madeApp.ID, ctx.Int("timeout"))
+}
+
+func waitUntilMultiClusterAppActive(c *cliclient.MasterClient, appID string, timeout int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	defer cancel()
+	ticker := tickerContext(ctx, 2*time.Second)
+	for {
+		select {
+		case <-ctx.Done():
 			return errors.New("timed out waiting for app to be active, the app could still be installing. Run 'rancher multiclusterapps' to verify")
-		}
-		timewait++
-		time.Sleep(2 * time.Second)
-		madeApp, err = c.ManagementClient.MultiClusterApp.ByID(madeApp.ID)
-		if err != nil {
-			return err
-		}
-		if madeApp.Status == nil {
-			// The status can be nil before any condition is initialized. Wait for conditions to be available in this case.
-			continue
-		}
-		for _, condition := range madeApp.Status.Conditions {
-			condType := strings.ToLower(condition.Type)
-			condStatus := strings.ToLower(condition.Status)
-			if condType == "installed" && condStatus == "true" {
-				installed = true
-				break
+		case <-ticker:
+			app, err := c.ManagementClient.MultiClusterApp.ByID(appID)
+			if err != nil {
+				return err
+			}
+			if app.State == "active" {
+				return nil
+			}
+			if app.Transitioning == "error" {
+				return errors.New(app.TransitioningMessage)
 			}
 		}
-		if madeApp.Transitioning == "error" {
-			return errors.New(madeApp.TransitioningMessage)
-		}
 	}
-	return nil
 }
 
 func lookupProjectIDsFromTargets(c *cliclient.MasterClient, targets []string) ([]string, error) {
@@ -876,7 +883,11 @@ func addMcappTargetProject(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.ManagementClient.MultiClusterApp.ActionAddProjects(app, input)
+
+	if err := c.ManagementClient.MultiClusterApp.ActionAddProjects(app, input); err != nil {
+		return err
+	}
+	return waitUntilMultiClusterAppActive(c, app.ID, ctx.Int(argTimeout))
 }
 
 func deleteMcappTargetProject(ctx *cli.Context) error {
