@@ -208,10 +208,6 @@ func MultiClusterAppCommand() cli.Command {
 						Name:  argUpgradeBatchInterval,
 						Usage: "The number of seconds between updating the next app during upgrade.  Only used if --upgrade-strategy is rolling-update.",
 					},
-					cli.BoolFlag{
-						Name:  "rollback",
-						Usage: "Rollback to previous revision when the upgrade fails",
-					},
 					timeoutFlag,
 				},
 			},
@@ -565,24 +561,6 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 	}
 
 	if _, err := c.ManagementClient.MultiClusterApp.Update(app, update); err != nil {
-		return err
-	}
-
-	err = waitUntilMultiClusterAppActive(c, app.ID, ctx.Int(argTimeout))
-	if err == nil || !ctx.Bool("rollback") {
-		return err
-	}
-
-	logrus.WithError(err).Errorf("failed to upgrade multi-cluster app %q. Rolling back to previous revision", app.Name)
-
-	if app.Status == nil {
-		return errors.New("revision is unknown")
-	}
-
-	rr := &managementClient.MultiClusterAppRollbackInput{
-		RevisionID: app.Status.RevisionID,
-	}
-	if err := c.ManagementClient.MultiClusterApp.ActionRollback(app, rr); err != nil {
 		return err
 	}
 
