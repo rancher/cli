@@ -214,6 +214,10 @@ func AppCommand() cli.Command {
 						Name:  "show-versions,v",
 						Usage: "Display versions available to upgrade to",
 					},
+					cli.BoolFlag{
+						Name:  "reset",
+						Usage: "Reset all catalog app answers",
+					},
 				},
 			},
 			cli.Command{
@@ -401,7 +405,7 @@ func appUpgrade(ctx *cli.Context) error {
 	}
 
 	answers := app.Answers
-	err = processAnswers(ctx, c, nil, answers, false)
+	answers, err = processAnswers(ctx, c, nil, answers, false)
 	if err != nil {
 		return err
 	}
@@ -593,8 +597,7 @@ func templateInstall(ctx *cli.Context) error {
 			return err
 		}
 
-		answers := make(map[string]string)
-		err = processAnswers(ctx, c, nil, answers, false)
+		answers, err := processAnswers(ctx, c, nil, nil, false)
 		if err != nil {
 			return err
 		}
@@ -637,8 +640,7 @@ func templateInstall(ctx *cli.Context) error {
 		}
 
 		interactive := !ctx.Bool("no-prompt")
-		answers := make(map[string]string)
-		err = processAnswers(ctx, c, templateVersion, answers, interactive)
+		answers, err := processAnswers(ctx, c, templateVersion, nil, interactive)
 		if err != nil {
 			return err
 		}
@@ -989,23 +991,29 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 	return nil
 }
 
+// processAnswers adds answers to given map, and prompts users to answers chart questions if interactive is true
 func processAnswers(
 	ctx *cli.Context,
 	c *cliclient.MasterClient,
 	tv *managementClient.TemplateVersion,
 	answers map[string]string,
 	interactive bool,
-) error {
+) (map[string]string, error) {
+	if answers == nil || ctx.Bool("reset") {
+		// this would not be possible without returning a map
+		answers = make(map[string]string)
+	}
+
 	if ctx.String("values") != "" {
 		if err := getValuesFile(ctx.String("values"), answers); err != nil {
-			return err
+			return answers, err
 		}
 	}
 
 	if ctx.String("answers") != "" {
 		err := getAnswersFile(ctx.String("answers"), answers)
 		if err != nil {
-			return err
+			return answers, err
 		}
 	}
 
@@ -1017,13 +1025,14 @@ func processAnswers(
 	}
 
 	if interactive {
+		// answers to questions will be added to map
 		err := askQuestions(tv, answers)
 		if err != nil {
-			return err
+			return answers, err
 		}
 	}
 
-	return nil
+	return answers, nil
 }
 
 func getAnswersFile(location string, answers map[string]string) error {
