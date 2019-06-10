@@ -187,6 +187,10 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Set answers for the template, can be used multiple times. You can set overriding answers for specific clusters or projects " +
 							"by providing cluster ID or project ID as the prefix. Example: --set foo=bar --set c-rvcrl:foo=bar --set c-rvcrl:p-8w2x8:foo=bar",
 					},
+					cli.BoolFlag{
+						Name:  "reset",
+						Usage: "Reset all catalog app answers",
+					},
 					cli.StringSliceFlag{
 						Name: "role,r",
 						Usage: "Set roles required to launch/manage the apps in target projects. Specified roles on upgrade will override all the original roles. " +
@@ -514,7 +518,7 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 
 	update := make(map[string]interface{})
 	answers := fromMultiClusterAppAnswers(app.Answers)
-	err = processAnswers(ctx, c, nil, answers, false)
+	answers, err = processAnswers(ctx, c, nil, answers, false)
 	if err != nil {
 		return err
 	}
@@ -671,8 +675,7 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 	}
 
 	interactive := !ctx.Bool("no-prompt")
-	answers := make(map[string]string)
-	err = processAnswers(ctx, c, templateVersion, answers, interactive)
+	answers, err := processAnswers(ctx, c, templateVersion, nil, interactive)
 	if err != nil {
 		return err
 	}
@@ -920,8 +923,7 @@ func getTargetInput(ctx *cli.Context, c *cliclient.MasterClient) (*managementCli
 		return nil, err
 	}
 
-	answers := make(map[string]string)
-	err = processAnswers(ctx, c, nil, answers, false)
+	answers, err := processAnswers(ctx, c, nil, nil, false)
 	if err != nil {
 		return nil, err
 	}
