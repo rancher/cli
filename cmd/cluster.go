@@ -772,6 +772,10 @@ func getRKEConfig(ctx *cli.Context) (*managementClient.RancherKubernetesEngineCo
 		if err != nil {
 			return nil, err
 		}
+		bytes, err = fixTopLevelKeys(bytes)
+		if err != nil {
+			return nil, err
+		}
 		err = json.Unmarshal(bytes, &rkeConfig)
 		if err != nil {
 			return nil, err
