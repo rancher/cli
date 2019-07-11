@@ -29,6 +29,7 @@ import (
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
+	"github.com/rancher/norman/types/convert"
 	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -499,6 +500,23 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 		return parts[0], parts[1], nil
 	}
 	return "", "", fmt.Errorf("Unable to extract clusterid and projectid from [%s]", id)
+}
+
+func fixTopLevelKeys(bytes []byte) ([]byte, error) {
+	old := map[string]interface{}{}
+	new := map[string]interface{}{}
+
+	err := json.Unmarshal(bytes, &old)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling: %v", err)
+	}
+
+	for key, val := range old {
+		newKey := convert.ToJSONKey(key)
+		new[newKey] = val
+	}
+
+	return json.Marshal(new)
 }
 
 // Return a JSON blob of the file at path
