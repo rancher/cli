@@ -453,14 +453,9 @@ func updateExternalIDVersion(externalID string, version string) (string, error) 
 		return "", err
 	}
 
-	q := u.Query()
-	q.Set("version", version)
-	// Need to unescape here to get the raw string for the externalId filter
-	catalogQuery, err := url.QueryUnescape(q.Encode())
-	if err != nil {
-		return "", err
-	}
-	return "catalog://?" + catalogQuery, nil
+	oldVersionQuery := fmt.Sprintf("version=%s", u.Query().Get("version"))
+	newVersionQuery := fmt.Sprintf("version=%s", version)
+	return strings.Replace(externalID, oldVersionQuery, newVersionQuery, 1), nil
 }
 
 func appRollback(ctx *cli.Context) error {
