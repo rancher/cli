@@ -20,6 +20,7 @@ const (
 	ClusterFieldCertificatesExpiration               = "certificatesExpiration"
 	ClusterFieldClusterTemplateAnswers               = "answers"
 	ClusterFieldClusterTemplateID                    = "clusterTemplateId"
+	ClusterFieldClusterTemplateQuestions             = "questions"
 	ClusterFieldClusterTemplateRevisionID            = "clusterTemplateRevisionId"
 	ClusterFieldComponentStatuses                    = "componentStatuses"
 	ClusterFieldConditions                           = "conditions"
@@ -53,6 +54,7 @@ const (
 	ClusterFieldTransitioningMessage                 = "transitioningMessage"
 	ClusterFieldUUID                                 = "uuid"
 	ClusterFieldVersion                              = "version"
+	ClusterFieldWindowsPreferedCluster               = "windowsPreferedCluster"
 )
 
 type Cluster struct {
@@ -71,6 +73,7 @@ type Cluster struct {
 	CertificatesExpiration               map[string]CertExpiration      `json:"certificatesExpiration,omitempty" yaml:"certificatesExpiration,omitempty"`
 	ClusterTemplateAnswers               *Answer                        `json:"answers,omitempty" yaml:"answers,omitempty"`
 	ClusterTemplateID                    string                         `json:"clusterTemplateId,omitempty" yaml:"clusterTemplateId,omitempty"`
+	ClusterTemplateQuestions             []Question                     `json:"questions,omitempty" yaml:"questions,omitempty"`
 	ClusterTemplateRevisionID            string                         `json:"clusterTemplateRevisionId,omitempty" yaml:"clusterTemplateRevisionId,omitempty"`
 	ComponentStatuses                    []ClusterComponentStatus       `json:"componentStatuses,omitempty" yaml:"componentStatuses,omitempty"`
 	Conditions                           []ClusterCondition             `json:"conditions,omitempty" yaml:"conditions,omitempty"`
@@ -104,6 +107,7 @@ type Cluster struct {
 	TransitioningMessage                 string                         `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
 	UUID                                 string                         `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 	Version                              *Info                          `json:"version,omitempty" yaml:"version,omitempty"`
+	WindowsPreferedCluster               bool                           `json:"windowsPreferedCluster,omitempty" yaml:"windowsPreferedCluster,omitempty"`
 }
 
 type ClusterCollection struct {
