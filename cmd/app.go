@@ -177,6 +177,15 @@ func AppCommand() cli.Command {
 						Name:  "no-prompt",
 						Usage: "Suppress asking questions and use the default values when required answers are not provided",
 					},
+					cli.IntFlag{
+						Name:  "timeout",
+						Usage: "Amount of time to wait for k8s commands (default is 300 secs). Example: --timeout 600",
+						Value: 300,
+					},
+					cli.BoolFlag{
+						Name:  "wait",
+						Usage: "Wait, as long as timeout value, for installed resources to be ready (pods, PVCs, deployments, etc.). Example: --wait",
+					},
 				},
 			},
 			cli.Command{
@@ -252,6 +261,12 @@ func AppCommand() cli.Command {
 				Flags: []cli.Flag{
 					formatFlag,
 				},
+			},
+			cli.Command{
+				Name:      "show-notes",
+				Usage:     "Show contents of apps notes.txt",
+				Action:    appNotes,
+				ArgsUsage: "[APP_NAME/APP_ID]",
 			},
 		},
 	}
@@ -658,38 +673,44 @@ func templateInstall(ctx *cli.Context) error {
 		app.TargetNamespace = namespace
 	}
 
+	app.Wait = ctx.Bool("wait")
+	app.Timeout = ctx.Int64("timeout")
+
 	madeApp, err := c.ProjectClient.App.Create(app)
 	if err != nil {
 		return err
 	}
 
-	// wait for the app to be installed to print the notes
-	var (
-		timeout   int
-		installed bool
-	)
-	for !installed {
-		if timeout == 60 {
-			return errors.New("timed out waiting for app to install. Run 'rancher apps' to verify status")
-		}
-		timeout++
-		time.Sleep(2 * time.Second)
-		madeApp, err = c.ProjectClient.App.ByID(madeApp.ID)
-		if err != nil {
-			return err
-		}
-		for _, condition := range madeApp.Conditions {
-			condType := strings.ToLower(condition.Type)
-			condStatus := strings.ToLower(condition.Status)
-			if condType == "installed" && condStatus == "true" {
-				installed = true
-				break
-			}
-		}
+	fmt.Printf("run \"app show-notes %s\" to view app notes once app is ready\n", madeApp.Name)
+
+	return nil
+}
+
+// appNotes prints notes from app's notes.txt file
+func appNotes(ctx *cli.Context) error {
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
 	}
 
-	if len(madeApp.Notes) != 0 {
-		fmt.Println(madeApp.Notes)
+	if ctx.NArg() < 1 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	resource, err := Lookup(c, ctx.Args().First(), "app")
+	if err != nil {
+		return err
+	}
+
+	app, err := c.ProjectClient.App.ByID(resource.ID)
+	if err != nil {
+		return err
+	}
+
+	if len(app.Notes) > 0 {
+		fmt.Println(app.Notes)
+	} else {
+		fmt.Println("no notes to print")
 	}
 
 	return nil

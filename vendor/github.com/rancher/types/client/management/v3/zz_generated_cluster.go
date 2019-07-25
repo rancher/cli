@@ -17,6 +17,10 @@ const (
 	ClusterFieldCACert                               = "caCert"
 	ClusterFieldCapabilities                         = "capabilities"
 	ClusterFieldCapacity                             = "capacity"
+	ClusterFieldCertificatesExpiration               = "certificatesExpiration"
+	ClusterFieldClusterTemplateAnswers               = "answers"
+	ClusterFieldClusterTemplateID                    = "clusterTemplateId"
+	ClusterFieldClusterTemplateRevisionID            = "clusterTemplateRevisionId"
 	ClusterFieldComponentStatuses                    = "componentStatuses"
 	ClusterFieldConditions                           = "conditions"
 	ClusterFieldCreated                              = "created"
@@ -34,6 +38,7 @@ const (
 	ClusterFieldFailedSpec                           = "failedSpec"
 	ClusterFieldImportedConfig                       = "importedConfig"
 	ClusterFieldInternal                             = "internal"
+	ClusterFieldIstioEnabled                         = "istioEnabled"
 	ClusterFieldLabels                               = "labels"
 	ClusterFieldLimits                               = "limits"
 	ClusterFieldLocalClusterAuthEndpoint             = "localClusterAuthEndpoint"
@@ -63,6 +68,10 @@ type Cluster struct {
 	CACert                               string                         `json:"caCert,omitempty" yaml:"caCert,omitempty"`
 	Capabilities                         *Capabilities                  `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
 	Capacity                             map[string]string              `json:"capacity,omitempty" yaml:"capacity,omitempty"`
+	CertificatesExpiration               map[string]CertExpiration      `json:"certificatesExpiration,omitempty" yaml:"certificatesExpiration,omitempty"`
+	ClusterTemplateAnswers               *Answer                        `json:"answers,omitempty" yaml:"answers,omitempty"`
+	ClusterTemplateID                    string                         `json:"clusterTemplateId,omitempty" yaml:"clusterTemplateId,omitempty"`
+	ClusterTemplateRevisionID            string                         `json:"clusterTemplateRevisionId,omitempty" yaml:"clusterTemplateRevisionId,omitempty"`
 	ComponentStatuses                    []ClusterComponentStatus       `json:"componentStatuses,omitempty" yaml:"componentStatuses,omitempty"`
 	Conditions                           []ClusterCondition             `json:"conditions,omitempty" yaml:"conditions,omitempty"`
 	Created                              string                         `json:"created,omitempty" yaml:"created,omitempty"`
@@ -80,6 +89,7 @@ type Cluster struct {
 	FailedSpec                           *ClusterSpec                   `json:"failedSpec,omitempty" yaml:"failedSpec,omitempty"`
 	ImportedConfig                       *ImportedConfig                `json:"importedConfig,omitempty" yaml:"importedConfig,omitempty"`
 	Internal                             bool                           `json:"internal,omitempty" yaml:"internal,omitempty"`
+	IstioEnabled                         bool                           `json:"istioEnabled,omitempty" yaml:"istioEnabled,omitempty"`
 	Labels                               map[string]string              `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Limits                               map[string]string              `json:"limits,omitempty" yaml:"limits,omitempty"`
 	LocalClusterAuthEndpoint             *LocalClusterAuthEndpoint      `json:"localClusterAuthEndpoint,omitempty" yaml:"localClusterAuthEndpoint,omitempty"`
@@ -131,6 +141,8 @@ type ClusterOperations interface {
 	ActionRestoreFromEtcdBackup(resource *Cluster, input *RestoreFromEtcdBackupInput) error
 
 	ActionRotateCertificates(resource *Cluster, input *RotateCertificateInput) (*RotateCertificateOutput, error)
+
+	ActionRunSecurityScan(resource *Cluster) error
 
 	ActionViewMonitoring(resource *Cluster) (*MonitoringOutput, error)
 }
@@ -233,6 +245,11 @@ func (c *ClusterClient) ActionRotateCertificates(resource *Cluster, input *Rotat
 	resp := &RotateCertificateOutput{}
 	err := c.apiClient.Ops.DoAction(ClusterType, "rotateCertificates", &resource.Resource, input, resp)
 	return resp, err
+}
+
+func (c *ClusterClient) ActionRunSecurityScan(resource *Cluster) error {
+	err := c.apiClient.Ops.DoAction(ClusterType, "runSecurityScan", &resource.Resource, nil, nil)
+	return err
 }
 
 func (c *ClusterClient) ActionViewMonitoring(resource *Cluster) (*MonitoringOutput, error) {
