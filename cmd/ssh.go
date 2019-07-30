@@ -30,14 +30,11 @@ Examples:
 	# SSH into a node by ID/name using the external IP address
 	$ rancher ssh -e nodeFoo
 
-	# SSH into a node by name but specify the username to use
-	$ rancher ssh -u user1 nodeFoo
+	# SSH into a node by name but specify the login name to use
+	$ rancher ssh -l login1 nodeFoo
 
-	# SSH into a node by specifying user and node using the @ syntax while adding a command to run
-	$ rancher ssh user1@nodeFoo env
-
-	# SSH into a node by specifying user and node using the @ syntax while adding a command to run
-	$ rancher ssh user1@nodeFoo env
+	# SSH into a node by specifying login name and node using the @ syntax while adding a command to run
+	$ rancher ssh login1@nodeFoo env
 `
 
 func SSHCommand() cli.Command {
@@ -53,8 +50,8 @@ func SSHCommand() cli.Command {
 				Usage: "Use the external ip address",
 			},
 			cli.StringFlag{
-				Name:  "username,u",
-				Usage: "The username",
+				Name:  "login,l",
+				Usage: "The login name",
 			},
 		},
 		SkipFlagParsing: false,
@@ -72,7 +69,7 @@ func nodeSSH(ctx *cli.Context) error {
 		return cli.ShowCommandHelp(ctx, "ssh")
 	}
 
-	user := ctx.String("username")
+	user := ctx.String("login")
 	nodeName := ctx.Args().First()
 
 	if strings.Contains(nodeName, "@") {
