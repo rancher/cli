@@ -220,7 +220,11 @@ func verifyCert(caCert []byte) (string, error) {
 	return string(caCert), nil
 }
 
-func loadConfig(path string) (config.Config, error) {
+func loadConfig(ctx *cli.Context) (config.Config, error) {
+	path := ctx.GlobalString("config")
+	if path == "" {
+		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
+	}
 	cf := config.Config{
 		Path:    path,
 		Servers: make(map[string]*config.ServerConfig),
@@ -240,12 +244,7 @@ func loadConfig(path string) (config.Config, error) {
 }
 
 func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
-	path := ctx.GlobalString("config")
-	if path == "" {
-		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
-	}
-
-	cf, err := loadConfig(path)
+	cf, err := loadConfig(ctx)
 	if nil != err {
 		return nil, err
 	}
