@@ -168,32 +168,39 @@ func serverSwitch(ctx *cli.Context) error {
 // serverFromInput displays the list of servers from the local config and
 // prompt the user to select one.
 func serverFromInput(ctx *cli.Context, cf config.Config) (string, error) {
+	serverNames := getServerNames(cf)
 
 	displayListServers(ctx, cf)
+
 	fmt.Print("Select a Server:")
-
 	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
+
+	errMessage := fmt.Sprintf("Invalid input, enter a number between 1 and %v: ", len(serverNames))
+	var selection int
+
+	for {
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return "", err
+		}
+		input = strings.TrimSpace(input)
+
+		if input != "" {
+			i, err := strconv.Atoi(input)
+			if nil != err {
+				fmt.Print(errMessage)
+				continue
+			}
+			if i <= len(serverNames) && i != 0 {
+				selection = i - 1
+				break
+			}
+			fmt.Print(errMessage)
+			continue
+		}
 	}
 
-	input = strings.TrimSpace(input)
-	if input == "" {
-
-	}
-
-	i, err := strconv.Atoi(input)
-	if err != nil {
-		return "", err
-	}
-
-	serverNames := getServerNames(cf)
-	if i > len(serverNames) || i <= 0 {
-		return "", errors.New("Invalid input")
-	}
-
-	return getServerNames(cf)[i-1], nil
+	return serverNames[selection], nil
 }
 
 // displayListServers displays the list of rancher servers
