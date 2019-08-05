@@ -1098,8 +1098,16 @@ func outputMultiClusterAppVersions(ctx *cli.Context, c *cliclient.MasterClient, 
 		return err
 	}
 
+	ver, err := getRancherServerVersion(c)
+	if err != nil {
+		return err
+	}
+
+	filter := defaultListOpts(ctx)
+	filter.Filters["rancherVersion"] = ver
+
 	template := &managementClient.Template{}
-	if err := c.ManagementClient.Ops.DoGet(templateVersion.Links["template"], &types.ListOpts{}, template); err != nil {
+	if err := c.ManagementClient.Ops.DoGet(templateVersion.Links["template"], filter, template); err != nil {
 		return err
 	}
 	writer := NewTableWriter([][]string{

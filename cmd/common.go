@@ -191,6 +191,14 @@ func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (
 	return &results.Data[selection], nil
 }
 
+func getRancherServerVersion(c *cliclient.MasterClient) (string, error) {
+	setting, err := c.ManagementClient.Setting.ByID("server-version")
+	if err != nil {
+		return "", err
+	}
+	return setting.Value, err
+}
+
 func loadAndVerifyCert(path string) (string, error) {
 	caCert, err := ioutil.ReadFile(path)
 	if nil != err {

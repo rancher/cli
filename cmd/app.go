@@ -573,7 +573,7 @@ func templateShow(ctx *cli.Context) error {
 		return err
 	}
 
-	template, err := c.ManagementClient.Template.ByID(resource.ID)
+	template, err := getFilteredTemplate(ctx, c, resource.ID)
 	if err != nil {
 		return err
 	}
@@ -581,6 +581,10 @@ func templateShow(ctx *cli.Context) error {
 	sortedVersions, err := sortTemplateVersions(template)
 	if err != nil {
 		return err
+	}
+
+	if len(sortedVersions) == 0 {
+		fmt.Println("No app versions available to install for this version of Rancher server")
 	}
 
 	for _, version := range sortedVersions {
@@ -833,7 +837,20 @@ func outputVersions(ctx *cli.Context, c *cliclient.MasterClient) error {
 		return err
 	}
 
-	template, err := c.ManagementClient.Template.ByID(externalInfo["catalog"] + "-" + externalInfo["template"])
+	template, err := getFilteredTemplate(ctx, c, "cattle-global-data:"+externalInfo["catalog"]+"-"+externalInfo["template"])
+	if err != nil {
+		return err
+	}
+
+	sortedVersions, err := sortTemplateVersions(template)
+	if err != nil {
+		return err
+	}
+
+	if len(sortedVersions) == 0 {
+		fmt.Println("No app versions available to install for this version of Rancher server")
+		return nil
+	}
 
 	writer := NewTableWriter([][]string{
 		{"CURRENT", "Current"},
@@ -841,11 +858,6 @@ func outputVersions(ctx *cli.Context, c *cliclient.MasterClient) error {
 	}, ctx)
 
 	defer writer.Close()
-
-	sortedVersions, err := sortTemplateVersions(template)
-	if err != nil {
-		return err
-	}
 
 	for _, version := range sortedVersions {
 		var current string
@@ -946,6 +958,27 @@ func parseExternalID(e string) (map[string]string, error) {
 		}
 	}
 	return parsed, nil
+}
+
+func getFilteredTemplate(ctx *cli.Context, c *cliclient.MasterClient, templateID string) (*managementClient.Template, error) {
+	ver, err := getRancherServerVersion(c)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := defaultListOpts(ctx)
+	filter.Filters["id"] = templateID
+	filter.Filters["rancherVersion"] = ver
+
+	template, err := c.ManagementClient.Template.List(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(template.Data) == 0 {
+		return nil, fmt.Errorf("template %v not found", templateID)
+	}
+	return &template.Data[0], nil
 }
 
 func sortTemplateVersions(template *managementClient.Template) ([]*gover.Version, error) {
