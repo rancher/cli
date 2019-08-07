@@ -69,7 +69,10 @@ func contextSwitch(ctx *cli.Context) error {
 
 	server.Project = project.ID
 
-	cf.Write()
+	err = cf.Write()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

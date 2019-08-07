@@ -137,7 +137,10 @@ func loginSetup(ctx *cli.Context) error {
 	cf.CurrentServer = serverName
 	cf.Servers[serverName] = serverConfig
 
-	cf.Write()
+	err = cf.Write()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

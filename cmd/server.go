@@ -99,7 +99,10 @@ func serverDelete(ctx *cli.Context) error {
 	}
 
 	delete(cf.Servers, serverName)
-	cf.Write()
+	err = cf.Write()
+	if err != nil {
+		return err
+	}
 	logrus.Infof("Server %s deleted", serverName)
 	return nil
 }
@@ -160,7 +163,10 @@ func serverSwitch(ctx *cli.Context) error {
 	}
 
 	cf.CurrentServer = serverName
-	cf.Write()
+	err = cf.Write()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
