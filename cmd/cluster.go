@@ -462,6 +462,10 @@ func clusterExport(ctx *cli.Context) error {
 		return err
 	}
 
+	if _, ok := cluster.Actions["exportYaml"]; !ok {
+		return errors.New("cluster does not support being exported")
+	}
+
 	export, err := c.ManagementClient.Cluster.ActionExportYaml(cluster)
 	if err != nil {
 		return err
