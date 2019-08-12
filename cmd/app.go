@@ -631,9 +631,18 @@ func templateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		template, err := c.ManagementClient.Template.ByID(resource.ID)
 
-		templateVersionID := templateVersionIDFromVersionLink(template.VersionLinks[template.DefaultVersion])
+		template, err := getFilteredTemplate(ctx, c, resource.ID)
+		if err != nil {
+			return err
+		}
+
+		latestVersion, err := getTemplateLatestVersion(template)
+		if err != nil {
+			return err
+		}
+
+		templateVersionID := templateVersionIDFromVersionLink(latestVersion)
 		userVersion := ctx.String("version")
 		if userVersion != "" {
 			if link, ok := template.VersionLinks[userVersion]; ok {
@@ -955,6 +964,8 @@ func parseExternalID(e string) (map[string]string, error) {
 	return parsed, nil
 }
 
+// getFilteredTemplate uses the rancherVersion in the template request to get the
+// filtered template with incompatable versions dropped
 func getFilteredTemplate(ctx *cli.Context, c *cliclient.MasterClient, templateID string) (*managementClient.Template, error) {
 	ver, err := getRancherServerVersion(c)
 	if err != nil {
@@ -974,6 +985,16 @@ func getFilteredTemplate(ctx *cli.Context, c *cliclient.MasterClient, templateID
 		return nil, fmt.Errorf("template %v not found", templateID)
 	}
 	return &template.Data[0], nil
+}
+
+// getTemplateLatestVersion returns the newest version of the template
+func getTemplateLatestVersion(template *managementClient.Template) (string, error) {
+	sorted, err := sortTemplateVersions(template)
+	if err != nil {
+		return "", err
+	}
+
+	return sorted[len(sorted)-1].String(), nil
 }
 
 func sortTemplateVersions(template *managementClient.Template) ([]*gover.Version, error) {

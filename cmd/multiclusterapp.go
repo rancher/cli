@@ -649,12 +649,18 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	template, err := c.ManagementClient.Template.ByID(resource.ID)
+
+	template, err := getFilteredTemplate(ctx, c, resource.ID)
 	if err != nil {
 		return err
 	}
 
-	templateVersionID := templateVersionIDFromVersionLink(template.VersionLinks[template.DefaultVersion])
+	latestVersion, err := getTemplateLatestVersion(template)
+	if err != nil {
+		return err
+	}
+
+	templateVersionID := templateVersionIDFromVersionLink(latestVersion)
 	userVersion := ctx.String("version")
 	if userVersion != "" {
 		if link, ok := template.VersionLinks[userVersion]; ok {
