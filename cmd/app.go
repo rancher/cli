@@ -642,7 +642,7 @@ func templateInstall(ctx *cli.Context) error {
 			return err
 		}
 
-		templateVersionID := templateVersionIDFromVersionLink(latestVersion)
+		templateVersionID := templateVersionIDFromVersionLink(template.VersionLinks[latestVersion])
 		userVersion := ctx.String("version")
 		if userVersion != "" {
 			if link, ok := template.VersionLinks[userVersion]; ok {
