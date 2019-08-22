@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	waitTypes = []string{"cluster", "app", "project"}
+	waitTypes = []string{"cluster", "app", "project", "multiClusterApp"}
 )
 
 func WaitCommand() cli.Command {
