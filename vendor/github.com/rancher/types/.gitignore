@@ -8,3 +8,5 @@
 /types
 *trash.lock
 .vscode/
+Dockerfile.Dapper[0-9]*
+.cache/
