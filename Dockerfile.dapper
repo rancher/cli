@@ -1,8 +1,13 @@
-FROM golang:1.9.4
+FROM golang:1.12.9
 RUN apt-get update && \
     apt-get install -y xz-utils zip rsync
-RUN go get github.com/rancher/trash
-RUN go get golang.org/x/lint/golint
+
+RUN go get -u golang.org/x/lint/golint && \
+    go get -d golang.org/x/tools/cmd/goimports && \
+    # This needs to be kept up to date with rancher/types
+    git -C /go/src/golang.org/x/tools/cmd/goimports checkout -b release-branch.go1.12 origin/release-branch.go1.12 && \
+    go install golang.org/x/tools/cmd/goimports
+
 RUN curl -sL https://get.docker.com/builds/Linux/x86_64/docker-1.9.1 > /usr/bin/docker && \
     chmod +x /usr/bin/docker
 ENV PATH /go/bin:$PATH
@@ -10,7 +15,6 @@ ENV DAPPER_SOURCE /go/src/github.com/rancher/cli
 ENV DAPPER_OUTPUT bin build/bin dist
 ENV DAPPER_DOCKER_SOCKET true
 ENV DAPPER_ENV TAG REPO GOOS CROSS DRONE_TAG
-ENV TRASH_CACHE ${DAPPER_SOURCE}/.trash-cache
 WORKDIR ${DAPPER_SOURCE}
 ENTRYPOINT ["./scripts/entry"]
 CMD ["ci"]
