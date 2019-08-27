@@ -11,6 +11,17 @@ API Types for Rancher 2.0
 
 Run `go generate` in the root of the project
 
+### Running code generation after go modules
+
+The code generation code still depends on the GOPATH. 
+To generate types you need to update vendor.
+
+1. Update go.mod for what you need 
+2. Run `GO111MODULE=on go mod vendor`
+3. Export your gopath (export GOPATH=types_go_path_dir)
+4. Run `go generate`
+5. Unset your `GOPATH`
+
 ## License
 Copyright (c) 2014-2017 [Rancher Labs, Inc.](http://rancher.com)
 

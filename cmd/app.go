@@ -37,6 +37,9 @@ Example:
 	# Install the redis template without any options
 	$ rancher app install redis appFoo
 
+	# Block cli until installation has finished or encountered an error. Use after app install.
+	$ rancher wait <app-id>
+
 	# Install the local redis template folder without any options
 	$ rancher app install ./redis appFoo
 
@@ -128,7 +131,7 @@ func AppCommand() cli.Command {
 	return cli.Command{
 		Name:    "apps",
 		Aliases: []string{"app"},
-		Usage:   "Operations with apps",
+		Usage:   "Operations with apps. Uses helm. Flags prepended with \"helm\" can also be accurately described by helm documentation.",
 		Action:  defaultAction(appLs),
 		Flags:   appLsFlags,
 		Subcommands: []cli.Command{
@@ -178,13 +181,13 @@ func AppCommand() cli.Command {
 						Usage: "Suppress asking questions and use the default values when required answers are not provided",
 					},
 					cli.IntFlag{
-						Name:  "timeout",
-						Usage: "Amount of time to wait for k8s commands (default is 300 secs). Example: --timeout 600",
+						Name:  "helm-timeout",
+						Usage: "Amount of time for helm to wait for k8s commands (default is 300 secs). Example: --helm-timeout 600",
 						Value: 300,
 					},
 					cli.BoolFlag{
-						Name:  "wait",
-						Usage: "Wait, as long as timeout value, for installed resources to be ready (pods, PVCs, deployments, etc.). Example: --wait",
+						Name:  "helm-wait",
+						Usage: "Helm will wait for as long as timeout value, for installed resources to be ready (pods, PVCs, deployments, etc.). Example: --helm-wait",
 					},
 				},
 			},
@@ -681,8 +684,8 @@ func templateInstall(ctx *cli.Context) error {
 		app.TargetNamespace = namespace
 	}
 
-	app.Wait = ctx.Bool("wait")
-	app.Timeout = ctx.Int64("timeout")
+	app.Wait = ctx.Bool("helm-wait")
+	app.Timeout = ctx.Int64("helm-timeout")
 
 	madeApp, err := c.ProjectClient.App.Create(app)
 	if err != nil {
