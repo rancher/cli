@@ -586,18 +586,18 @@ func (c *CatalogOperator) GetTemplateVersionUpgradesByID(id string) []string {
 }
 
 func (c *CatalogOperator) GetTemplateVersionUpgrades(tver *catalog.TemplateVersion) []string {
-	if len(tver.UpgradeVersionLinks) > 0 {
-		upgrades := make([]string, 0, len(tver.UpgradeVersionLinks))
-		for _, upgrade := range tver.UpgradeVersionLinks {
-			upgradeID := strings.Split(upgrade, "/")
-			upgrades = append(upgrades, upgradeID[len(upgradeID)-1])
-		}
-
-		sort.Strings(upgrades)
-
-		return upgrades
+	if tver == nil || len(tver.UpgradeVersionLinks) == 0 {
+		return nil
 	}
-	return nil
+	upgrades := make([]string, 0, len(tver.UpgradeVersionLinks))
+	for _, upgrade := range tver.UpgradeVersionLinks {
+		upgradeID := strings.Split(upgrade, "/")
+		upgrades = append(upgrades, upgradeID[len(upgradeID)-1])
+	}
+
+	sort.Strings(upgrades)
+
+	return upgrades
 }
 
 func (c *CatalogOperator) CheckTemplateVersionUpgrade(externalid, newid string) bool {
