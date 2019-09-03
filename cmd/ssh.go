@@ -20,58 +20,58 @@ import (
 )
 
 const sshDescription = `
-For any nodes created through Rancher using docker-machine, 
+For any nodes created through Rancher using docker-machine,
 you can SSH into the node. This is not supported for any custom nodes.
-
 Examples:
 	# SSH into a node by ID/name
 	$ rancher ssh nodeFoo
-
-	# SSH into a node by name but specify the username to use
-	$ rancher ssh -l user1 nodeFoo
-
-	# SSH into a node by specifying user and node using the @ syntax while adding a command to run
-	$ rancher ssh user1@nodeFoo env
+	# SSH into a node by ID/name using the external IP address
+	$ rancher ssh -e nodeFoo
+	# SSH into a node by name but specify the login name to use
+	$ rancher ssh -l login1 nodeFoo
+	# SSH into a node by specifying login name and node using the @ syntax while adding a command to run
+	$ rancher ssh login1@nodeFoo -- netstat -p tcp
 `
 
 func SSHCommand() cli.Command {
 	return cli.Command{
-		Name:            "ssh",
-		Usage:           "SSH into a node",
-		Description:     sshDescription,
-		ArgsUsage:       "[NODE_ID/NODE_NAME]",
-		Action:          nodeSSH,
-		UsageText:       "potato",
-		SkipFlagParsing: true,
+		Name:        "ssh",
+		Usage:       "SSH into a node",
+		Description: sshDescription,
+		Action:      nodeSSH,
+		ArgsUsage:   "[NODE_ID/NODE_NAME]",
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "external,e",
+				Usage: "Use the external ip address of the node",
+			},
+			cli.StringFlag{
+				Name:  "login,l",
+				Usage: "The login name",
+			},
+		},
 	}
 }
 
 func nodeSSH(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "ssh")
-	}
-
 	args := ctx.Args()
 	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
 		return cli.ShowCommandHelp(ctx, "ssh")
 	}
 
-	// ssh nodeName or ssh -l user nodeName or ssh user@nodeName
-	var user string
-	var nodeName string
-	if strings.Contains(args[0], "@") {
-		pieces := strings.Split(args[0], "@")
-		user = pieces[0]
-		nodeName = pieces[1]
-		args = args[1:]
-	} else if args[0] == "-l" {
-		user = args[1]
-		nodeName = args[2]
-		args = args[3:]
-	} else {
-		nodeName = args[0]
-		args = args[1:]
+	if ctx.NArg() == 0 {
+		return cli.ShowCommandHelp(ctx, "ssh")
 	}
+
+	user := ctx.String("login")
+	nodeName := ctx.Args().First()
+
+	if strings.Contains(nodeName, "@") {
+		user = strings.Split(nodeName, "@")[0]
+		nodeName = strings.Split(nodeName, "@")[1]
+	}
+
+	args = args[1:]
 
 	c, err := GetClient(ctx)
 	if err != nil {
@@ -97,7 +97,12 @@ func nodeSSH(ctx *cli.Context) error {
 		return err
 	}
 
-	return processExitCode(callSSH(key, sshNode.IPAddress, user, args))
+	ipAddress := sshNode.IPAddress
+	if ctx.Bool("external") {
+		ipAddress = sshNode.ExternalIPAddress
+	}
+
+	return processExitCode(callSSH(key, ipAddress, user, args))
 }
 
 func callSSH(content []byte, ip string, user string, args []string) error {
