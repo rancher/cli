@@ -611,9 +611,10 @@ func multiClusterAppRollback(ctx *cli.Context) error {
 }
 
 func multiClusterAppTemplateInstall(ctx *cli.Context) error {
-	if ctx.NArg() >= 2 {
+	if ctx.NArg() > 2 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
+
 	templateName := ctx.Args().First()
 	appName := ctx.Args().Get(1)
 
@@ -722,12 +723,12 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 	app.Wait = ctx.Bool("helm-wait")
 	app.Timeout = ctx.Int64("helm-timeout")
 
-	_, err = c.ManagementClient.MultiClusterApp.Create(app)
+	app, err = c.ManagementClient.MultiClusterApp.Create(app)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Installing multi-cluster app %q...\n", appName)
+	fmt.Printf("Installing multi-cluster app %q...\n", app.Name)
 
 	return nil
 }
