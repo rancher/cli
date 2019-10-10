@@ -35,12 +35,12 @@ github.com/pkg/term/termios
 github.com/pmezard/go-difflib/difflib
 # github.com/rancher/norman v0.0.0-20181217230628-457c15b94aca
 github.com/rancher/norman/clientbase
-github.com/rancher/norman/types
-github.com/rancher/norman/types/convert
-github.com/rancher/norman/types/slice
 github.com/rancher/norman/httperror
 github.com/rancher/norman/name
+github.com/rancher/norman/types
+github.com/rancher/norman/types/convert
 github.com/rancher/norman/types/definition
+github.com/rancher/norman/types/slice
 github.com/rancher/norman/types/values
 # github.com/rancher/types v0.0.0-20190725170125-839eead94ce4
 github.com/rancher/types/client/cluster/v3
@@ -54,17 +54,17 @@ github.com/stretchr/testify/assert
 github.com/urfave/cli
 # golang.org/x/crypto v0.0.0-20180403160946-b2aa35443fbc
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20180502164142-640f4622ab69
+# golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
 golang.org/x/net/context
 # golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20180416112224-2f57af4873d0
+# golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # gopkg.in/check.v1 v1.0.0-20160105164936-4f90aeace3a2
 gopkg.in/check.v1
-# gopkg.in/yaml.v2 v2.0.0-20170721113624-670d4cfef054
+# gopkg.in/yaml.v2 v2.2.1
 gopkg.in/yaml.v2
 # k8s.io/apimachinery v0.0.0-20180328184639-0ed326127d30
-k8s.io/apimachinery/pkg/util/rand
 k8s.io/apimachinery/pkg/util/intstr
+k8s.io/apimachinery/pkg/util/rand

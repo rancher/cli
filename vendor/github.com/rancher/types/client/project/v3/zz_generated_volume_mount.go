@@ -7,7 +7,6 @@ const (
 	VolumeMountFieldName             = "name"
 	VolumeMountFieldReadOnly         = "readOnly"
 	VolumeMountFieldSubPath          = "subPath"
-	VolumeMountFieldSubPathExpr      = "subPathExpr"
 )
 
 type VolumeMount struct {
@@ -16,5 +15,4 @@ type VolumeMount struct {
 	Name             string `json:"name,omitempty" yaml:"name,omitempty"`
 	ReadOnly         bool   `json:"readOnly,omitempty" yaml:"readOnly,omitempty"`
 	SubPath          string `json:"subPath,omitempty" yaml:"subPath,omitempty"`
-	SubPathExpr      string `json:"subPathExpr,omitempty" yaml:"subPathExpr,omitempty"`
 }

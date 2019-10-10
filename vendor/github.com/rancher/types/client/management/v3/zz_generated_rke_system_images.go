@@ -6,11 +6,9 @@ const (
 	RKESystemImagesFieldCalicoCNI                 = "calicoCni"
 	RKESystemImagesFieldCalicoControllers         = "calicoControllers"
 	RKESystemImagesFieldCalicoCtl                 = "calicoCtl"
-	RKESystemImagesFieldCalicoFlexVol             = "calicoFlexVol"
 	RKESystemImagesFieldCalicoNode                = "calicoNode"
 	RKESystemImagesFieldCanalCNI                  = "canalCni"
 	RKESystemImagesFieldCanalFlannel              = "canalFlannel"
-	RKESystemImagesFieldCanalFlexVol              = "canalFlexVol"
 	RKESystemImagesFieldCanalNode                 = "canalNode"
 	RKESystemImagesFieldCertDownloader            = "certDownloader"
 	RKESystemImagesFieldCoreDNS                   = "coredns"
@@ -31,7 +29,6 @@ const (
 	RKESystemImagesFieldPodInfraContainer         = "podInfraContainer"
 	RKESystemImagesFieldWeaveCNI                  = "weaveCni"
 	RKESystemImagesFieldWeaveNode                 = "weaveNode"
-	RKESystemImagesFieldWindowsPodInfraContainer  = "podInfraWindowsContainer"
 )
 
 type RKESystemImages struct {
@@ -39,11 +36,9 @@ type RKESystemImages struct {
 	CalicoCNI                 string `json:"calicoCni,omitempty" yaml:"calicoCni,omitempty"`
 	CalicoControllers         string `json:"calicoControllers,omitempty" yaml:"calicoControllers,omitempty"`
 	CalicoCtl                 string `json:"calicoCtl,omitempty" yaml:"calicoCtl,omitempty"`
-	CalicoFlexVol             string `json:"calicoFlexVol,omitempty" yaml:"calicoFlexVol,omitempty"`
 	CalicoNode                string `json:"calicoNode,omitempty" yaml:"calicoNode,omitempty"`
 	CanalCNI                  string `json:"canalCni,omitempty" yaml:"canalCni,omitempty"`
 	CanalFlannel              string `json:"canalFlannel,omitempty" yaml:"canalFlannel,omitempty"`
-	CanalFlexVol              string `json:"canalFlexVol,omitempty" yaml:"canalFlexVol,omitempty"`
 	CanalNode                 string `json:"canalNode,omitempty" yaml:"canalNode,omitempty"`
 	CertDownloader            string `json:"certDownloader,omitempty" yaml:"certDownloader,omitempty"`
 	CoreDNS                   string `json:"coredns,omitempty" yaml:"coredns,omitempty"`
@@ -64,5 +59,4 @@ type RKESystemImages struct {
 	PodInfraContainer         string `json:"podInfraContainer,omitempty" yaml:"podInfraContainer,omitempty"`
 	WeaveCNI                  string `json:"weaveCni,omitempty" yaml:"weaveCni,omitempty"`
 	WeaveNode                 string `json:"weaveNode,omitempty" yaml:"weaveNode,omitempty"`
-	WindowsPodInfraContainer  string `json:"podInfraWindowsContainer,omitempty" yaml:"podInfraWindowsContainer,omitempty"`
 }

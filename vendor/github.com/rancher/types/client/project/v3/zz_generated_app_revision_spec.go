@@ -1,10 +1,8 @@
 package client
 
 const (
-	AppRevisionSpecType           = "appRevisionSpec"
-	AppRevisionSpecFieldProjectID = "projectId"
+	AppRevisionSpecType = "appRevisionSpec"
 )
 
 type AppRevisionSpec struct {
-	ProjectID string `json:"projectId,omitempty" yaml:"projectId,omitempty"`
 }
