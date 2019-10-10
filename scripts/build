@@ -11,7 +11,7 @@ OS_ARCH_ARG[linux]="amd64 arm"
 OS_ARCH_ARG[windows]="386 amd64"
 OS_ARCH_ARG[darwin]="amd64"
 
-CGO_ENABLED=0 go build -ldflags="-w -s -X main.VERSION=$VERSION -linkmode external -extldflags -static" -o bin/rancher
+go build -mod vendor -ldflags="-w -s -X main.VERSION=$VERSION" -o bin/rancher
 
 if [ -n "$CROSS" ]; then
     rm -rf build/bin

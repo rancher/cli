@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -216,7 +217,9 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 	if err != nil {
 		return result, err
 	}
-	defer resp.Body.Close()
+	defer func(closer io.Closer) {
+		closer.Close()
+	}(resp.Body)
 
 	if resp.StatusCode != 200 {
 		return result, NewAPIError(resp, opts.URL)
@@ -242,7 +245,9 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 		if err != nil {
 			return result, err
 		}
-		defer resp.Body.Close()
+		defer func(closer io.Closer) {
+			closer.Close()
+		}(resp.Body)
 
 		if resp.StatusCode != 200 {
 			return result, NewAPIError(resp, schemasURLs)
@@ -272,7 +277,7 @@ func NewAPIClient(opts *ClientOpts) (APIBaseClient, error) {
 	result.Ops = &APIOperations{
 		Opts:   opts,
 		Client: client,
-		Dialer: &websocket.Dialer{},
+		Dialer: &websocket.Dialer{HandshakeTimeout: 10 * time.Second},
 		Types:  result.Types,
 	}
 
