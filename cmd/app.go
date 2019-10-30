@@ -422,6 +422,7 @@ func appUpgrade(ctx *cli.Context) error {
 		return err
 	}
 
+	valuesYaml := app.ValuesYaml
 	answers := app.Answers
 	answers, err = processAnswers(ctx, c, nil, answers, false)
 	if err != nil {
@@ -430,6 +431,7 @@ func appUpgrade(ctx *cli.Context) error {
 
 	au := &projectClient.AppUpgradeConfig{
 		Answers: answers,
+		ValuesYaml: valuesYaml,
 	}
 
 	if resolveTemplatePath(appVersionOrLocalTemplatePath) {
