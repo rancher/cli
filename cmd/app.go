@@ -309,7 +309,9 @@ func appLs(ctx *cli.Context) error {
 				return err
 			}
 
-			appTemplateFiles = appRevision.Status.Files
+			if appRevision.Status != nil {
+				appTemplateFiles = appRevision.Status.Files
+			}
 		}
 
 		parsedInfo, err := parseTemplateInfo(appExternalID, appTemplateFiles)
