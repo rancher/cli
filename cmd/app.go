@@ -1080,13 +1080,13 @@ func processAnswers(
 	}
 
 	if ctx.String("values") != "" {
-		if err := getValuesFile(ctx.String("values"), answers); err != nil {
+		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
 			return answers, err
 		}
 	}
 
 	if ctx.String("answers") != "" {
-		err := getAnswersFile(ctx.String("answers"), answers)
+		err := parseAnswersFile(ctx.String("answers"), answers)
 		if err != nil {
 			return answers, err
 		}
@@ -1110,18 +1110,11 @@ func processAnswers(
 	return answers, nil
 }
 
-func getAnswersFile(location string, answers map[string]string) error {
-	bytes, err := readFileReturnJSON(location)
+func parseAnswersFile(location string, answers map[string]string) error {
+	holder, err := parseFile(location)
 	if err != nil {
 		return err
 	}
-
-	holder := make(map[string]interface{})
-	err = json.Unmarshal(bytes, &holder)
-	if err != nil {
-		return err
-	}
-
 	for key, value := range holder {
 		switch value.(type) {
 		case nil:
@@ -1133,18 +1126,34 @@ func getAnswersFile(location string, answers map[string]string) error {
 	return nil
 }
 
-// getValuesFile reads a values file and parse it to answers in helm strvals format
-func getValuesFile(location string, answers map[string]string) error {
-	bytes, err := readFileReturnJSON(location)
+// parseValuesFile reads a values file and parses it to answers in helm strvals format
+func parseValuesFile(location string, answers map[string]string) error {
+	values, err := parseFile(location)
 	if err != nil {
-		return err
-	}
-	values := make(map[string]interface{})
-	if err := json.Unmarshal(bytes, &values); err != nil {
 		return err
 	}
 	valuesToAnswers(values, answers)
 	return nil
+}
+
+func parseFile(location string) (map[string]interface{}, error) {
+	bytes, err := ioutil.ReadFile(location)
+	if err != nil {
+		return nil, err
+	}
+
+	values := make(map[string]interface{})
+	if hasPrefix(bytes, []byte("{")) {
+		// this is the check that "readFileReturnJSON" uses to differentiate between JSON and YAML
+		if err := json.Unmarshal(bytes, &values); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := yaml.Unmarshal(bytes, &values); err != nil {
+			return nil, err
+		}
+	}
+	return values, nil
 }
 
 func valuesToAnswers(values map[string]interface{}, answers map[string]string) {
