@@ -39,7 +39,7 @@ Run `CROSS=1 make build`.
 
 ## Docker Image
 
-Run `docker run --rm -it -v <PATH_TO_CONFIG>:/root/.rancher/cli2.json rancher/cli [ARGS]`.
+Run `docker run --rm -it -v <PATH_TO_CONFIG>:/root/.rancher/cli2.json rancher/cli2 [ARGS]`.
 Pass credentials by replacing `<PATH_TO_CONFIG>` with your config file for the server.
 
 To build `rancher/cli`, run `make`.  To use a custom Docker repository, do `REPO=custom make`, which produces a `custom/cli` image.
@@ -52,7 +52,7 @@ For bugs, questions, comments, corrections, suggestions, etc., open an issue in
 Or just [click here](//github.com/rancher/rancher/issues/new?title=%5Bcli%5D%20) to create a new issue.
 
 ## License
-Copyright (c) 2014-2018 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2014-2019 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
