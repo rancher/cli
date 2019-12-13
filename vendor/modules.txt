@@ -1,27 +1,30 @@
 # github.com/c-bata/go-prompt v0.0.0-20180219161504-f329ebd2409d
 github.com/c-bata/go-prompt
-# github.com/davecgh/go-spew v1.1.0
+# github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/docker/docker v0.0.0-20161012222843-8658748ef716
+# github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
 github.com/docker/docker/pkg/namesgenerator
-github.com/docker/docker/pkg/random
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
-# github.com/gogo/protobuf v0.0.0-20170330071051-c0656edd0d9e
+# github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 github.com/gogo/protobuf/proto
-# github.com/golang/glog v0.0.0-20141105023935-44145f04b68c
-github.com/golang/glog
-# github.com/google/gofuzz v0.0.0-20161122191042-44d81051d367
+# github.com/google/gofuzz v1.0.0
 github.com/google/gofuzz
-# github.com/gorilla/websocket v0.0.0-20180306181548-eb925808374e
+# github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
 # github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 github.com/grantae/certinfo
-# github.com/hashicorp/go-version v0.0.0-20180322230233-23480c066577
+# github.com/hashicorp/go-version v1.1.0
 github.com/hashicorp/go-version
+# github.com/konsorten/go-windows-terminal-sequences v1.0.1
+github.com/konsorten/go-windows-terminal-sequences
+# github.com/kr/pretty v0.1.0
+github.com/kr/pretty
+# github.com/kr/text v0.1.0
+github.com/kr/text
 # github.com/mattn/go-colorable v0.1.0
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.4
+# github.com/mattn/go-isatty v0.0.6
 github.com/mattn/go-isatty
 # github.com/mattn/go-tty v0.0.0-20180219170247-931426f7535a
 github.com/mattn/go-tty
@@ -33,38 +36,36 @@ github.com/pkg/errors
 github.com/pkg/term/termios
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/rancher/norman v0.0.0-20181217230628-457c15b94aca
+# github.com/rancher/norman v0.0.0-20191209163739-5b9227fe3222
 github.com/rancher/norman/clientbase
+github.com/rancher/norman/httperror
 github.com/rancher/norman/types
 github.com/rancher/norman/types/convert
-github.com/rancher/norman/types/slice
-github.com/rancher/norman/httperror
-github.com/rancher/norman/name
 github.com/rancher/norman/types/definition
+github.com/rancher/norman/types/slice
 github.com/rancher/norman/types/values
-# github.com/rancher/types v0.0.0-20190725170125-839eead94ce4
+# github.com/rancher/types v0.0.0-20191213000433-bfc3105d2b29
 github.com/rancher/types/client/cluster/v3
 github.com/rancher/types/client/management/v3
 github.com/rancher/types/client/project/v3
-# github.com/sirupsen/logrus v1.0.4
+# github.com/rancher/wrangler v0.1.5
+github.com/rancher/wrangler/pkg/name
+# github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
-# github.com/stretchr/testify v1.2.2
+# github.com/stretchr/testify v1.3.0
 github.com/stretchr/testify/assert
 # github.com/urfave/cli v0.0.0-20180226030253-8e01ec4cd3e2
 github.com/urfave/cli
-# golang.org/x/crypto v0.0.0-20180403160946-b2aa35443fbc
-golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20180502164142-640f4622ab69
-golang.org/x/net/context
-# golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f
+# golang.org/x/sync v0.0.0-20190423024810-112230192c58
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20180416112224-2f57af4873d0
+# golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f
 golang.org/x/sys/unix
-golang.org/x/sys/windows
-# gopkg.in/check.v1 v1.0.0-20160105164936-4f90aeace3a2
+# gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 gopkg.in/check.v1
-# gopkg.in/yaml.v2 v2.0.0-20170721113624-670d4cfef054
+# gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
-# k8s.io/apimachinery v0.0.0-20180328184639-0ed326127d30
-k8s.io/apimachinery/pkg/util/rand
+# k8s.io/apimachinery v0.0.0 => k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
 k8s.io/apimachinery/pkg/util/intstr
+k8s.io/apimachinery/pkg/util/rand
+# k8s.io/klog v0.4.0
+k8s.io/klog
