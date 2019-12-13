@@ -233,7 +233,7 @@ func catalogRefresh(ctx *cli.Context) error {
 		// save the catalogs in case we need to wait for them to become active
 		catalogs = collection.Data
 
-		err = c.ManagementClient.Catalog.CollectionActionRefresh(collection)
+		_, err = c.ManagementClient.Catalog.CollectionActionRefresh(collection)
 		if err != nil {
 			return err
 		}
@@ -253,7 +253,7 @@ func catalogRefresh(ctx *cli.Context) error {
 			// collect the refreshing catalogs in case we need to wait for them later
 			catalogs = append(catalogs, *catalog)
 
-			err = c.ManagementClient.Catalog.ActionRefresh(catalog)
+			_, err = c.ManagementClient.Catalog.ActionRefresh(catalog)
 			if err != nil {
 				return err
 			}
