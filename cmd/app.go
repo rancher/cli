@@ -37,6 +37,9 @@ Example:
 	# Install the redis template without any options
 	$ rancher app install redis appFoo
 
+	# Block cli until installation has finished or encountered an error. Use after app install.
+	$ rancher wait <app-id>
+
 	# Install the local redis template folder without any options
 	$ rancher app install ./redis appFoo
 
@@ -128,7 +131,7 @@ func AppCommand() cli.Command {
 	return cli.Command{
 		Name:    "apps",
 		Aliases: []string{"app"},
-		Usage:   "Operations with apps",
+		Usage:   "Operations with apps. Uses helm. Flags prepended with \"helm\" can also be accurately described by helm documentation.",
 		Action:  defaultAction(appLs),
 		Flags:   appLsFlags,
 		Subcommands: []cli.Command{
@@ -177,6 +180,15 @@ func AppCommand() cli.Command {
 						Name:  "no-prompt",
 						Usage: "Suppress asking questions and use the default values when required answers are not provided",
 					},
+					cli.IntFlag{
+						Name:  "helm-timeout",
+						Usage: "Amount of time for helm to wait for k8s commands (default is 300 secs). Example: --helm-timeout 600",
+						Value: 300,
+					},
+					cli.BoolFlag{
+						Name:  "helm-wait",
+						Usage: "Helm will wait for as long as timeout value, for installed resources to be ready (pods, PVCs, deployments, etc.). Example: --helm-wait",
+					},
 				},
 			},
 			cli.Command{
@@ -214,6 +226,10 @@ func AppCommand() cli.Command {
 						Name:  "show-versions,v",
 						Usage: "Display versions available to upgrade to",
 					},
+					cli.BoolFlag{
+						Name:  "reset",
+						Usage: "Reset all catalog app answers",
+					},
 				},
 			},
 			cli.Command{
@@ -248,6 +264,12 @@ func AppCommand() cli.Command {
 				Flags: []cli.Flag{
 					formatFlag,
 				},
+			},
+			cli.Command{
+				Name:      "show-notes",
+				Usage:     "Show contents of apps notes.txt",
+				Action:    appNotes,
+				ArgsUsage: "[APP_NAME/APP_ID]",
 			},
 		},
 	}
@@ -287,7 +309,9 @@ func appLs(ctx *cli.Context) error {
 				return err
 			}
 
-			appTemplateFiles = appRevision.Status.Files
+			if appRevision.Status != nil {
+				appTemplateFiles = appRevision.Status.Files
+			}
 		}
 
 		parsedInfo, err := parseTemplateInfo(appExternalID, appTemplateFiles)
@@ -401,7 +425,7 @@ func appUpgrade(ctx *cli.Context) error {
 	}
 
 	answers := app.Answers
-	err = processAnswers(ctx, c, nil, answers, false)
+	answers, err = processAnswers(ctx, c, nil, answers, false)
 	if err != nil {
 		return err
 	}
@@ -449,14 +473,9 @@ func updateExternalIDVersion(externalID string, version string) (string, error) 
 		return "", err
 	}
 
-	q := u.Query()
-	q.Set("version", version)
-	// Need to unescape here to get the raw string for the externalId filter
-	catalogQuery, err := url.QueryUnescape(q.Encode())
-	if err != nil {
-		return "", err
-	}
-	return "catalog://?" + catalogQuery, nil
+	oldVersionQuery := fmt.Sprintf("version=%s", u.Query().Get("version"))
+	newVersionQuery := fmt.Sprintf("version=%s", version)
+	return strings.Replace(externalID, oldVersionQuery, newVersionQuery, 1), nil
 }
 
 func appRollback(ctx *cli.Context) error {
@@ -554,7 +573,7 @@ func templateShow(ctx *cli.Context) error {
 		return err
 	}
 
-	template, err := c.ManagementClient.Template.ByID(resource.ID)
+	template, err := getFilteredTemplate(ctx, c, resource.ID)
 	if err != nil {
 		return err
 	}
@@ -562,6 +581,10 @@ func templateShow(ctx *cli.Context) error {
 	sortedVersions, err := sortTemplateVersions(template)
 	if err != nil {
 		return err
+	}
+
+	if len(sortedVersions) == 0 {
+		fmt.Println("No app versions available to install for this version of Rancher server")
 	}
 
 	for _, version := range sortedVersions {
@@ -593,8 +616,7 @@ func templateInstall(ctx *cli.Context) error {
 			return err
 		}
 
-		answers := make(map[string]string)
-		err = processAnswers(ctx, c, nil, answers, false)
+		answers, err := processAnswers(ctx, c, nil, nil, false)
 		if err != nil {
 			return err
 		}
@@ -614,9 +636,18 @@ func templateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		template, err := c.ManagementClient.Template.ByID(resource.ID)
 
-		templateVersionID := templateVersionIDFromVersionLink(template.VersionLinks[template.DefaultVersion])
+		template, err := getFilteredTemplate(ctx, c, resource.ID)
+		if err != nil {
+			return err
+		}
+
+		latestVersion, err := getTemplateLatestVersion(template)
+		if err != nil {
+			return err
+		}
+
+		templateVersionID := templateVersionIDFromVersionLink(template.VersionLinks[latestVersion])
 		userVersion := ctx.String("version")
 		if userVersion != "" {
 			if link, ok := template.VersionLinks[userVersion]; ok {
@@ -637,8 +668,7 @@ func templateInstall(ctx *cli.Context) error {
 		}
 
 		interactive := !ctx.Bool("no-prompt")
-		answers := make(map[string]string)
-		err = processAnswers(ctx, c, templateVersion, answers, interactive)
+		answers, err := processAnswers(ctx, c, templateVersion, nil, interactive)
 		if err != nil {
 			return err
 		}
@@ -656,38 +686,44 @@ func templateInstall(ctx *cli.Context) error {
 		app.TargetNamespace = namespace
 	}
 
+	app.Wait = ctx.Bool("helm-wait")
+	app.Timeout = ctx.Int64("helm-timeout")
+
 	madeApp, err := c.ProjectClient.App.Create(app)
 	if err != nil {
 		return err
 	}
 
-	// wait for the app to be installed to print the notes
-	var (
-		timeout   int
-		installed bool
-	)
-	for !installed {
-		if timeout == 60 {
-			return errors.New("timed out waiting for app to install. Run 'rancher apps' to verify status")
-		}
-		timeout++
-		time.Sleep(2 * time.Second)
-		madeApp, err = c.ProjectClient.App.ByID(madeApp.ID)
-		if err != nil {
-			return err
-		}
-		for _, condition := range madeApp.Conditions {
-			condType := strings.ToLower(condition.Type)
-			condStatus := strings.ToLower(condition.Status)
-			if condType == "installed" && condStatus == "true" {
-				installed = true
-				break
-			}
-		}
+	fmt.Printf("run \"app show-notes %s\" to view app notes once app is ready\n", madeApp.Name)
+
+	return nil
+}
+
+// appNotes prints notes from app's notes.txt file
+func appNotes(ctx *cli.Context) error {
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
 	}
 
-	if len(madeApp.Notes) != 0 {
-		fmt.Println(madeApp.Notes)
+	if ctx.NArg() < 1 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	resource, err := Lookup(c, ctx.Args().First(), "app")
+	if err != nil {
+		return err
+	}
+
+	app, err := c.ProjectClient.App.ByID(resource.ID)
+	if err != nil {
+		return err
+	}
+
+	if len(app.Notes) > 0 {
+		fmt.Println(app.Notes)
+	} else {
+		fmt.Println("no notes to print")
 	}
 
 	return nil
@@ -810,7 +846,20 @@ func outputVersions(ctx *cli.Context, c *cliclient.MasterClient) error {
 		return err
 	}
 
-	template, err := c.ManagementClient.Template.ByID(externalInfo["catalog"] + "-" + externalInfo["template"])
+	template, err := getFilteredTemplate(ctx, c, "cattle-global-data:"+externalInfo["catalog"]+"-"+externalInfo["template"])
+	if err != nil {
+		return err
+	}
+
+	sortedVersions, err := sortTemplateVersions(template)
+	if err != nil {
+		return err
+	}
+
+	if len(sortedVersions) == 0 {
+		fmt.Println("No app versions available to install for this version of Rancher server")
+		return nil
+	}
 
 	writer := NewTableWriter([][]string{
 		{"CURRENT", "Current"},
@@ -818,11 +867,6 @@ func outputVersions(ctx *cli.Context, c *cliclient.MasterClient) error {
 	}, ctx)
 
 	defer writer.Close()
-
-	sortedVersions, err := sortTemplateVersions(template)
-	if err != nil {
-		return err
-	}
 
 	for _, version := range sortedVersions {
 		var current string
@@ -925,6 +969,39 @@ func parseExternalID(e string) (map[string]string, error) {
 	return parsed, nil
 }
 
+// getFilteredTemplate uses the rancherVersion in the template request to get the
+// filtered template with incompatable versions dropped
+func getFilteredTemplate(ctx *cli.Context, c *cliclient.MasterClient, templateID string) (*managementClient.Template, error) {
+	ver, err := getRancherServerVersion(c)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := defaultListOpts(ctx)
+	filter.Filters["id"] = templateID
+	filter.Filters["rancherVersion"] = ver
+
+	template, err := c.ManagementClient.Template.List(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(template.Data) == 0 {
+		return nil, fmt.Errorf("template %v not found", templateID)
+	}
+	return &template.Data[0], nil
+}
+
+// getTemplateLatestVersion returns the newest version of the template
+func getTemplateLatestVersion(template *managementClient.Template) (string, error) {
+	sorted, err := sortTemplateVersions(template)
+	if err != nil {
+		return "", err
+	}
+
+	return sorted[len(sorted)-1].String(), nil
+}
+
 func sortTemplateVersions(template *managementClient.Template) ([]*gover.Version, error) {
 	var versions []*gover.Version
 	for key := range template.VersionLinks {
@@ -989,23 +1066,29 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 	return nil
 }
 
+// processAnswers adds answers to given map, and prompts users to answers chart questions if interactive is true
 func processAnswers(
 	ctx *cli.Context,
 	c *cliclient.MasterClient,
 	tv *managementClient.TemplateVersion,
 	answers map[string]string,
 	interactive bool,
-) error {
+) (map[string]string, error) {
+	if answers == nil || ctx.Bool("reset") {
+		// this would not be possible without returning a map
+		answers = make(map[string]string)
+	}
+
 	if ctx.String("values") != "" {
-		if err := getValuesFile(ctx.String("values"), answers); err != nil {
-			return err
+		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
+			return answers, err
 		}
 	}
 
 	if ctx.String("answers") != "" {
-		err := getAnswersFile(ctx.String("answers"), answers)
+		err := parseAnswersFile(ctx.String("answers"), answers)
 		if err != nil {
-			return err
+			return answers, err
 		}
 	}
 
@@ -1017,27 +1100,21 @@ func processAnswers(
 	}
 
 	if interactive {
+		// answers to questions will be added to map
 		err := askQuestions(tv, answers)
 		if err != nil {
-			return err
+			return answers, err
 		}
 	}
 
-	return nil
+	return answers, nil
 }
 
-func getAnswersFile(location string, answers map[string]string) error {
-	bytes, err := readFileReturnJSON(location)
+func parseAnswersFile(location string, answers map[string]string) error {
+	holder, err := parseFile(location)
 	if err != nil {
 		return err
 	}
-
-	holder := make(map[string]interface{})
-	err = json.Unmarshal(bytes, &holder)
-	if err != nil {
-		return err
-	}
-
 	for key, value := range holder {
 		switch value.(type) {
 		case nil:
@@ -1049,18 +1126,34 @@ func getAnswersFile(location string, answers map[string]string) error {
 	return nil
 }
 
-// getValuesFile reads a values file and parse it to answers in helm strvals format
-func getValuesFile(location string, answers map[string]string) error {
-	bytes, err := readFileReturnJSON(location)
+// parseValuesFile reads a values file and parses it to answers in helm strvals format
+func parseValuesFile(location string, answers map[string]string) error {
+	values, err := parseFile(location)
 	if err != nil {
-		return err
-	}
-	values := make(map[string]interface{})
-	if err := json.Unmarshal(bytes, &values); err != nil {
 		return err
 	}
 	valuesToAnswers(values, answers)
 	return nil
+}
+
+func parseFile(location string) (map[string]interface{}, error) {
+	bytes, err := ioutil.ReadFile(location)
+	if err != nil {
+		return nil, err
+	}
+
+	values := make(map[string]interface{})
+	if hasPrefix(bytes, []byte("{")) {
+		// this is the check that "readFileReturnJSON" uses to differentiate between JSON and YAML
+		if err := json.Unmarshal(bytes, &values); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := yaml.Unmarshal(bytes, &values); err != nil {
+			return nil, err
+		}
+	}
+	return values, nil
 }
 
 func valuesToAnswers(values map[string]interface{}, answers map[string]string) {

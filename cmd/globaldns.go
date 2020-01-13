@@ -734,14 +734,33 @@ func globalDNSUpdate(ctx *cli.Context) error {
 			return err
 		}
 		update["multiClusterAppId"] = resource.ID
+		if len(entry.ProjectIDs) > 0 {
+			input := &managementClient.UpdateGlobalDNSTargetsInput{
+				ProjectIDs: entry.ProjectIDs,
+			}
+			if err := c.ManagementClient.GlobalDNS.ActionRemoveProjects(entry, input); err != nil {
+				return err
+			}
+		}
 	}
 
 	if ctx.IsSet(argTTL) {
 		update["ttl"] = ctx.Int64(argTTL)
 	}
 
-	_, err = c.ManagementClient.GlobalDNS.Update(entry, update)
-	return err
+	if _, err := c.ManagementClient.GlobalDNS.Update(entry, update); err != nil {
+		// Rollback target projects on update failure
+		if ctx.IsSet(argMultiClusterApp) && len(entry.ProjectIDs) > 0 {
+			input := &managementClient.UpdateGlobalDNSTargetsInput{
+				ProjectIDs: entry.ProjectIDs,
+			}
+			if rbErr := c.ManagementClient.GlobalDNS.ActionAddProjects(entry, input); rbErr != nil {
+				return fmt.Errorf("failed to update global DNS entry: %v and failed to rollback to previous target projects: %v", err, rbErr)
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func globalDNSDelete(ctx *cli.Context) error {
@@ -870,12 +889,29 @@ func addGlobalDNSProjects(ctx *cli.Context) error {
 		return err
 	}
 
-	input := &managementClient.UpdateGlobalDNSTargetsInput{
-		MultiClusterAppID: "",
-		ProjectIDs:        projectIDs,
+	update := make(map[string]interface{})
+	if entry.MultiClusterAppID != "" {
+		update["multiClusterAppId"] = ""
+		if _, err := c.ManagementClient.GlobalDNS.Update(entry, update); err != nil {
+			return err
+		}
 	}
 
-	return c.ManagementClient.GlobalDNS.ActionAddProjects(entry, input)
+	input := &managementClient.UpdateGlobalDNSTargetsInput{
+		ProjectIDs: projectIDs,
+	}
+
+	if err := c.ManagementClient.GlobalDNS.ActionAddProjects(entry, input); err != nil {
+		// Rollback target mcapp on add-project failure
+		if entry.MultiClusterAppID != "" {
+			update["multiClusterAppId"] = entry.MultiClusterAppID
+			if _, rbErr := c.ManagementClient.GlobalDNS.Update(entry, update); rbErr != nil {
+				return fmt.Errorf("failed to add target projects to the entry: %v and failed to rollback to previous multi-cluster app target: %v", err, rbErr)
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func searchForGlobalDNSProvider(c *cliclient.MasterClient, name string) (*managementClient.GlobalDNSProvider, error) {

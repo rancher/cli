@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -28,6 +29,7 @@ import (
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
+	"github.com/rancher/norman/types/convert"
 	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -189,6 +191,14 @@ func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (
 	return &results.Data[selection], nil
 }
 
+func getRancherServerVersion(c *cliclient.MasterClient) (string, error) {
+	setting, err := c.ManagementClient.Setting.ByID("server-version")
+	if err != nil {
+		return "", err
+	}
+	return setting.Value, err
+}
+
 func loadAndVerifyCert(path string) (string, error) {
 	caCert, err := ioutil.ReadFile(path)
 	if nil != err {
@@ -218,7 +228,11 @@ func verifyCert(caCert []byte) (string, error) {
 	return string(caCert), nil
 }
 
-func loadConfig(path string) (config.Config, error) {
+func loadConfig(ctx *cli.Context) (config.Config, error) {
+	path := ctx.GlobalString("config")
+	if path == "" {
+		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
+	}
 	cf := config.Config{
 		Path:    path,
 		Servers: make(map[string]*config.ServerConfig),
@@ -238,12 +252,7 @@ func loadConfig(path string) (config.Config, error) {
 }
 
 func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
-	path := ctx.GlobalString("config")
-	if path == "" {
-		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
-	}
-
-	cf, err := loadConfig(path)
+	cf, err := loadConfig(ctx)
 	if nil != err {
 		return nil, err
 	}
@@ -500,6 +509,23 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 	return "", "", fmt.Errorf("Unable to extract clusterid and projectid from [%s]", id)
 }
 
+func fixTopLevelKeys(bytes []byte) ([]byte, error) {
+	old := map[string]interface{}{}
+	new := map[string]interface{}{}
+
+	err := json.Unmarshal(bytes, &old)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling: %v", err)
+	}
+
+	for key, val := range old {
+		newKey := convert.ToJSONKey(key)
+		new[newKey] = val
+	}
+
+	return json.Marshal(new)
+}
+
 // Return a JSON blob of the file at path
 func readFileReturnJSON(path string) ([]byte, error) {
 	file, err := ioutil.ReadFile(path)
@@ -639,4 +665,13 @@ func deleteMembersByNames(ctx *cli.Context, c *cliclient.MasterClient, members [
 		members = toKeepMembers
 	}
 	return members, nil
+}
+
+func tickerContext(ctx context.Context, duration time.Duration) <-chan time.Time {
+	ticker := time.NewTicker(duration)
+	go func() {
+		<-ctx.Done()
+		ticker.Stop()
+	}()
+	return ticker.C
 }

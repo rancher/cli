@@ -105,10 +105,25 @@ func IsAPIError(err error) bool {
 	return ok
 }
 
+func IsNotFound(err error) bool {
+	if apiError, ok := err.(*APIError); ok {
+		return apiError.Code.Status == 404
+	}
+
+	return false
+}
+
 func IsConflict(err error) bool {
 	if apiError, ok := err.(*APIError); ok {
 		return apiError.Code.Status == 409
 	}
 
+	return false
+}
+
+func IsForbidden(err error) bool {
+	if apiError, ok := err.(*APIError); ok {
+		return apiError.Code.Status == 403
+	}
 	return false
 }

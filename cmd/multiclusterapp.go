@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -32,10 +31,21 @@ Example:
 
 	# Install the redis template and set target projects to install
 	$ rancher multiclusterapp install --target mycluster:Default --target c-98pjr:p-w6c5f redis appFoo
+
+	# Block cli until installation has finished or encountered an error. Use after multiclusterapp install.
+	$ rancher wait <multiclusterapp-id>
 `
+	upgradeStrategySimultaneously = "simultaneously"
+	upgradeStrategyRollingUpdate  = "rolling-update"
+	argUpgradeStrategy            = "upgrade-strategy"
+	argUpgradeBatchSize           = "upgrade-batch-size"
+	argUpgradeBatchInterval       = "upgrade-batch-interval"
 )
 
-var memberAccessTypes = []string{"owner", "member", "read-only"}
+var (
+	memberAccessTypes = []string{"owner", "member", "read-only"}
+	upgradeStrategies = []string{upgradeStrategySimultaneously, upgradeStrategyRollingUpdate}
+)
 
 type MultiClusterAppData struct {
 	ID      string
@@ -90,8 +100,9 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Path to a helm values file.",
 					},
 					cli.StringSliceFlag{
-						Name:  "set",
-						Usage: "Set answers for the template, can be used multiple times. Example: --set foo=bar",
+						Name: "set",
+						Usage: "Set answers for the template, can be used multiple times. You can set overriding answers for specific clusters or projects " +
+							"by providing cluster ID or project ID as the prefix. Example: --set foo=bar --set c-rvcrl:foo=bar --set c-rvcrl:p-8w2x8:foo=bar",
 					},
 					cli.StringFlag{
 						Name:  "version",
@@ -120,10 +131,29 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Access type of the members. Specify only one value, and it applies to all members defined by --member. Valid options are 'owner', 'member' and 'read-only'",
 						Value: "owner",
 					},
+					cli.StringFlag{
+						Name:  argUpgradeStrategy,
+						Usage: "Strategy for upgrade. Valid options are \"rolling-update\" and \"simultaneously\"",
+						Value: upgradeStrategySimultaneously,
+					},
+					cli.Int64Flag{
+						Name:  argUpgradeBatchSize,
+						Usage: "The number of apps in target projects to be upgraded at a time.  Only used if --upgrade-strategy is rolling-update.",
+						Value: 1,
+					},
+					cli.Int64Flag{
+						Name:  argUpgradeBatchInterval,
+						Usage: "The number of seconds between updating the next app during upgrade.  Only used if --upgrade-strategy is rolling-update.",
+						Value: 1,
+					},
 					cli.IntFlag{
-						Name:  "timeout",
-						Usage: "Time in seconds to wait until the app is in a ready state",
-						Value: 60,
+						Name:  "helm-timeout",
+						Usage: "Amount of time for helm to wait for k8s commands (default is 300 secs). Example: --helm-timeout 600",
+						Value: 300,
+					},
+					cli.BoolFlag{
+						Name:  "helm-wait",
+						Usage: "Helm will wait for as long as timeout value, for installed resources to be ready (pods, PVCs, deployments, etc.). Example: --helm-wait",
 					},
 				},
 			},
@@ -154,8 +184,13 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Path to a helm values file.",
 					},
 					cli.StringSliceFlag{
-						Name:  "set",
-						Usage: "Set answers for the template, can be used multiple times. Example: --set foo=bar",
+						Name: "set",
+						Usage: "Set answers for the template, can be used multiple times. You can set overriding answers for specific clusters or projects " +
+							"by providing cluster ID or project ID as the prefix. Example: --set foo=bar --set c-rvcrl:foo=bar --set c-rvcrl:p-8w2x8:foo=bar",
+					},
+					cli.BoolFlag{
+						Name:  "reset",
+						Usage: "Reset all catalog app answers",
 					},
 					cli.StringSliceFlag{
 						Name: "role,r",
@@ -165,6 +200,18 @@ func MultiClusterAppCommand() cli.Command {
 					cli.BoolFlag{
 						Name:  "show-versions,v",
 						Usage: "Display versions available to upgrade to",
+					},
+					cli.StringFlag{
+						Name:  argUpgradeStrategy,
+						Usage: "Strategy for upgrade. Valid options are \"rolling-update\" and \"simultaneously\"",
+					},
+					cli.Int64Flag{
+						Name:  argUpgradeBatchSize,
+						Usage: "The number of apps in target projects to be upgraded at a time.  Only used if --upgrade-strategy is rolling-update.",
+					},
+					cli.Int64Flag{
+						Name:  argUpgradeBatchInterval,
+						Usage: "The number of seconds between updating the next app during upgrade.  Only used if --upgrade-strategy is rolling-update.",
 					},
 				},
 			},
@@ -221,6 +268,16 @@ func MultiClusterAppCommand() cli.Command {
 				},
 			},
 			cli.Command{
+				Name:      "list-answers",
+				Aliases:   []string{"la"},
+				Usage:     "List current answers of a multi-cluster app",
+				ArgsUsage: "[APP_NAME/APP_ID]",
+				Action:    listMultiClusterAppAnswers,
+				Flags: []cli.Flag{
+					formatFlag,
+				},
+			},
+			cli.Command{
 				Name:        "list-templates",
 				Aliases:     []string{"lt"},
 				Usage:       "List templates available for installation",
@@ -269,6 +326,7 @@ func multiClusterAppLs(ctx *cli.Context) error {
 
 	collection, err := c.ManagementClient.MultiClusterApp.List(defaultListOpts(ctx))
 	writer := NewTableWriter([][]string{
+		{"ID", "ID"},
 		{"NAME", "App.Name"},
 		{"STATE", "App.State"},
 		{"VERSION", "Version"},
@@ -444,8 +502,13 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 		return outputMultiClusterAppVersions(ctx, c, app)
 	}
 
-	if ctx.NArg() < 2 {
+	if ctx.NArg() != 2 {
 		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	upgradeStrategy := strings.ToLower(ctx.String(argUpgradeStrategy))
+	if ctx.IsSet(argUpgradeStrategy) && !slice.ContainsString(upgradeStrategies, upgradeStrategy) {
+		return fmt.Errorf("invalid upgrade-strategy %q, supported values are \"rolling-update\" and \"simultaneously\"", upgradeStrategy)
 	}
 
 	_, app, err := searchForMcapp(c, ctx.Args().First())
@@ -453,12 +516,13 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 		return err
 	}
 
+	update := make(map[string]interface{})
 	answers := fromMultiClusterAppAnswers(app.Answers)
-	err = processAnswers(ctx, c, nil, answers, false)
+	answers, err = processAnswers(ctx, c, nil, answers, false)
 	if err != nil {
 		return err
 	}
-	app.Answers, err = toMultiClusterAppAnswers(c, answers)
+	update["answers"], err = toMultiClusterAppAnswers(c, answers)
 	if err != nil {
 		return err
 	}
@@ -468,15 +532,43 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	app.TemplateVersionID = strings.TrimSuffix(templateVersion.ID, templateVersion.Version) + version
+	toUpgradeTemplateversionID := strings.TrimSuffix(templateVersion.ID, templateVersion.Version) + version
+	// Check if the template version is valid before applying it
+	templateVersion, err = c.ManagementClient.TemplateVersion.ByID(toUpgradeTemplateversionID)
+	if err != nil {
+		templateName := strings.TrimSuffix(toUpgradeTemplateversionID, "-"+version)
+		return fmt.Errorf(
+			"version %s for template %s is invalid, run 'rancher mcapp show-template %s' for available versions",
+			version,
+			templateName,
+			templateName,
+		)
+	}
+	update["templateVersionId"] = toUpgradeTemplateversionID
 
 	roles := ctx.StringSlice("role")
 	if len(roles) > 0 {
-		app.Roles = roles
+		update["roles"] = roles
+	} else {
+		update["roles"] = app.Roles
 	}
 
-	_, err = c.ManagementClient.MultiClusterApp.Update(app, app)
-	return err
+	if upgradeStrategy == upgradeStrategyRollingUpdate {
+		update["upgradeStrategy"] = &managementClient.UpgradeStrategy{
+			RollingUpdate: &managementClient.RollingUpdate{
+				BatchSize: ctx.Int64(argUpgradeBatchSize),
+				Interval:  ctx.Int64(argUpgradeBatchInterval),
+			},
+		}
+	} else if upgradeStrategy == upgradeStrategySimultaneously {
+		update["upgradeStrategy"] = nil
+	}
+
+	if _, err := c.ManagementClient.MultiClusterApp.Update(app, update); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func multiClusterAppRollback(ctx *cli.Context) error {
@@ -498,7 +590,7 @@ func multiClusterAppRollback(ctx *cli.Context) error {
 		return outputMultiClusterAppRevisions(ctx, c, resource, app)
 	}
 
-	if ctx.NArg() < 2 {
+	if ctx.NArg() != 2 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
@@ -510,14 +602,19 @@ func multiClusterAppRollback(ctx *cli.Context) error {
 	rr := &managementClient.MultiClusterAppRollbackInput{
 		RevisionID: revisionResource.ID,
 	}
-	err = c.ManagementClient.MultiClusterApp.ActionRollback(app, rr)
-	return err
+
+	if err := c.ManagementClient.MultiClusterApp.ActionRollback(app, rr); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func multiClusterAppTemplateInstall(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
+	if ctx.NArg() > 2 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
+
 	templateName := ctx.Args().First()
 	appName := ctx.Args().Get(1)
 
@@ -537,16 +634,34 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 		Roles: roles,
 	}
 
+	upgradeStrategy := strings.ToLower(ctx.String(argUpgradeStrategy))
+	if !slice.ContainsString(upgradeStrategies, upgradeStrategy) {
+		return fmt.Errorf("invalid upgrade-strategy %q, supported values are \"rolling-update\" and \"simultaneously\"", upgradeStrategy)
+	} else if upgradeStrategy == upgradeStrategyRollingUpdate {
+		app.UpgradeStrategy = &managementClient.UpgradeStrategy{
+			RollingUpdate: &managementClient.RollingUpdate{
+				BatchSize: ctx.Int64(argUpgradeBatchSize),
+				Interval:  ctx.Int64(argUpgradeBatchInterval),
+			},
+		}
+	}
+
 	resource, err := Lookup(c, templateName, managementClient.TemplateType)
 	if err != nil {
 		return err
 	}
-	template, err := c.ManagementClient.Template.ByID(resource.ID)
+
+	template, err := getFilteredTemplate(ctx, c, resource.ID)
 	if err != nil {
 		return err
 	}
 
-	templateVersionID := templateVersionIDFromVersionLink(template.VersionLinks[template.DefaultVersion])
+	latestVersion, err := getTemplateLatestVersion(template)
+	if err != nil {
+		return err
+	}
+
+	templateVersionID := templateVersionIDFromVersionLink(template.VersionLinks[latestVersion])
 	userVersion := ctx.String("version")
 	if userVersion != "" {
 		if link, ok := template.VersionLinks[userVersion]; ok {
@@ -567,8 +682,7 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 	}
 
 	interactive := !ctx.Bool("no-prompt")
-	answers := make(map[string]string)
-	err = processAnswers(ctx, c, templateVersion, answers, interactive)
+	answers, err := processAnswers(ctx, c, templateVersion, nil, interactive)
 	if err != nil {
 		return err
 	}
@@ -606,38 +720,16 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 	}
 	app.Members = members
 
-	madeApp, err := c.ManagementClient.MultiClusterApp.Create(app)
+	app.Wait = ctx.Bool("helm-wait")
+	app.Timeout = ctx.Int64("helm-timeout")
+
+	app, err = c.ManagementClient.MultiClusterApp.Create(app)
 	if err != nil {
 		return err
 	}
 
-	var (
-		timewait  int
-		installed bool
-	)
-	timeout := ctx.Int("timeout")
-	for !installed {
-		if timewait*2 >= timeout {
-			return errors.New("timed out waiting for app to be active, the app could still be installing. Run 'rancher multiclusterapps' to verify")
-		}
-		timewait++
-		time.Sleep(2 * time.Second)
-		madeApp, err = c.ManagementClient.MultiClusterApp.ByID(madeApp.ID)
-		if err != nil {
-			return err
-		}
-		for _, condition := range madeApp.Status.Conditions {
-			condType := strings.ToLower(condition.Type)
-			condStatus := strings.ToLower(condition.Status)
-			if condType == "installed" && condStatus == "true" {
-				installed = true
-				break
-			}
-		}
-		if madeApp.Transitioning == "error" {
-			return errors.New(madeApp.TransitioningMessage)
-		}
-	}
+	fmt.Printf("Installing multi-cluster app %q...\n", app.Name)
+
 	return nil
 }
 
@@ -782,7 +874,12 @@ func addMcappTargetProject(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.ManagementClient.MultiClusterApp.ActionAddProjects(app, input)
+
+	if err := c.ManagementClient.MultiClusterApp.ActionAddProjects(app, input); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func deleteMcappTargetProject(ctx *cli.Context) error {
@@ -814,8 +911,7 @@ func getTargetInput(ctx *cli.Context, c *cliclient.MasterClient) (*managementCli
 		return nil, err
 	}
 
-	answers := make(map[string]string)
-	err = processAnswers(ctx, c, nil, answers, false)
+	answers, err := processAnswers(ctx, c, nil, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -860,6 +956,7 @@ func addMcappMember(ctx *cli.Context) error {
 
 	update := make(map[string]interface{})
 	update["members"] = members
+	update["roles"] = app.Roles
 
 	_, err = c.ManagementClient.MultiClusterApp.Update(app, update)
 	return err
@@ -890,6 +987,7 @@ func deleteMcappMember(ctx *cli.Context) error {
 
 	update := make(map[string]interface{})
 	update["members"] = members
+	update["roles"] = app.Roles
 
 	_, err = c.ManagementClient.MultiClusterApp.Update(app, update)
 	return err
@@ -930,6 +1028,7 @@ func showMultiClusterApp(ctx *cli.Context) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -951,6 +1050,24 @@ func listMultiClusterAppMembers(ctx *cli.Context) error {
 	return outputMembers(ctx, c, app.Members)
 }
 
+func listMultiClusterAppAnswers(ctx *cli.Context) error {
+	if ctx.NArg() == 0 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, app, err := searchForMcapp(c, ctx.Args().First())
+	if err != nil {
+		return err
+	}
+
+	return outputMultiClusterAppAnswers(ctx, c, app)
+}
+
 func searchForMcapp(c *cliclient.MasterClient, name string) (*types.Resource, *managementClient.MultiClusterApp, error) {
 	resource, err := Lookup(c, name, managementClient.MultiClusterAppType)
 	if err != nil {
@@ -969,8 +1086,16 @@ func outputMultiClusterAppVersions(ctx *cli.Context, c *cliclient.MasterClient, 
 		return err
 	}
 
+	ver, err := getRancherServerVersion(c)
+	if err != nil {
+		return err
+	}
+
+	filter := defaultListOpts(ctx)
+	filter.Filters["rancherVersion"] = ver
+
 	template := &managementClient.Template{}
-	if err := c.ManagementClient.Ops.DoGet(templateVersion.Links["template"], &types.ListOpts{}, template); err != nil {
+	if err := c.ManagementClient.Ops.DoGet(templateVersion.Links["template"], filter, template); err != nil {
 		return err
 	}
 	writer := NewTableWriter([][]string{
@@ -1043,6 +1168,53 @@ func outputMultiClusterAppRoles(ctx *cli.Context, c *cliclient.MasterClient, app
 
 	for _, r := range app.Roles {
 		writer.Write(map[string]string{"Name": r})
+	}
+	return writer.Err()
+}
+
+func outputMultiClusterAppAnswers(ctx *cli.Context, c *cliclient.MasterClient, app *managementClient.MultiClusterApp) error {
+	writer := NewTableWriter([][]string{
+		{"SCOPE", "Scope"},
+		{"QUESTION", "Question"},
+		{"ANSWER", "Answer"},
+	}, ctx)
+
+	defer writer.Close()
+
+	answers := app.Answers
+	// Sort answers by scope in the Global-Cluster-Project order
+	sort.Slice(answers, func(i, j int) bool {
+		if answers[i].ClusterID == "" && answers[i].ProjectID == "" {
+			return true
+		} else if answers[i].ClusterID != "" && answers[j].ProjectID != "" {
+			return true
+		}
+		return false
+	})
+
+	var scope string
+	for _, r := range answers {
+		scope = "Global"
+		if r.ClusterID != "" {
+			cluster, err := getClusterByID(c, r.ClusterID)
+			if err != nil {
+				return err
+			}
+			scope = fmt.Sprintf("All projects in cluster %s", cluster.Name)
+		} else if r.ProjectID != "" {
+			project, err := getProjectByID(c, r.ProjectID)
+			if err != nil {
+				return err
+			}
+			scope = fmt.Sprintf("Project %s", project.Name)
+		}
+		for key, value := range r.Values {
+			writer.Write(map[string]string{
+				"Scope":    scope,
+				"Question": key,
+				"Answer":   value,
+			})
+		}
 	}
 	return writer.Err()
 }

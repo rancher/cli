@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/rancher/cli/cliclient"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -36,12 +34,7 @@ be automatically selected.
 }
 
 func contextSwitch(ctx *cli.Context) error {
-	path := ctx.GlobalString("cf")
-	if path == "" {
-		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
-	}
-
-	cf, err := loadConfig(path)
+	cf, err := loadConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -76,7 +69,10 @@ func contextSwitch(ctx *cli.Context) error {
 
 	server.Project = project.ID
 
-	cf.Write()
+	err = cf.Write()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

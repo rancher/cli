@@ -3,6 +3,8 @@ Rancher CLI
 
 The Rancher Command Line Interface (CLI) is a unified tool for interacting with your Rancher Server.
 
+For usage information see: https://rancher.com/docs/rancher/v2.x/en/cli/
+
 > **Note:** This is for version 2.x.x of the cli, for info on 1.6.x see [here](https://github.com/rancher/cli/tree/v1.6)
 
 ## Installing
@@ -11,7 +13,7 @@ Check the [releases page](https://github.com/rancher/cli/releases) for direct do
 
 ## Setting up Rancher CLI with a Rancher Server
 
-The CLI requires your Rancher Server address, along with credentials for authentication. Rancher CLI pulls this information from a JSON file, `cli2.json`, which is created the first time you run `rancher login`. By default, the path of this file is `~/.rancher/cli2.json`.
+The CLI requires your Rancher Server address, along with [credentials for authentication](https://rancher.com/docs/rancher/v2.x/en/user-settings/api-keys/). Rancher CLI pulls this information from a JSON file, `cli2.json`, which is created the first time you run `rancher login`. By default, the path of this file is `~/.rancher/cli2.json`.
 
 ```
 $ rancher login https://<RANCHER_SERVER_URL> -t my-secret-token
@@ -37,7 +39,7 @@ Run `CROSS=1 make build`.
 
 ## Docker Image
 
-Run `docker run --rm -it -v <PATH_TO_CONFIG>:/root/.rancher/cli2.json rancher/cli [ARGS]`.
+Run `docker run --rm -it -v <PATH_TO_CONFIG>:/root/.rancher/cli2.json rancher/cli2 [ARGS]`.
 Pass credentials by replacing `<PATH_TO_CONFIG>` with your config file for the server.
 
 To build `rancher/cli`, run `make`.  To use a custom Docker repository, do `REPO=custom make`, which produces a `custom/cli` image.
@@ -50,7 +52,7 @@ For bugs, questions, comments, corrections, suggestions, etc., open an issue in
 Or just [click here](//github.com/rancher/rancher/issues/new?title=%5Bcli%5D%20) to create a new issue.
 
 ## License
-Copyright (c) 2014-2018 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2014-2019 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -70,12 +70,7 @@ func loginSetup(ctx *cli.Context) error {
 		return cli.ShowCommandHelp(ctx, "login")
 	}
 
-	path := ctx.GlobalString("cf")
-	if path == "" {
-		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
-	}
-
-	cf, err := loadConfig(path)
+	cf, err := loadConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -142,7 +137,10 @@ func loginSetup(ctx *cli.Context) error {
 	cf.CurrentServer = serverName
 	cf.Servers[serverName] = serverConfig
 
-	cf.Write()
+	err = cf.Write()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cmd"
-	"github.com/rancher/cli/rancher_prompt"
+	rancherprompt "github.com/rancher/cli/rancher_prompt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -96,6 +96,7 @@ func mainErr() error {
 		cmd.NodeCommand(),
 		cmd.ProjectCommand(),
 		cmd.PsCommand(),
+		cmd.ServerCommand(),
 		cmd.SettingsCommand(),
 		cmd.SSHCommand(),
 		cmd.UpCommand(),
