@@ -654,7 +654,7 @@ func templateInstall(ctx *cli.Context) error {
 				templateVersionID = templateVersionIDFromVersionLink(link)
 			} else {
 				return fmt.Errorf(
-					"version %s for template %s is invalid, run 'rancher show-template %s' for a list of versions",
+					"version %s for template %s is invalid, run 'rancher app show-template %s' for a list of versions",
 					userVersion,
 					templateName,
 					templateName,
