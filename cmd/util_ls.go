@@ -22,7 +22,7 @@ func listSystemFlag() cli.BoolFlag {
 func baseListOpts() *types.ListOpts {
 	return &types.ListOpts{
 		Filters: map[string]interface{}{
-			"limit": -2,
+			"limit": -1,
 			"all":   true,
 		},
 	}
