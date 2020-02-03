@@ -36,7 +36,7 @@ github.com/pkg/errors
 github.com/pkg/term/termios
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/rancher/norman v0.0.0-20191209163739-5b9227fe3222
+# github.com/rancher/norman v0.0.0-20200202051408-9dd0f76a7e8b
 github.com/rancher/norman/clientbase
 github.com/rancher/norman/httperror
 github.com/rancher/norman/types
@@ -44,28 +44,28 @@ github.com/rancher/norman/types/convert
 github.com/rancher/norman/types/definition
 github.com/rancher/norman/types/slice
 github.com/rancher/norman/types/values
-# github.com/rancher/types v0.0.0-20191213000433-bfc3105d2b29
+# github.com/rancher/types v0.0.0-20200203183517-d6c661218ddf
 github.com/rancher/types/client/cluster/v3
 github.com/rancher/types/client/management/v3
 github.com/rancher/types/client/project/v3
-# github.com/rancher/wrangler v0.1.5
+# github.com/rancher/wrangler v0.4.1
 github.com/rancher/wrangler/pkg/name
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
-# github.com/stretchr/testify v1.3.0
+# github.com/stretchr/testify v1.4.0
 github.com/stretchr/testify/assert
-# github.com/urfave/cli v0.0.0-20180226030253-8e01ec4cd3e2
+# github.com/urfave/cli v1.20.0
 github.com/urfave/cli
-# golang.org/x/sync v0.0.0-20190423024810-112230192c58
+# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f
+# golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
 golang.org/x/sys/unix
-# gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
+# gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 gopkg.in/check.v1
-# gopkg.in/yaml.v2 v2.2.2
+# gopkg.in/yaml.v2 v2.2.5
 gopkg.in/yaml.v2
-# k8s.io/apimachinery v0.0.0 => k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
+# k8s.io/apimachinery v0.17.2
 k8s.io/apimachinery/pkg/util/intstr
 k8s.io/apimachinery/pkg/util/rand
-# k8s.io/klog v0.4.0
+# k8s.io/klog v1.0.0
 k8s.io/klog

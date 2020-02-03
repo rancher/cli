@@ -39,7 +39,6 @@ type Client struct {
 	ProjectNetworkPolicy                    ProjectNetworkPolicyOperations
 	ClusterLogging                          ClusterLoggingOperations
 	ProjectLogging                          ProjectLoggingOperations
-	ListenConfig                            ListenConfigOperations
 	Setting                                 SettingOperations
 	Feature                                 FeatureOperations
 	ClusterAlert                            ClusterAlertOperations
@@ -69,6 +68,8 @@ type Client struct {
 	RKEK8sSystemImage                       RKEK8sSystemImageOperations
 	RKEK8sServiceOption                     RKEK8sServiceOptionOperations
 	RKEAddon                                RKEAddonOperations
+	CisConfig                               CisConfigOperations
+	CisBenchmarkVersion                     CisBenchmarkVersionOperations
 }
 
 func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
@@ -113,7 +114,6 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	client.ProjectNetworkPolicy = newProjectNetworkPolicyClient(client)
 	client.ClusterLogging = newClusterLoggingClient(client)
 	client.ProjectLogging = newProjectLoggingClient(client)
-	client.ListenConfig = newListenConfigClient(client)
 	client.Setting = newSettingClient(client)
 	client.Feature = newFeatureClient(client)
 	client.ClusterAlert = newClusterAlertClient(client)
@@ -143,6 +143,8 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	client.RKEK8sSystemImage = newRKEK8sSystemImageClient(client)
 	client.RKEK8sServiceOption = newRKEK8sServiceOptionClient(client)
 	client.RKEAddon = newRKEAddonClient(client)
+	client.CisConfig = newCisConfigClient(client)
+	client.CisBenchmarkVersion = newCisBenchmarkVersionClient(client)
 
 	return client, nil
 }
