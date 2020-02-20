@@ -201,6 +201,10 @@ func AppCommand() cli.Command {
 						Name:  "show-revisions,r",
 						Usage: "Show revisions available to rollback to",
 					},
+					cli.BoolFlag{
+						Name:  "force,f",
+						Usage: "Force rollback, deletes and recreates resources if needed during rollback. (default is false)",
+					},
 				},
 			},
 			cli.Command{
@@ -229,6 +233,10 @@ func AppCommand() cli.Command {
 					cli.BoolFlag{
 						Name:  "reset",
 						Usage: "Reset all catalog app answers",
+					},
+					cli.BoolFlag{
+						Name:  "force,f",
+						Usage: "Force upgrade, deletes and recreates resources if needed during upgrade. (default is false)",
 					},
 				},
 			},
@@ -430,8 +438,11 @@ func appUpgrade(ctx *cli.Context) error {
 		return err
 	}
 
+	force := ctx.Bool("force")
+
 	au := &projectClient.AppUpgradeConfig{
-		Answers: answers,
+		Answers:      answers,
+		ForceUpgrade: force,
 	}
 
 	if resolveTemplatePath(appVersionOrLocalTemplatePath) {
@@ -492,6 +503,8 @@ func appRollback(ctx *cli.Context) error {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
+	force := ctx.Bool("force")
+
 	resource, err := Lookup(c, ctx.Args().First(), "app")
 	if err != nil {
 		return err
@@ -513,7 +526,8 @@ func appRollback(ctx *cli.Context) error {
 	}
 
 	rr := &projectClient.RollbackRevision{
-		RevisionID: revision.Name,
+		ForceUpgrade: force,
+		RevisionID:   revision.Name,
 	}
 
 	return c.ProjectClient.App.ActionRollback(app, rr)
