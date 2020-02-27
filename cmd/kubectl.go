@@ -26,7 +26,7 @@ func runKubectl(ctx *cli.Context) error {
 	}
 
 	path, err := exec.LookPath("kubectl")
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("kubectl is required to be set in your path to use this "+
 			"command. See https://kubernetes.io/docs/tasks/tools/install-kubectl/ "+
 			"for more info. Error: %s", err.Error())
@@ -38,28 +38,28 @@ func runKubectl(ctx *cli.Context) error {
 	}
 
 	cluster, err := getClusterByID(c, c.UserConfig.FocusedCluster())
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	config, err := c.ManagementClient.Cluster.ActionGenerateKubeconfig(cluster)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	tmpfile, err := ioutil.TempFile("", "rancher-")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.Write([]byte(config.Config))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	err = tmpfile.Close()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -73,7 +73,7 @@ func runKubectl(ctx *cli.Context) error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	err = cmd.Run()
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	return nil

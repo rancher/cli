@@ -86,7 +86,7 @@ func listAllRoles() []string {
 
 func listRoles(ctx *cli.Context, context string) error {
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -95,7 +95,7 @@ func listRoles(ctx *cli.Context, context string) error {
 	filter.Filters["context"] = context
 
 	templates, err := c.ManagementClient.RoleTemplate.List(filter)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -158,7 +158,7 @@ func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (
 
 	// A collection is needed to get the action link
 	pCollection, err := c.ManagementClient.Principal.List(filter)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -167,7 +167,7 @@ func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (
 	}
 
 	results, err := c.ManagementClient.Principal.CollectionActionSearch(pCollection, &p)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -201,7 +201,7 @@ func getRancherServerVersion(c *cliclient.MasterClient) (string, error) {
 
 func loadAndVerifyCert(path string) (string, error) {
 	caCert, err := ioutil.ReadFile(path)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 	return verifyCert(caCert)
@@ -218,7 +218,7 @@ func verifyCert(caCert []byte) (string, error) {
 	}
 
 	parsedCert, err := x509.ParseCertificate(block.Bytes)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 
@@ -241,7 +241,7 @@ func loadConfig(ctx *cli.Context) (config.Config, error) {
 	content, err := ioutil.ReadFile(path)
 	if os.IsNotExist(err) {
 		return cf, nil
-	} else if nil != err {
+	} else if err != nil {
 		return cf, err
 	}
 
@@ -253,7 +253,7 @@ func loadConfig(ctx *cli.Context) (config.Config, error) {
 
 func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 	cf, err := loadConfig(ctx)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -267,12 +267,12 @@ func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 
 func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
 	cf, err := lookupConfig(ctx)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	mc, err := cliclient.NewMasterClient(cf)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -444,7 +444,7 @@ func printTemplate(out io.Writer, templateContent string, obj interface{}) error
 		"json":     FormatJSON,
 	}
 	tmpl, err := template.New("").Funcs(funcMap).Parse(templateContent)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -549,7 +549,7 @@ func settingsToMap(client *cliclient.MasterClient) (map[string]string, error) {
 	configMap := make(map[string]string)
 
 	settings, err := client.ManagementClient.Setting.List(baseListOpts())
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -596,7 +596,7 @@ func findStringInArray(s string, a []string) bool {
 
 func createdTimetoHuman(t string) (string, error) {
 	parsedTime, err := time.Parse(time.RFC3339, t)
-	if nil != err {
+	if err != nil {
 		return "", err
 	}
 	return parsedTime.Format("02 Jan 2006 15:04:05 MST"), nil
@@ -632,7 +632,7 @@ func outputMembers(ctx *cli.Context, c *cliclient.MasterClient, members []manage
 func addMembersByNames(ctx *cli.Context, c *cliclient.MasterClient, members []managementClient.Member, toAddMembers []string, accessType string) ([]managementClient.Member, error) {
 	for _, name := range toAddMembers {
 		member, err := searchForMember(ctx, c, name)
-		if nil != err {
+		if err != nil {
 			return nil, err
 		}
 

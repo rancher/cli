@@ -51,17 +51,17 @@ func NodeCommand() cli.Command {
 
 func nodeLs(ctx *cli.Context) error {
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	collection, err := getNodesList(ctx, c, c.UserConfig.FocusedCluster())
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	nodePools, err := getNodePools(ctx, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -93,18 +93,18 @@ func nodeDelete(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	for _, arg := range ctx.Args() {
 		resource, err := Lookup(c, arg, "node")
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		node, err := getNodeByID(ctx, c, resource.ID)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -115,7 +115,7 @@ func nodeDelete(ctx *cli.Context) error {
 		}
 
 		err = c.ManagementClient.Node.Delete(&node)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -131,7 +131,7 @@ func getNodesList(
 	filter.Filters["clusterId"] = clusterID
 
 	collection, err := c.ManagementClient.Node.List(filter)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	return collection, nil
@@ -143,7 +143,7 @@ func getNodeByID(
 	nodeID string,
 ) (managementClient.Node, error) {
 	nodeCollection, err := getNodesList(ctx, c, c.UserConfig.FocusedCluster())
-	if nil != err {
+	if err != nil {
 		return managementClient.Node{}, err
 	}
 
@@ -176,7 +176,7 @@ func getNodePools(
 	filter.Filters["clusterId"] = c.UserConfig.FocusedCluster()
 
 	collection, err := c.ManagementClient.NodePool.List(filter)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	return collection, nil

@@ -193,7 +193,7 @@ func serverFromInput(ctx *cli.Context, cf config.Config) (string, error) {
 
 		if input != "" {
 			i, err := strconv.Atoi(input)
-			if nil != err {
+			if err != nil {
 				fmt.Print(errMessage)
 				continue
 			}
