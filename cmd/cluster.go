@@ -230,7 +230,7 @@ func clusterLs(ctx *cli.Context) error {
 			current = "*"
 		}
 		nodeCount, err := getClusterNodeCount(ctx, c, item.ID)
-		if nil != err {
+		if err != nil {
 			logrus.Errorf("error getting cluster node count for cluster %s: %s", item.Name, err)
 		}
 
@@ -255,7 +255,7 @@ func clusterCreate(ctx *cli.Context) error {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -287,7 +287,7 @@ func clusterCreate(ctx *cli.Context) error {
 
 	createdCluster, err := c.ManagementClient.Cluster.Create(clusterConfig)
 
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -301,17 +301,17 @@ func clusterImport(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	resource, err := Lookup(c, ctx.Args().First(), "cluster")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	cluster, err := getClusterByID(c, resource.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -320,7 +320,7 @@ func clusterImport(ctx *cli.Context) error {
 	}
 
 	clusterToken, err := getClusterRegToken(ctx, c, cluster.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -342,17 +342,17 @@ func clusterAddNode(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	resource, err := Lookup(c, ctx.Args().First(), "cluster")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	cluster, err := getClusterByID(c, resource.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -360,7 +360,7 @@ func clusterAddNode(ctx *cli.Context) error {
 		filter := defaultListOpts(ctx)
 		filter.Filters["clusterId"] = cluster.ID
 		nodePools, err := c.ManagementClient.NodePool.List(filter)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -372,7 +372,7 @@ func clusterAddNode(ctx *cli.Context) error {
 	}
 
 	clusterToken, err := getClusterRegToken(ctx, c, cluster.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -417,24 +417,24 @@ func clusterDelete(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	for _, cluster := range ctx.Args() {
 
 		resource, err := Lookup(c, cluster, "cluster")
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		cluster, err := getClusterByID(c, resource.ID)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		err = c.ManagementClient.Cluster.Delete(cluster)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -448,17 +448,17 @@ func clusterExport(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	resource, err := Lookup(c, ctx.Args().First(), "cluster")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	cluster, err := getClusterByID(c, resource.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -481,22 +481,22 @@ func clusterKubeConfig(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	resource, err := Lookup(c, ctx.Args().First(), "cluster")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	cluster, err := getClusterByID(c, resource.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	config, err := c.ManagementClient.Cluster.ActionGenerateKubeconfig(cluster)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	fmt.Println(config.Config)
@@ -513,12 +513,12 @@ func addClusterMemberRoles(ctx *cli.Context) error {
 	roles := ctx.Args()[1:]
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	member, err := searchForMember(ctx, c, memberName)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -539,7 +539,7 @@ func addClusterMemberRoles(ctx *cli.Context) error {
 			rtb.GroupPrincipalID = member.ID
 		}
 		_, err = c.ManagementClient.ClusterRoleTemplateBinding.Create(&rtb)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -556,12 +556,12 @@ func deleteClusterMemberRoles(ctx *cli.Context) error {
 	roles := ctx.Args()[1:]
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	member, err := searchForMember(ctx, c, memberName)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -582,13 +582,13 @@ func deleteClusterMemberRoles(ctx *cli.Context) error {
 		}
 
 		bindings, err := c.ManagementClient.ClusterRoleTemplateBinding.List(filter)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		for _, binding := range bindings.Data {
 			err = c.ManagementClient.ClusterRoleTemplateBinding.Delete(&binding)
-			if nil != err {
+			if err != nil {
 				return err
 			}
 		}
@@ -602,7 +602,7 @@ func listClusterRoles(ctx *cli.Context) error {
 
 func listClusterMembers(ctx *cli.Context) error {
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -614,13 +614,13 @@ func listClusterMembers(ctx *cli.Context) error {
 	filter := defaultListOpts(ctx)
 	filter.Filters["clusterId"] = clusterID
 	bindings, err := c.ManagementClient.ClusterRoleTemplateBinding.List(filter)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	userFilter := defaultListOpts(ctx)
 	users, err := c.ManagementClient.User.List(userFilter)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -630,7 +630,7 @@ func listClusterMembers(ctx *cli.Context) error {
 
 	for _, binding := range bindings.Data {
 		parsedTime, err := createdTimetoHuman(binding.Created)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -655,7 +655,7 @@ func getClusterRegToken(
 	tokenOpts.Filters["clusterId"] = clusterID
 
 	clusterTokenCollection, err := c.ManagementClient.ClusterRegistrationToken.List(tokenOpts)
-	if nil != err {
+	if err != nil {
 		return managementClient.ClusterRegistrationToken{}, err
 	}
 
@@ -664,7 +664,7 @@ func getClusterRegToken(
 			ClusterID: clusterID,
 		}
 		clusterToken, err := c.ManagementClient.ClusterRegistrationToken.Create(crt)
-		if nil != err {
+		if err != nil {
 			return managementClient.ClusterRegistrationToken{}, err
 		}
 		return *clusterToken, nil
@@ -677,7 +677,7 @@ func getClusterByID(
 	clusterID string,
 ) (*managementClient.Cluster, error) {
 	cluster, err := c.ManagementClient.Cluster.ByID(clusterID)
-	if nil != err {
+	if err != nil {
 		return nil, fmt.Errorf("no cluster found with the ID [%s], run "+
 			"`rancher clusters` to see available clusters: %s", clusterID, err)
 	}
@@ -723,7 +723,7 @@ func getClusterRAM(cluster managementClient.Cluster) string {
 func parseResourceString(mem string) string {
 	if strings.HasSuffix(mem, "Ki") {
 		num, err := strconv.ParseFloat(strings.Replace(mem, "Ki", "", -1), 64)
-		if nil != err {
+		if err != nil {
 			return mem
 		}
 		num = num / 1024 / 1024
@@ -731,7 +731,7 @@ func parseResourceString(mem string) string {
 	}
 	if strings.HasSuffix(mem, "Mi") {
 		num, err := strconv.ParseFloat(strings.Replace(mem, "Mi", "", -1), 64)
-		if nil != err {
+		if err != nil {
 			return mem
 		}
 		num = num / 1024
@@ -739,7 +739,7 @@ func parseResourceString(mem string) string {
 	}
 	if strings.HasSuffix(mem, "m") {
 		num, err := strconv.ParseFloat(strings.Replace(mem, "m", "", -1), 64)
-		if nil != err {
+		if err != nil {
 			return mem
 		}
 		num = num / 1000

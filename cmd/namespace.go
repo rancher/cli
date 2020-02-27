@@ -151,17 +151,17 @@ func namespaceDelete(ctx *cli.Context) error {
 
 	for _, arg := range ctx.Args() {
 		resource, err := Lookup(c, arg, "namespace")
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		namespace, err := getNamespaceByID(c, resource.ID)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		err = c.ClusterClient.Namespace.Delete(namespace)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -180,7 +180,7 @@ func namespaceMove(ctx *cli.Context) error {
 	}
 
 	resource, err := Lookup(c, ctx.Args().First(), "namespace")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -190,12 +190,12 @@ func namespaceMove(ctx *cli.Context) error {
 	}
 
 	projResource, err := Lookup(c, ctx.Args().Get(1), "project")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	proj, err := getProjectByID(c, projResource.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -214,7 +214,7 @@ func namespaceMove(ctx *cli.Context) error {
 	update["projectId"] = proj.ID
 
 	_, err = c.ClusterClient.Namespace.Update(namespace, update)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -237,7 +237,7 @@ func getNamespaceByID(
 	namespaceID string,
 ) (*clusterClient.Namespace, error) {
 	namespace, err := c.ClusterClient.Namespace.ByID(namespaceID)
-	if nil != err {
+	if err != nil {
 		return nil, fmt.Errorf("no namespace found with the ID [%s], run "+
 			"`rancher namespaces` to see available namespaces: %s", namespaceID, err)
 	}

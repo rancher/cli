@@ -65,7 +65,7 @@ func inspectResources(ctx *cli.Context) error {
 	}
 
 	resource, err := Lookup(c, ctx.Args().First(), types...)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	mapResource := map[string]interface{}{}

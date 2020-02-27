@@ -52,25 +52,25 @@ func psLs(ctx *cli.Context) error {
 	if ctx.String("project") != "" {
 		//Verify the project given is valid
 		resource, err := Lookup(c, ctx.String("project"), "project")
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		sc, err := lookupConfig(ctx)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		sc.Project = resource.ID
 
 		projClient, err := cliclient.NewProjectClient(sc)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		c.ProjectClient = projClient.ProjectClient
 	}
 
 	workLoads, err := c.ProjectClient.Workload.List(defaultListOpts(ctx))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -110,7 +110,7 @@ func psLs(ctx *cli.Context) error {
 	opts.Filters["workloadId"] = ""
 
 	orphanPods, err := c.ProjectClient.Pod.List(opts)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

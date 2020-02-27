@@ -65,7 +65,7 @@ func settingsLs(ctx *cli.Context) error {
 	}
 
 	settings, err := c.ManagementClient.Setting.List(defaultListOpts(ctx))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -97,12 +97,12 @@ func settingGet(ctx *cli.Context) error {
 	}
 
 	resource, err := Lookup(c, ctx.Args().First(), "setting")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	setting, err := c.ManagementClient.Setting.ByID(resource.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -135,12 +135,12 @@ func settingSet(ctx *cli.Context) error {
 	}
 
 	resource, err := Lookup(c, ctx.Args().First(), "setting")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	setting, err := c.ManagementClient.Setting.ByID(resource.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -152,7 +152,7 @@ func settingSet(ctx *cli.Context) error {
 	}
 
 	updatedSetting, err := c.ManagementClient.Setting.Update(setting, update)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

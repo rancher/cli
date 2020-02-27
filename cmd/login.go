@@ -106,7 +106,7 @@ func loginSetup(ctx *cli.Context) error {
 
 	if ctx.String("cacert") != "" {
 		cert, err := loadAndVerifyCert(ctx.String("cacert"))
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		serverConfig.CACerts = cert
@@ -114,12 +114,12 @@ func loginSetup(ctx *cli.Context) error {
 	}
 
 	c, err := cliclient.NewManagementClient(serverConfig)
-	if nil != err {
+	if err != nil {
 		if _, ok := err.(*url.Error); ok && strings.Contains(err.Error(), "certificate signed by unknown authority") {
 			// no cert was provided and it's most likely a self signed cert if
 			// we get here so grab the cacert and see if the user accepts the server
 			c, err = getCertFromServer(ctx, serverConfig)
-			if nil != err {
+			if err != nil {
 				return err
 			}
 		} else {
@@ -128,7 +128,7 @@ func loginSetup(ctx *cli.Context) error {
 	}
 
 	proj, err := getProjectContext(ctx, c)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -237,7 +237,7 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 
 		if input != "" {
 			i, err := strconv.Atoi(input)
-			if nil != err {
+			if err != nil {
 				fmt.Print(errMessage)
 				continue
 			}
@@ -254,7 +254,7 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 
 func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.MasterClient, error) {
 	req, err := http.NewRequest("GET", cf.URL+"/v3/settings/cacerts", nil)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -266,14 +266,14 @@ func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.Ma
 	client := &http.Client{Transport: tr}
 
 	res, err := client.Do(req)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	defer res.Body.Close()
 
 	content, err := ioutil.ReadAll(res.Body)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -284,13 +284,13 @@ func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.Ma
 	}
 
 	cert, err := verifyCert([]byte(certReponse.Value))
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
 	// Get the server cert chain in a printable form
 	serverCerts, err := processServerChain(res)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -346,13 +346,13 @@ func loginContext(ctx *cli.Context) error {
 	}
 
 	cluster, err := getClusterByID(c, c.UserConfig.FocusedCluster())
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	clusterName := getClusterName(cluster)
 
 	project, err := getProjectByID(c, c.UserConfig.Project)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

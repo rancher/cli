@@ -79,12 +79,12 @@ func nodeSSH(ctx *cli.Context) error {
 	}
 
 	resource, err := Lookup(c, nodeName, "node")
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	sshNode, err := getNodeByID(ctx, c, resource.ID)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 

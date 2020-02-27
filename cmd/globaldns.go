@@ -292,7 +292,7 @@ func globalDNSProviderLs(ctx *cli.Context) error {
 	}
 
 	providers, err := c.ManagementClient.GlobalDNSProvider.List(defaultListOpts(ctx))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -325,7 +325,7 @@ func listGlobalDNSProviderMembers(ctx *cli.Context) error {
 	}
 
 	provider, err := searchForGlobalDNSProvider(c, ctx.Args().First())
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -485,13 +485,13 @@ func globalDNSProviderDelete(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	for _, name := range ctx.Args() {
 		provider, err := searchForGlobalDNSProvider(c, name)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -509,7 +509,7 @@ func addGlobalDNSProviderMembers(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -536,7 +536,7 @@ func deleteGlobalDNSProviderMembers(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -564,7 +564,7 @@ func globalDNSLs(ctx *cli.Context) error {
 	}
 
 	entries, err := c.ManagementClient.GlobalDNS.List(defaultListOpts(ctx))
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -629,7 +629,7 @@ func listGlobalDNSMembers(ctx *cli.Context) error {
 	}
 
 	entry, err := searchForGlobalDNS(c, ctx.Args().First())
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -769,13 +769,13 @@ func globalDNSDelete(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	for _, name := range ctx.Args() {
 		entry, err := searchForGlobalDNS(c, name)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -793,7 +793,7 @@ func addGlobalDNSMembers(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -819,7 +819,7 @@ func deleteGlobalDNSMembers(ctx *cli.Context) error {
 	}
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -916,7 +916,7 @@ func addGlobalDNSProjects(ctx *cli.Context) error {
 
 func searchForGlobalDNSProvider(c *cliclient.MasterClient, name string) (*managementClient.GlobalDNSProvider, error) {
 	resource, err := Lookup(c, name, managementClient.GlobalDNSProviderType)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 
@@ -925,7 +925,7 @@ func searchForGlobalDNSProvider(c *cliclient.MasterClient, name string) (*manage
 
 func searchForGlobalDNS(c *cliclient.MasterClient, name string) (*managementClient.GlobalDNS, error) {
 	resource, err := Lookup(c, name, managementClient.GlobalDNSType)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 

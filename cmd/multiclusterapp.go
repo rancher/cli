@@ -1132,7 +1132,7 @@ func outputMultiClusterAppRevisions(ctx *cli.Context, c *cliclient.MasterClient,
 	var sorted revSlice
 	for _, rev := range revisions.Data {
 		parsedTime, err := time.Parse(time.RFC3339, rev.Created)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		sorted = append(sorted, revision{Name: rev.Name, Created: parsedTime})

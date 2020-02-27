@@ -919,7 +919,7 @@ func outputRevisions(ctx *cli.Context, c *cliclient.MasterClient) error {
 	var sorted revSlice
 	for _, rev := range revisions.Data {
 		parsedTime, err := time.Parse(time.RFC3339, rev.Created)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 

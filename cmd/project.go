@@ -147,7 +147,7 @@ func projectCreate(ctx *cli.Context) error {
 	clusterID := c.UserConfig.FocusedCluster()
 	if ctx.String("cluster") != "" {
 		resource, err := Lookup(c, ctx.String("cluster"), "cluster")
-		if nil != err {
+		if err != nil {
 			return err
 		}
 		clusterID = resource.ID
@@ -160,7 +160,7 @@ func projectCreate(ctx *cli.Context) error {
 	}
 
 	_, err = c.ManagementClient.Project.Create(newProj)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 	return nil
@@ -178,17 +178,17 @@ func projectDelete(ctx *cli.Context) error {
 
 	for _, arg := range ctx.Args() {
 		resource, err := Lookup(c, arg, "project")
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		project, err := getProjectByID(c, resource.ID)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		err = c.ManagementClient.Project.Delete(project)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -206,12 +206,12 @@ func addProjectMemberRoles(ctx *cli.Context) error {
 	roles := ctx.Args()[1:]
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	member, err := searchForMember(ctx, c, memberName)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -232,7 +232,7 @@ func addProjectMemberRoles(ctx *cli.Context) error {
 			rtb.GroupPrincipalID = member.ID
 		}
 		_, err = c.ManagementClient.ProjectRoleTemplateBinding.Create(&rtb)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 	}
@@ -249,12 +249,12 @@ func deleteProjectMemberRoles(ctx *cli.Context) error {
 	roles := ctx.Args()[1:]
 
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	member, err := searchForMember(ctx, c, memberName)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -275,13 +275,13 @@ func deleteProjectMemberRoles(ctx *cli.Context) error {
 		}
 
 		bindings, err := c.ManagementClient.ProjectRoleTemplateBinding.List(filter)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
 		for _, binding := range bindings.Data {
 			err = c.ManagementClient.ProjectRoleTemplateBinding.Delete(&binding)
-			if nil != err {
+			if err != nil {
 				return err
 			}
 		}
@@ -295,7 +295,7 @@ func listProjectRoles(ctx *cli.Context) error {
 
 func listProjectMembers(ctx *cli.Context) error {
 	c, err := GetClient(ctx)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -307,13 +307,13 @@ func listProjectMembers(ctx *cli.Context) error {
 	filter := defaultListOpts(ctx)
 	filter.Filters["projectId"] = projectID
 	bindings, err := c.ManagementClient.ProjectRoleTemplateBinding.List(filter)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
 	userFilter := defaultListOpts(ctx)
 	users, err := c.ManagementClient.User.List(userFilter)
-	if nil != err {
+	if err != nil {
 		return err
 	}
 
@@ -323,7 +323,7 @@ func listProjectMembers(ctx *cli.Context) error {
 
 	for _, binding := range bindings.Data {
 		parsedTime, err := createdTimetoHuman(binding.Created)
-		if nil != err {
+		if err != nil {
 			return err
 		}
 
@@ -346,7 +346,7 @@ func getProjectList(
 	filter.Filters["clusterId"] = c.UserConfig.FocusedCluster()
 
 	collection, err := c.ManagementClient.Project.List(filter)
-	if nil != err {
+	if err != nil {
 		return nil, err
 	}
 	return collection, nil
@@ -357,7 +357,7 @@ func getProjectByID(
 	projectID string,
 ) (*managementClient.Project, error) {
 	project, err := c.ManagementClient.Project.ByID(projectID)
-	if nil != err {
+	if err != nil {
 		return nil, fmt.Errorf("no project found with the ID [%s], run "+
 			"`rancher projects` to see available projects: %s", projectID, err)
 	}
