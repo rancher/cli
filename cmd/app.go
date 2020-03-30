@@ -433,9 +433,17 @@ func appUpgrade(ctx *cli.Context) error {
 	}
 
 	answers := app.Answers
-	answers, err = processAnswers(ctx, c, nil, answers, false)
-	if err != nil {
-		return err
+	if ctx.String("answers") != "" {
+		answers, err = processAnswers(ctx, c, nil, answers, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	values := app.ValuesYaml
+	if ctx.String("values") != "" {
+		values, err = parseFileToString(ctx.String("values") )
+		answers = nil
 	}
 
 	force := ctx.Bool("force")
@@ -443,6 +451,7 @@ func appUpgrade(ctx *cli.Context) error {
 	au := &projectClient.AppUpgradeConfig{
 		Answers:      answers,
 		ForceUpgrade: force,
+		ValuesYaml: values,
 	}
 
 	if resolveTemplatePath(appVersionOrLocalTemplatePath) {
@@ -1093,17 +1102,9 @@ func processAnswers(
 		answers = make(map[string]string)
 	}
 
-	if ctx.String("values") != "" {
-		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
-			return answers, err
-		}
-	}
-
-	if ctx.String("answers") != "" {
-		err := parseAnswersFile(ctx.String("answers"), answers)
-		if err != nil {
-			return answers, err
-		}
+	err := parseAnswersFile(ctx.String("answers"), answers)
+	if err != nil {
+		return answers, err
 	}
 
 	for _, answer := range ctx.StringSlice("set") {
@@ -1170,6 +1171,14 @@ func parseFile(location string) (map[string]interface{}, error) {
 		}
 	}
 	return values, nil
+}
+
+func parseFileToString(location string) (string, error) {
+	bytes, err := ioutil.ReadFile(location)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 func valuesToAnswers(values map[string]interface{}, answers map[string]string) {
