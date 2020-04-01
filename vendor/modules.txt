@@ -6,9 +6,9 @@ github.com/davecgh/go-spew/spew
 github.com/docker/docker/pkg/namesgenerator
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
-# github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
+# github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/proto
-# github.com/google/gofuzz v1.0.0
+# github.com/google/gofuzz v1.1.0
 github.com/google/gofuzz
 # github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
@@ -16,15 +16,15 @@ github.com/gorilla/websocket
 github.com/grantae/certinfo
 # github.com/hashicorp/go-version v1.1.0
 github.com/hashicorp/go-version
-# github.com/konsorten/go-windows-terminal-sequences v1.0.1
+# github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/pretty v0.1.0
 github.com/kr/pretty
 # github.com/kr/text v0.1.0
 github.com/kr/text
-# github.com/mattn/go-colorable v0.1.0
+# github.com/mattn/go-colorable v0.1.2
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.6
+# github.com/mattn/go-isatty v0.0.8
 github.com/mattn/go-isatty
 # github.com/mattn/go-tty v0.0.0-20180219170247-931426f7535a
 github.com/mattn/go-tty
@@ -36,7 +36,7 @@ github.com/pkg/errors
 github.com/pkg/term/termios
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/rancher/norman v0.0.0-20200202051408-9dd0f76a7e8b
+# github.com/rancher/norman v0.0.0-20200326201949-eb806263e8ad
 github.com/rancher/norman/clientbase
 github.com/rancher/norman/httperror
 github.com/rancher/norman/types
@@ -44,11 +44,11 @@ github.com/rancher/norman/types/convert
 github.com/rancher/norman/types/definition
 github.com/rancher/norman/types/slice
 github.com/rancher/norman/types/values
-# github.com/rancher/types v0.0.0-20200203183517-d6c661218ddf
+# github.com/rancher/types v0.0.0-20200327203838-a36e8d24795f
 github.com/rancher/types/client/cluster/v3
 github.com/rancher/types/client/management/v3
 github.com/rancher/types/client/project/v3
-# github.com/rancher/wrangler v0.4.1
+# github.com/rancher/wrangler v0.5.4-0.20200326191509-4054411d9736
 github.com/rancher/wrangler/pkg/name
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
@@ -62,9 +62,9 @@ golang.org/x/sync/errgroup
 golang.org/x/sys/unix
 # gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 gopkg.in/check.v1
-# gopkg.in/yaml.v2 v2.2.5
+# gopkg.in/yaml.v2 v2.2.8
 gopkg.in/yaml.v2
-# k8s.io/apimachinery v0.17.2
+# k8s.io/apimachinery v0.18.0
 k8s.io/apimachinery/pkg/util/intstr
 k8s.io/apimachinery/pkg/util/rand
 # k8s.io/klog v1.0.0

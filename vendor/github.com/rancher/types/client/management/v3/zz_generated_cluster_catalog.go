@@ -14,6 +14,7 @@ const (
 	ClusterCatalogFieldCreated              = "created"
 	ClusterCatalogFieldCreatorID            = "creatorId"
 	ClusterCatalogFieldDescription          = "description"
+	ClusterCatalogFieldHelmVersion          = "helmVersion"
 	ClusterCatalogFieldKind                 = "kind"
 	ClusterCatalogFieldLabels               = "labels"
 	ClusterCatalogFieldLastRefreshTimestamp = "lastRefreshTimestamp"
@@ -40,6 +41,7 @@ type ClusterCatalog struct {
 	Created              string             `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID            string             `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
 	Description          string             `json:"description,omitempty" yaml:"description,omitempty"`
+	HelmVersion          string             `json:"helmVersion,omitempty" yaml:"helmVersion,omitempty"`
 	Kind                 string             `json:"kind,omitempty" yaml:"kind,omitempty"`
 	Labels               map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
 	LastRefreshTimestamp string             `json:"lastRefreshTimestamp,omitempty" yaml:"lastRefreshTimestamp,omitempty"`
@@ -68,6 +70,7 @@ type ClusterCatalogClient struct {
 
 type ClusterCatalogOperations interface {
 	List(opts *types.ListOpts) (*ClusterCatalogCollection, error)
+	ListAll(opts *types.ListOpts) (*ClusterCatalogCollection, error)
 	Create(opts *ClusterCatalog) (*ClusterCatalog, error)
 	Update(existing *ClusterCatalog, updates interface{}) (*ClusterCatalog, error)
 	Replace(existing *ClusterCatalog) (*ClusterCatalog, error)
@@ -107,6 +110,24 @@ func (c *ClusterCatalogClient) List(opts *types.ListOpts) (*ClusterCatalogCollec
 	resp := &ClusterCatalogCollection{}
 	err := c.apiClient.Ops.DoList(ClusterCatalogType, opts, resp)
 	resp.client = c
+	return resp, err
+}
+
+func (c *ClusterCatalogClient) ListAll(opts *types.ListOpts) (*ClusterCatalogCollection, error) {
+	resp := &ClusterCatalogCollection{}
+	resp, err := c.List(opts)
+	if err != nil {
+		return resp, err
+	}
+	data := resp.Data
+	for next, err := resp.Next(); next != nil && err == nil; next, err = next.Next() {
+		data = append(data, next.Data...)
+		resp = next
+		resp.Data = data
+	}
+	if err != nil {
+		return resp, err
+	}
 	return resp, err
 }
 

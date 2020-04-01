@@ -13,6 +13,7 @@ const (
 	CatalogFieldCreated              = "created"
 	CatalogFieldCreatorID            = "creatorId"
 	CatalogFieldDescription          = "description"
+	CatalogFieldHelmVersion          = "helmVersion"
 	CatalogFieldKind                 = "kind"
 	CatalogFieldLabels               = "labels"
 	CatalogFieldLastRefreshTimestamp = "lastRefreshTimestamp"
@@ -37,6 +38,7 @@ type Catalog struct {
 	Created              string             `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID            string             `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
 	Description          string             `json:"description,omitempty" yaml:"description,omitempty"`
+	HelmVersion          string             `json:"helmVersion,omitempty" yaml:"helmVersion,omitempty"`
 	Kind                 string             `json:"kind,omitempty" yaml:"kind,omitempty"`
 	Labels               map[string]string  `json:"labels,omitempty" yaml:"labels,omitempty"`
 	LastRefreshTimestamp string             `json:"lastRefreshTimestamp,omitempty" yaml:"lastRefreshTimestamp,omitempty"`
@@ -64,6 +66,7 @@ type CatalogClient struct {
 
 type CatalogOperations interface {
 	List(opts *types.ListOpts) (*CatalogCollection, error)
+	ListAll(opts *types.ListOpts) (*CatalogCollection, error)
 	Create(opts *Catalog) (*Catalog, error)
 	Update(existing *Catalog, updates interface{}) (*Catalog, error)
 	Replace(existing *Catalog) (*Catalog, error)
@@ -103,6 +106,24 @@ func (c *CatalogClient) List(opts *types.ListOpts) (*CatalogCollection, error) {
 	resp := &CatalogCollection{}
 	err := c.apiClient.Ops.DoList(CatalogType, opts, resp)
 	resp.client = c
+	return resp, err
+}
+
+func (c *CatalogClient) ListAll(opts *types.ListOpts) (*CatalogCollection, error) {
+	resp := &CatalogCollection{}
+	resp, err := c.List(opts)
+	if err != nil {
+		return resp, err
+	}
+	data := resp.Data
+	for next, err := resp.Next(); next != nil && err == nil; next, err = next.Next() {
+		data = append(data, next.Data...)
+		resp = next
+		resp.Data = data
+	}
+	if err != nil {
+		return resp, err
+	}
 	return resp, err
 }
 

@@ -10,6 +10,7 @@ const (
 	ManagementSecretFieldCreated         = "created"
 	ManagementSecretFieldCreatorID       = "creatorId"
 	ManagementSecretFieldData            = "data"
+	ManagementSecretFieldImmutable       = "immutable"
 	ManagementSecretFieldLabels          = "labels"
 	ManagementSecretFieldName            = "name"
 	ManagementSecretFieldOwnerReferences = "ownerReferences"
@@ -25,6 +26,7 @@ type ManagementSecret struct {
 	Created         string            `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID       string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
 	Data            map[string]string `json:"data,omitempty" yaml:"data,omitempty"`
+	Immutable       *bool             `json:"immutable,omitempty" yaml:"immutable,omitempty"`
 	Labels          map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Name            string            `json:"name,omitempty" yaml:"name,omitempty"`
 	OwnerReferences []OwnerReference  `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
@@ -46,6 +48,7 @@ type ManagementSecretClient struct {
 
 type ManagementSecretOperations interface {
 	List(opts *types.ListOpts) (*ManagementSecretCollection, error)
+	ListAll(opts *types.ListOpts) (*ManagementSecretCollection, error)
 	Create(opts *ManagementSecret) (*ManagementSecret, error)
 	Update(existing *ManagementSecret, updates interface{}) (*ManagementSecret, error)
 	Replace(existing *ManagementSecret) (*ManagementSecret, error)
@@ -81,6 +84,24 @@ func (c *ManagementSecretClient) List(opts *types.ListOpts) (*ManagementSecretCo
 	resp := &ManagementSecretCollection{}
 	err := c.apiClient.Ops.DoList(ManagementSecretType, opts, resp)
 	resp.client = c
+	return resp, err
+}
+
+func (c *ManagementSecretClient) ListAll(opts *types.ListOpts) (*ManagementSecretCollection, error) {
+	resp := &ManagementSecretCollection{}
+	resp, err := c.List(opts)
+	if err != nil {
+		return resp, err
+	}
+	data := resp.Data
+	for next, err := resp.Next(); next != nil && err == nil; next, err = next.Next() {
+		data = append(data, next.Data...)
+		resp = next
+		resp.Data = data
+	}
+	if err != nil {
+		return resp, err
+	}
 	return resp, err
 }
 

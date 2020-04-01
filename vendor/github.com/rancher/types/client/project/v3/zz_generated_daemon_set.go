@@ -18,6 +18,7 @@ const (
 	DaemonSetFieldDaemonSetStatus               = "daemonSetStatus"
 	DaemonSetFieldEnableServiceLinks            = "enableServiceLinks"
 	DaemonSetFieldEphemeralContainers           = "ephemeralContainers"
+	DaemonSetFieldFSGroupChangePolicy           = "fsGroupChangePolicy"
 	DaemonSetFieldFsgid                         = "fsgid"
 	DaemonSetFieldGids                          = "gids"
 	DaemonSetFieldHostAliases                   = "hostAliases"
@@ -75,6 +76,7 @@ type DaemonSet struct {
 	DaemonSetStatus               *DaemonSetStatus               `json:"daemonSetStatus,omitempty" yaml:"daemonSetStatus,omitempty"`
 	EnableServiceLinks            *bool                          `json:"enableServiceLinks,omitempty" yaml:"enableServiceLinks,omitempty"`
 	EphemeralContainers           []EphemeralContainer           `json:"ephemeralContainers,omitempty" yaml:"ephemeralContainers,omitempty"`
+	FSGroupChangePolicy           string                         `json:"fsGroupChangePolicy,omitempty" yaml:"fsGroupChangePolicy,omitempty"`
 	Fsgid                         *int64                         `json:"fsgid,omitempty" yaml:"fsgid,omitempty"`
 	Gids                          []int64                        `json:"gids,omitempty" yaml:"gids,omitempty"`
 	HostAliases                   []HostAlias                    `json:"hostAliases,omitempty" yaml:"hostAliases,omitempty"`
@@ -130,11 +132,14 @@ type DaemonSetClient struct {
 
 type DaemonSetOperations interface {
 	List(opts *types.ListOpts) (*DaemonSetCollection, error)
+	ListAll(opts *types.ListOpts) (*DaemonSetCollection, error)
 	Create(opts *DaemonSet) (*DaemonSet, error)
 	Update(existing *DaemonSet, updates interface{}) (*DaemonSet, error)
 	Replace(existing *DaemonSet) (*DaemonSet, error)
 	ByID(id string) (*DaemonSet, error)
 	Delete(container *DaemonSet) error
+
+	ActionRedeploy(resource *DaemonSet) error
 }
 
 func newDaemonSetClient(apiClient *Client) *DaemonSetClient {
@@ -168,6 +173,24 @@ func (c *DaemonSetClient) List(opts *types.ListOpts) (*DaemonSetCollection, erro
 	return resp, err
 }
 
+func (c *DaemonSetClient) ListAll(opts *types.ListOpts) (*DaemonSetCollection, error) {
+	resp := &DaemonSetCollection{}
+	resp, err := c.List(opts)
+	if err != nil {
+		return resp, err
+	}
+	data := resp.Data
+	for next, err := resp.Next(); next != nil && err == nil; next, err = next.Next() {
+		data = append(data, next.Data...)
+		resp = next
+		resp.Data = data
+	}
+	if err != nil {
+		return resp, err
+	}
+	return resp, err
+}
+
 func (cc *DaemonSetCollection) Next() (*DaemonSetCollection, error) {
 	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
 		resp := &DaemonSetCollection{}
@@ -186,4 +209,9 @@ func (c *DaemonSetClient) ByID(id string) (*DaemonSet, error) {
 
 func (c *DaemonSetClient) Delete(container *DaemonSet) error {
 	return c.apiClient.Ops.DoResourceDelete(DaemonSetType, &container.Resource)
+}
+
+func (c *DaemonSetClient) ActionRedeploy(resource *DaemonSet) error {
+	err := c.apiClient.Ops.DoAction(DaemonSetType, "redeploy", &resource.Resource, nil, nil)
+	return err
 }

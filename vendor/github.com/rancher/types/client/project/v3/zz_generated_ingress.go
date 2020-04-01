@@ -11,6 +11,7 @@ const (
 	IngressFieldCreatorID            = "creatorId"
 	IngressFieldDefaultBackend       = "defaultBackend"
 	IngressFieldDescription          = "description"
+	IngressFieldIngressClassName     = "ingressClassName"
 	IngressFieldLabels               = "labels"
 	IngressFieldName                 = "name"
 	IngressFieldNamespaceId          = "namespaceId"
@@ -34,6 +35,7 @@ type Ingress struct {
 	CreatorID            string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
 	DefaultBackend       *IngressBackend   `json:"defaultBackend,omitempty" yaml:"defaultBackend,omitempty"`
 	Description          string            `json:"description,omitempty" yaml:"description,omitempty"`
+	IngressClassName     string            `json:"ingressClassName,omitempty" yaml:"ingressClassName,omitempty"`
 	Labels               map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Name                 string            `json:"name,omitempty" yaml:"name,omitempty"`
 	NamespaceId          string            `json:"namespaceId,omitempty" yaml:"namespaceId,omitempty"`
@@ -62,6 +64,7 @@ type IngressClient struct {
 
 type IngressOperations interface {
 	List(opts *types.ListOpts) (*IngressCollection, error)
+	ListAll(opts *types.ListOpts) (*IngressCollection, error)
 	Create(opts *Ingress) (*Ingress, error)
 	Update(existing *Ingress, updates interface{}) (*Ingress, error)
 	Replace(existing *Ingress) (*Ingress, error)
@@ -97,6 +100,24 @@ func (c *IngressClient) List(opts *types.ListOpts) (*IngressCollection, error) {
 	resp := &IngressCollection{}
 	err := c.apiClient.Ops.DoList(IngressType, opts, resp)
 	resp.client = c
+	return resp, err
+}
+
+func (c *IngressClient) ListAll(opts *types.ListOpts) (*IngressCollection, error) {
+	resp := &IngressCollection{}
+	resp, err := c.List(opts)
+	if err != nil {
+		return resp, err
+	}
+	data := resp.Data
+	for next, err := resp.Next(); next != nil && err == nil; next, err = next.Next() {
+		data = append(data, next.Data...)
+		resp = next
+		resp.Data = data
+	}
+	if err != nil {
+		return resp, err
+	}
 	return resp, err
 }
 

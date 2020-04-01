@@ -11,6 +11,7 @@ const (
 	AlertmanagerFieldAnnotations          = "annotations"
 	AlertmanagerFieldBaseImage            = "baseImage"
 	AlertmanagerFieldConfigMaps           = "configMaps"
+	AlertmanagerFieldConfigSecret         = "configSecret"
 	AlertmanagerFieldContainers           = "containers"
 	AlertmanagerFieldCreated              = "created"
 	AlertmanagerFieldCreatorID            = "creatorId"
@@ -59,6 +60,7 @@ type Alertmanager struct {
 	Annotations          map[string]string      `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	BaseImage            string                 `json:"baseImage,omitempty" yaml:"baseImage,omitempty"`
 	ConfigMaps           []string               `json:"configMaps,omitempty" yaml:"configMaps,omitempty"`
+	ConfigSecret         string                 `json:"configSecret,omitempty" yaml:"configSecret,omitempty"`
 	Containers           []Container            `json:"containers,omitempty" yaml:"containers,omitempty"`
 	Created              string                 `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID            string                 `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
@@ -112,6 +114,7 @@ type AlertmanagerClient struct {
 
 type AlertmanagerOperations interface {
 	List(opts *types.ListOpts) (*AlertmanagerCollection, error)
+	ListAll(opts *types.ListOpts) (*AlertmanagerCollection, error)
 	Create(opts *Alertmanager) (*Alertmanager, error)
 	Update(existing *Alertmanager, updates interface{}) (*Alertmanager, error)
 	Replace(existing *Alertmanager) (*Alertmanager, error)
@@ -147,6 +150,24 @@ func (c *AlertmanagerClient) List(opts *types.ListOpts) (*AlertmanagerCollection
 	resp := &AlertmanagerCollection{}
 	err := c.apiClient.Ops.DoList(AlertmanagerType, opts, resp)
 	resp.client = c
+	return resp, err
+}
+
+func (c *AlertmanagerClient) ListAll(opts *types.ListOpts) (*AlertmanagerCollection, error) {
+	resp := &AlertmanagerCollection{}
+	resp, err := c.List(opts)
+	if err != nil {
+		return resp, err
+	}
+	data := resp.Data
+	for next, err := resp.Next(); next != nil && err == nil; next, err = next.Next() {
+		data = append(data, next.Data...)
+		resp = next
+		resp.Data = data
+	}
+	if err != nil {
+		return resp, err
+	}
 	return resp, err
 }
 
