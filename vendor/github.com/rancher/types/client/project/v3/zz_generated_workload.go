@@ -22,6 +22,7 @@ const (
 	WorkloadFieldDeploymentStatus              = "deploymentStatus"
 	WorkloadFieldEnableServiceLinks            = "enableServiceLinks"
 	WorkloadFieldEphemeralContainers           = "ephemeralContainers"
+	WorkloadFieldFSGroupChangePolicy           = "fsGroupChangePolicy"
 	WorkloadFieldFsgid                         = "fsgid"
 	WorkloadFieldGids                          = "gids"
 	WorkloadFieldHostAliases                   = "hostAliases"
@@ -94,6 +95,7 @@ type Workload struct {
 	DeploymentStatus              *DeploymentStatus              `json:"deploymentStatus,omitempty" yaml:"deploymentStatus,omitempty"`
 	EnableServiceLinks            *bool                          `json:"enableServiceLinks,omitempty" yaml:"enableServiceLinks,omitempty"`
 	EphemeralContainers           []EphemeralContainer           `json:"ephemeralContainers,omitempty" yaml:"ephemeralContainers,omitempty"`
+	FSGroupChangePolicy           string                         `json:"fsGroupChangePolicy,omitempty" yaml:"fsGroupChangePolicy,omitempty"`
 	Fsgid                         *int64                         `json:"fsgid,omitempty" yaml:"fsgid,omitempty"`
 	Gids                          []int64                        `json:"gids,omitempty" yaml:"gids,omitempty"`
 	HostAliases                   []HostAlias                    `json:"hostAliases,omitempty" yaml:"hostAliases,omitempty"`
@@ -160,6 +162,7 @@ type WorkloadClient struct {
 
 type WorkloadOperations interface {
 	List(opts *types.ListOpts) (*WorkloadCollection, error)
+	ListAll(opts *types.ListOpts) (*WorkloadCollection, error)
 	Create(opts *Workload) (*Workload, error)
 	Update(existing *Workload, updates interface{}) (*Workload, error)
 	Replace(existing *Workload) (*Workload, error)
@@ -167,6 +170,8 @@ type WorkloadOperations interface {
 	Delete(container *Workload) error
 
 	ActionPause(resource *Workload) error
+
+	ActionRedeploy(resource *Workload) error
 
 	ActionResume(resource *Workload) error
 
@@ -204,6 +209,24 @@ func (c *WorkloadClient) List(opts *types.ListOpts) (*WorkloadCollection, error)
 	return resp, err
 }
 
+func (c *WorkloadClient) ListAll(opts *types.ListOpts) (*WorkloadCollection, error) {
+	resp := &WorkloadCollection{}
+	resp, err := c.List(opts)
+	if err != nil {
+		return resp, err
+	}
+	data := resp.Data
+	for next, err := resp.Next(); next != nil && err == nil; next, err = next.Next() {
+		data = append(data, next.Data...)
+		resp = next
+		resp.Data = data
+	}
+	if err != nil {
+		return resp, err
+	}
+	return resp, err
+}
+
 func (cc *WorkloadCollection) Next() (*WorkloadCollection, error) {
 	if cc != nil && cc.Pagination != nil && cc.Pagination.Next != "" {
 		resp := &WorkloadCollection{}
@@ -226,6 +249,11 @@ func (c *WorkloadClient) Delete(container *Workload) error {
 
 func (c *WorkloadClient) ActionPause(resource *Workload) error {
 	err := c.apiClient.Ops.DoAction(WorkloadType, "pause", &resource.Resource, nil, nil)
+	return err
+}
+
+func (c *WorkloadClient) ActionRedeploy(resource *Workload) error {
+	err := c.apiClient.Ops.DoAction(WorkloadType, "redeploy", &resource.Resource, nil, nil)
 	return err
 }
 

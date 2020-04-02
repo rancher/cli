@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -19,6 +20,9 @@ Example:
 
 	# Add a catalog and specify the branch to use
 	$ rancher catalog add --branch awesomebranch foo https://my.catalog
+
+	# Add a catalog and specify the helm version to use. Specify 'v2' for helm 2 and 'v3' for helm 3
+	$ rancher catalog add --helm-version v3 foo https://my.catalog
 `
 
 	refreshCatalogDescription = `
@@ -83,6 +87,11 @@ func CatalogCommand() cli.Command {
 						Usage: "Branch from the url to use",
 						Value: "master",
 					},
+					cli.StringFlag{
+						Name:  "helm-version",
+						Usage: "Version of helm to use",
+						Value: "v2",
+					},
 				},
 			},
 			cli.Command{
@@ -135,6 +144,7 @@ func catalogLs(ctx *cli.Context) error {
 		{"URL", "Catalog.URL"},
 		{"BRANCH", "Catalog.Branch"},
 		{"KIND", "Catalog.Kind"},
+		{"HELMVERSION", "Catalog.HelmVersion"},
 	}
 
 	if ctx.Bool("verbose") {
@@ -166,11 +176,18 @@ func catalogAdd(ctx *cli.Context) error {
 		return err
 	}
 
+	//set default helm value to rancher-helm (helm v2)
+	helmVersion := "rancher-helm"
+	if strings.ToLower(ctx.String("helm-version")) == "v3" {
+		helmVersion = "helm_v3"
+	}
+
 	catalog := &managementClient.Catalog{
-		Branch: ctx.String("branch"),
-		Name:   ctx.Args().First(),
-		Kind:   "helm",
-		URL:    ctx.Args().Get(1),
+		Branch:      ctx.String("branch"),
+		Name:        ctx.Args().First(),
+		Kind:        "helm",
+		URL:         ctx.Args().Get(1),
+		HelmVersion: helmVersion,
 	}
 
 	_, err = c.ManagementClient.Catalog.Create(catalog)

@@ -5,31 +5,37 @@ import (
 )
 
 const (
-	FeatureType                 = "feature"
-	FeatureFieldAnnotations     = "annotations"
-	FeatureFieldCreated         = "created"
-	FeatureFieldCreatorID       = "creatorId"
-	FeatureFieldDefault         = "default"
-	FeatureFieldLabels          = "labels"
-	FeatureFieldName            = "name"
-	FeatureFieldOwnerReferences = "ownerReferences"
-	FeatureFieldRemoved         = "removed"
-	FeatureFieldUUID            = "uuid"
-	FeatureFieldValue           = "value"
+	FeatureType                      = "feature"
+	FeatureFieldAnnotations          = "annotations"
+	FeatureFieldCreated              = "created"
+	FeatureFieldCreatorID            = "creatorId"
+	FeatureFieldLabels               = "labels"
+	FeatureFieldName                 = "name"
+	FeatureFieldOwnerReferences      = "ownerReferences"
+	FeatureFieldRemoved              = "removed"
+	FeatureFieldState                = "state"
+	FeatureFieldStatus               = "status"
+	FeatureFieldTransitioning        = "transitioning"
+	FeatureFieldTransitioningMessage = "transitioningMessage"
+	FeatureFieldUUID                 = "uuid"
+	FeatureFieldValue                = "value"
 )
 
 type Feature struct {
 	types.Resource
-	Annotations     map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Created         string            `json:"created,omitempty" yaml:"created,omitempty"`
-	CreatorID       string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
-	Default         bool              `json:"default,omitempty" yaml:"default,omitempty"`
-	Labels          map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Name            string            `json:"name,omitempty" yaml:"name,omitempty"`
-	OwnerReferences []OwnerReference  `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
-	Removed         string            `json:"removed,omitempty" yaml:"removed,omitempty"`
-	UUID            string            `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-	Value           *bool             `json:"value,omitempty" yaml:"value,omitempty"`
+	Annotations          map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Created              string            `json:"created,omitempty" yaml:"created,omitempty"`
+	CreatorID            string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	Labels               map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Name                 string            `json:"name,omitempty" yaml:"name,omitempty"`
+	OwnerReferences      []OwnerReference  `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
+	Removed              string            `json:"removed,omitempty" yaml:"removed,omitempty"`
+	State                string            `json:"state,omitempty" yaml:"state,omitempty"`
+	Status               *FeatureStatus    `json:"status,omitempty" yaml:"status,omitempty"`
+	Transitioning        string            `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+	TransitioningMessage string            `json:"transitioningMessage,omitempty" yaml:"transitioningMessage,omitempty"`
+	UUID                 string            `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+	Value                *bool             `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 type FeatureCollection struct {
@@ -44,6 +50,7 @@ type FeatureClient struct {
 
 type FeatureOperations interface {
 	List(opts *types.ListOpts) (*FeatureCollection, error)
+	ListAll(opts *types.ListOpts) (*FeatureCollection, error)
 	Create(opts *Feature) (*Feature, error)
 	Update(existing *Feature, updates interface{}) (*Feature, error)
 	Replace(existing *Feature) (*Feature, error)
@@ -79,6 +86,24 @@ func (c *FeatureClient) List(opts *types.ListOpts) (*FeatureCollection, error) {
 	resp := &FeatureCollection{}
 	err := c.apiClient.Ops.DoList(FeatureType, opts, resp)
 	resp.client = c
+	return resp, err
+}
+
+func (c *FeatureClient) ListAll(opts *types.ListOpts) (*FeatureCollection, error) {
+	resp := &FeatureCollection{}
+	resp, err := c.List(opts)
+	if err != nil {
+		return resp, err
+	}
+	data := resp.Data
+	for next, err := resp.Next(); next != nil && err == nil; next, err = next.Next() {
+		data = append(data, next.Data...)
+		resp = next
+		resp.Data = data
+	}
+	if err != nil {
+		return resp, err
+	}
 	return resp, err
 }
 

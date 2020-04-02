@@ -9,6 +9,7 @@ const (
 	ClusterAlertRuleFieldAlertState            = "alertState"
 	ClusterAlertRuleFieldAnnotations           = "annotations"
 	ClusterAlertRuleFieldClusterID             = "clusterId"
+	ClusterAlertRuleFieldClusterScanRule       = "clusterScanRule"
 	ClusterAlertRuleFieldCreated               = "created"
 	ClusterAlertRuleFieldCreatorID             = "creatorId"
 	ClusterAlertRuleFieldEventRule             = "eventRule"
@@ -37,6 +38,7 @@ type ClusterAlertRule struct {
 	AlertState            string             `json:"alertState,omitempty" yaml:"alertState,omitempty"`
 	Annotations           map[string]string  `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	ClusterID             string             `json:"clusterId,omitempty" yaml:"clusterId,omitempty"`
+	ClusterScanRule       *ClusterScanRule   `json:"clusterScanRule,omitempty" yaml:"clusterScanRule,omitempty"`
 	Created               string             `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID             string             `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
 	EventRule             *EventRule         `json:"eventRule,omitempty" yaml:"eventRule,omitempty"`
@@ -72,6 +74,7 @@ type ClusterAlertRuleClient struct {
 
 type ClusterAlertRuleOperations interface {
 	List(opts *types.ListOpts) (*ClusterAlertRuleCollection, error)
+	ListAll(opts *types.ListOpts) (*ClusterAlertRuleCollection, error)
 	Create(opts *ClusterAlertRule) (*ClusterAlertRule, error)
 	Update(existing *ClusterAlertRule, updates interface{}) (*ClusterAlertRule, error)
 	Replace(existing *ClusterAlertRule) (*ClusterAlertRule, error)
@@ -115,6 +118,24 @@ func (c *ClusterAlertRuleClient) List(opts *types.ListOpts) (*ClusterAlertRuleCo
 	resp := &ClusterAlertRuleCollection{}
 	err := c.apiClient.Ops.DoList(ClusterAlertRuleType, opts, resp)
 	resp.client = c
+	return resp, err
+}
+
+func (c *ClusterAlertRuleClient) ListAll(opts *types.ListOpts) (*ClusterAlertRuleCollection, error) {
+	resp := &ClusterAlertRuleCollection{}
+	resp, err := c.List(opts)
+	if err != nil {
+		return resp, err
+	}
+	data := resp.Data
+	for next, err := resp.Next(); next != nil && err == nil; next, err = next.Next() {
+		data = append(data, next.Data...)
+		resp = next
+		resp.Data = data
+	}
+	if err != nil {
+		return resp, err
+	}
 	return resp, err
 }
 
