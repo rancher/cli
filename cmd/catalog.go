@@ -89,7 +89,7 @@ func CatalogCommand() cli.Command {
 					},
 					cli.StringFlag{
 						Name:  "helm-version",
-						Usage: "Version of helm to use",
+						Usage: "Version of helm the app(s) in your catalog will use for deployment. Use 'v2' for helm 2 or 'v3' for helm 3",
 						Value: "v2",
 					},
 				},
@@ -176,18 +176,12 @@ func catalogAdd(ctx *cli.Context) error {
 		return err
 	}
 
-	//set default helm value to rancher-helm (helm v2)
-	helmVersion := "rancher-helm"
-	if strings.ToLower(ctx.String("helm-version")) == "v3" {
-		helmVersion = "helm_v3"
-	}
-
 	catalog := &managementClient.Catalog{
 		Branch:      ctx.String("branch"),
 		Name:        ctx.Args().First(),
 		Kind:        "helm",
 		URL:         ctx.Args().Get(1),
-		HelmVersion: helmVersion,
+		HelmVersion: strings.ToLower(ctx.String("helm-version")),
 	}
 
 	_, err = c.ManagementClient.Catalog.Create(catalog)
