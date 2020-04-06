@@ -1119,6 +1119,8 @@ func processAnswers(
 		if err != nil {
 			return answers, err
 		}
+	} else {
+		answers = fillInDefaultAnswers(tv, answers)
 	}
 
 	return answers, nil
@@ -1278,6 +1280,23 @@ func askSubQuestion(q managementClient.SubQuestion) string {
 	}
 
 	return answer
+}
+
+func fillInDefaultAnswers(tv *managementClient.TemplateVersion, answers map[string]string) map[string]string {
+	for _, question := range tv.Questions {
+		if _, ok := answers[question.Variable]; !ok && checkShowIf(question.ShowIf, answers) {
+			answers[question.Variable] = question.Default
+			if checkShowSubquestionIf(question, answers) {
+				for _, subQuestion := range question.Subquestions {
+					// set the sub-question if the showIf check passes
+					if _, ok := answers[subQuestion.Variable]; !ok && checkShowIf(subQuestion.ShowIf, answers) {
+						answers[subQuestion.Variable] = question.Default
+					}
+				}
+			}
+		}
+	}
+	return answers
 }
 
 // checkShowIf uses the ShowIf field to determine if a question should be asked
