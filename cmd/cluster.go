@@ -29,7 +29,7 @@ type ClusterData struct {
 	Cluster  managementClient.Cluster
 	Name     string
 	Provider string
-	Nodes    int
+	Nodes    int64
 	CPU      string
 	RAM      string
 	Pods     string
@@ -229,10 +229,6 @@ func clusterLs(ctx *cli.Context) error {
 		if item.ID == c.UserConfig.FocusedCluster() {
 			current = "*"
 		}
-		nodeCount, err := getClusterNodeCount(ctx, c, item.ID)
-		if err != nil {
-			logrus.Errorf("error getting cluster node count for cluster %s: %s", item.Name, err)
-		}
 
 		writer.Write(&ClusterData{
 			ID:       item.ID,
@@ -240,7 +236,7 @@ func clusterLs(ctx *cli.Context) error {
 			Cluster:  item,
 			Name:     getClusterName(&item),
 			Provider: getClusterProvider(item),
-			Nodes:    nodeCount,
+			Nodes:    item.NodeCount,
 			CPU:      getClusterCPU(item),
 			RAM:      getClusterRAM(item),
 			Pods:     getClusterPods(item),
@@ -697,14 +693,6 @@ func getClusterProvider(cluster managementClient.Cluster) string {
 	default:
 		return "Unknown"
 	}
-}
-
-func getClusterNodeCount(ctx *cli.Context, c *cliclient.MasterClient, clusterID string) (int, error) {
-	nodes, err := getNodesList(ctx, c, clusterID)
-	if err != nil {
-		return 0, err
-	}
-	return len(nodes.Data), nil
 }
 
 func getClusterCPU(cluster managementClient.Cluster) string {
