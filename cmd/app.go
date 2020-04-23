@@ -431,7 +431,9 @@ func appUpgrade(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	answers, values, err := getAnswersAndValues(ctx, c, app.Answers, false)
+
+	answers := app.Answers
+	answers, err = processAnswers(ctx, c, nil, answers, false)
 	if err != nil {
 		return err
 	}
@@ -441,7 +443,6 @@ func appUpgrade(ctx *cli.Context) error {
 	au := &projectClient.AppUpgradeConfig{
 		Answers:      answers,
 		ForceUpgrade: force,
-		ValuesYaml:   values,
 	}
 
 	if resolveTemplatePath(appVersionOrLocalTemplatePath) {
@@ -629,13 +630,12 @@ func templateInstall(ctx *cli.Context) error {
 			return err
 		}
 
-		answers, values, err := getAnswersAndValues(ctx, c, app.Answers, false)
+		answers, err := processAnswers(ctx, c, nil, nil, false)
 		if err != nil {
 			return err
 		}
 		app.Files = files
 		app.Answers = answers
-		app.ValuesYaml = values
 		namespace := ctx.String("namespace")
 		if namespace == "" {
 			namespace = chartName + "-" + RandomLetters(5)
@@ -682,10 +682,11 @@ func templateInstall(ctx *cli.Context) error {
 		}
 
 		interactive := !ctx.Bool("no-prompt")
-		answers, values, err := getAnswersAndValues(ctx, c, app.Answers, interactive)
+		answers, err := processAnswers(ctx, c, templateVersion, nil, interactive)
 		if err != nil {
 			return err
 		}
+
 		namespace := ctx.String("namespace")
 		if namespace == "" {
 			namespace = template.Name + "-" + RandomLetters(5)
@@ -695,7 +696,6 @@ func templateInstall(ctx *cli.Context) error {
 			return err
 		}
 		app.Answers = answers
-		app.ValuesYaml = values
 		app.ExternalID = templateVersion.ExternalID
 		app.TargetNamespace = namespace
 	}
@@ -1093,9 +1093,17 @@ func processAnswers(
 		answers = make(map[string]string)
 	}
 
-	err := parseAnswersFile(ctx.String("answers"), answers)
-	if err != nil {
-		return answers, err
+	if ctx.String("values") != "" {
+		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
+			return answers, err
+		}
+	}
+
+	if ctx.String("answers") != "" {
+		err := parseAnswersFile(ctx.String("answers"), answers)
+		if err != nil {
+			return answers, err
+		}
 	}
 
 	for _, answer := range ctx.StringSlice("set") {
@@ -1132,6 +1140,16 @@ func parseAnswersFile(location string, answers map[string]string) error {
 	return nil
 }
 
+// parseValuesFile reads a values file and parses it to answers in helm strvals format
+func parseValuesFile(location string, answers map[string]string) error {
+	values, err := parseFile(location)
+	if err != nil {
+		return err
+	}
+	valuesToAnswers(values, answers)
+	return nil
+}
+
 func parseFile(location string) (map[string]interface{}, error) {
 	bytes, err := ioutil.ReadFile(location)
 	if err != nil {
@@ -1150,15 +1168,6 @@ func parseFile(location string) (map[string]interface{}, error) {
 		}
 	}
 	return values, nil
-}
-
-// parse values from values file in string format
-func parseFileToString(location string) (string, error) {
-	bytes, err := ioutil.ReadFile(location)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
 }
 
 func valuesToAnswers(values map[string]interface{}, answers map[string]string) {
@@ -1298,27 +1307,4 @@ func checkShowSubquestionIf(q managementClient.Question, answers map[string]stri
 		}
 	}
 	return false
-}
-
-// when using --answers flag, values should be empty to match UI behavior
-// when using --values flag, answers should be empty to match UI behavior
-// when using --answers and --values flag, both should be returned. UI only offers answers or values, not both
-func getAnswersAndValues(ctx *cli.Context, c *cliclient.MasterClient, currentAnswers map[string]string, interactive bool) (map[string]string, string, error) {
-	var err error
-	answers := make(map[string]string)
-	if ctx.String("answers") != "" {
-		answers, err = processAnswers(ctx, c, nil, currentAnswers, interactive)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-
-	values := ""
-	if ctx.String("values") != "" {
-		values, err = parseFileToString(ctx.String("values"))
-		if err != nil {
-			return nil, "", err
-		}
-	}
-	return answers, values, err
 }
