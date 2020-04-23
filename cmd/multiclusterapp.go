@@ -518,7 +518,7 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 
 	update := make(map[string]interface{})
 	answers := fromMultiClusterAppAnswers(app.Answers)
-	answers, err = processAnswers(ctx, c, nil, answers, false)
+	answers, err = processAnswerUpdates(ctx, answers)
 	if err != nil {
 		return err
 	}
@@ -682,7 +682,7 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 	}
 
 	interactive := !ctx.Bool("no-prompt")
-	answers, err := processAnswers(ctx, c, templateVersion, nil, interactive)
+	answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive)
 	if err != nil {
 		return err
 	}
@@ -911,7 +911,7 @@ func getTargetInput(ctx *cli.Context, c *cliclient.MasterClient) (*managementCli
 		return nil, err
 	}
 
-	answers, err := processAnswers(ctx, c, nil, nil, false)
+	answers, err := processAnswerUpdates(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

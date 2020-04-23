@@ -431,7 +431,14 @@ func appUpgrade(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	answers, values, err := getAnswersAndValues(ctx, c, app.Answers, false)
+
+	answers := app.Answers
+	values := app.ValuesYaml
+	answers, err = processAnswerUpdates(ctx, answers)
+	if err != nil {
+		return err
+	}
+	values, err = processValueUpgrades(ctx, values)
 	if err != nil {
 		return err
 	}
@@ -628,11 +635,15 @@ func templateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-
-		answers, values, err := getAnswersAndValues(ctx, c, app.Answers, false)
+		answers, err := processAnswerInstall(ctx, nil, nil, false)
 		if err != nil {
 			return err
 		}
+		values, err := processValueInstall(ctx, nil, "")
+		if err != nil {
+			return err
+		}
+
 		app.Files = files
 		app.Answers = answers
 		app.ValuesYaml = values
@@ -682,7 +693,11 @@ func templateInstall(ctx *cli.Context) error {
 		}
 
 		interactive := !ctx.Bool("no-prompt")
-		answers, values, err := getAnswersAndValues(ctx, c, app.Answers, interactive)
+		answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive)
+		if err != nil {
+			return err
+		}
+		values, err := processValueInstall(ctx, templateVersion, "")
 		if err != nil {
 			return err
 		}
@@ -1080,22 +1095,95 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 	return nil
 }
 
-// processAnswers adds answers to given map, and prompts users to answers chart questions if interactive is true
-func processAnswers(
+// processValueInstall creates a map of the values file and fills in missing answers with defaults
+func processValueInstall(ctx *cli.Context, tv *managementClient.TemplateVersion, existingValues string) (string, error) {
+	answers, err := processValues(ctx, existingValues)
+	if err != nil {
+		return existingValues, err
+	}
+	// add default values if answers missing from map
+	err = fillInDefaultAnswers(tv, answers)
+	if err != nil {
+		return existingValues, err
+	}
+
+	// change map back into string to be consistent with ui
+	existingValues, err = parseMapToYamlString(answers)
+	if err != nil {
+		return existingValues, err
+	}
+	return existingValues, nil
+}
+
+// processValueUpgrades creates map from existing values and applies updates
+func processValueUpgrades(ctx *cli.Context, existingValues string) (string, error) {
+	answers, err := processValues(ctx, existingValues)
+	if err != nil {
+		return existingValues, err
+	}
+	// change map back into string to be consistent with ui
+	existingValues, err = parseMapToYamlString(answers)
+	if err != nil {
+		return existingValues, err
+	}
+	return existingValues, nil
+}
+
+// processValues creates a map of the values file
+func processValues(ctx *cli.Context, existingValues string) (map[string]string, error) {
+	answers := make(map[string]string)
+	if existingValues != "" {
+		//parse values into map to ensure previous values are considered on update
+		valuesMap, err := createValuesMap([]byte(existingValues))
+		if err != nil {
+			return answers, err
+		}
+		valuesToAnswers(valuesMap, answers)
+	}
+
+	if ctx.String("values") != "" {
+		// if values file passed in, overwrite defaults with new key value pair
+		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
+			return answers, err
+		}
+	}
+	return answers, nil
+}
+
+// processAnswerInstall adds answers to given map, and prompts users to answers chart questions if interactive is true
+func processAnswerInstall(
 	ctx *cli.Context,
-	c *cliclient.MasterClient,
 	tv *managementClient.TemplateVersion,
 	answers map[string]string,
 	interactive bool,
 ) (map[string]string, error) {
+	var err error
+	answers, err = processAnswerUpdates(ctx, answers)
+	if err != nil {
+		return answers, err
+	}
+	// interactive occurs before adding defaults to ensure all questions are asked
+	if interactive {
+		// answers to questions will be added to map
+		err := askQuestions(tv, answers)
+		if err != nil {
+			return answers, err
+		}
+	}
+	return answers, nil
+}
+
+func processAnswerUpdates(ctx *cli.Context, answers map[string]string) (map[string]string, error) {
 	if answers == nil || ctx.Bool("reset") {
 		// this would not be possible without returning a map
 		answers = make(map[string]string)
 	}
 
-	err := parseAnswersFile(ctx.String("answers"), answers)
-	if err != nil {
-		return answers, err
+	if ctx.String("answers") != "" {
+		err := parseAnswersFile(ctx.String("answers"), answers)
+		if err != nil {
+			return answers, err
+		}
 	}
 
 	for _, answer := range ctx.StringSlice("set") {
@@ -1104,16 +1192,16 @@ func processAnswers(
 			answers[parts[0]] = parts[1]
 		}
 	}
-
-	if interactive {
-		// answers to questions will be added to map
-		err := askQuestions(tv, answers)
-		if err != nil {
-			return answers, err
-		}
-	}
-
 	return answers, nil
+}
+
+// parseMapToYamlString create yaml string from answers map
+func parseMapToYamlString(answerMap map[string]string) (string, error) {
+	yamlFileString, err := yaml.Marshal(answerMap)
+	if err != nil {
+		return "", err
+	}
+	return string(yamlFileString), nil
 }
 
 func parseAnswersFile(location string, answers map[string]string) error {
@@ -1132,12 +1220,25 @@ func parseAnswersFile(location string, answers map[string]string) error {
 	return nil
 }
 
+// parseValuesFile reads a values file and parses it to answers in helm strvals format
+func parseValuesFile(location string, answers map[string]string) error {
+	values, err := parseFile(location)
+	if err != nil {
+		return err
+	}
+	valuesToAnswers(values, answers)
+	return nil
+}
+
 func parseFile(location string) (map[string]interface{}, error) {
 	bytes, err := ioutil.ReadFile(location)
 	if err != nil {
 		return nil, err
 	}
+	return createValuesMap(bytes)
+}
 
+func createValuesMap(bytes []byte) (map[string]interface{}, error) {
 	values := make(map[string]interface{})
 	if hasPrefix(bytes, []byte("{")) {
 		// this is the check that "readFileReturnJSON" uses to differentiate between JSON and YAML
@@ -1150,15 +1251,6 @@ func parseFile(location string) (map[string]interface{}, error) {
 		}
 	}
 	return values, nil
-}
-
-// parse values from values file in string format
-func parseFileToString(location string) (string, error) {
-	bytes, err := ioutil.ReadFile(location)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
 }
 
 func valuesToAnswers(values map[string]interface{}, answers map[string]string) {
@@ -1195,10 +1287,12 @@ func traverseValuesToAnswers(key string, obj interface{}, answers map[string]str
 func askQuestions(tv *managementClient.TemplateVersion, answers map[string]string) error {
 	var asked bool
 	var attempts int
+	if tv == nil {
+		return nil
+	}
 	for {
 		attempts++
 		for _, question := range tv.Questions {
-			// only ask the question if there is not an answer and it passes the ShowIf check
 			if _, ok := answers[question.Variable]; !ok && checkShowIf(question.ShowIf, answers) {
 				asked = true
 				answers[question.Variable] = askQuestion(question)
@@ -1271,6 +1365,30 @@ func askSubQuestion(q managementClient.SubQuestion) string {
 	return answer
 }
 
+// fillInDefaultAnswers parses through questions and creates an answer map with default answers if missing from map
+func fillInDefaultAnswers(tv *managementClient.TemplateVersion, answers map[string]string) error {
+	if tv == nil {
+		return nil
+	}
+	for _, question := range tv.Questions {
+		if _, ok := answers[question.Variable]; !ok && checkShowIf(question.ShowIf, answers) {
+			answers[question.Variable] = question.Default
+			if checkShowSubquestionIf(question, answers) {
+				for _, subQuestion := range question.Subquestions {
+					// set the sub-question if the showIf check passes
+					if _, ok := answers[subQuestion.Variable]; !ok && checkShowIf(subQuestion.ShowIf, answers) {
+						answers[subQuestion.Variable] = question.Default
+					}
+				}
+			}
+		}
+	}
+	if answers == nil {
+		return errors.New("could not generate default answers")
+	}
+	return nil
+}
+
 // checkShowIf uses the ShowIf field to determine if a question should be asked
 // this field comes in the format <key>=<value> where key is a question id and value is the answer
 func checkShowIf(s string, answers map[string]string) bool {
@@ -1298,27 +1416,4 @@ func checkShowSubquestionIf(q managementClient.Question, answers map[string]stri
 		}
 	}
 	return false
-}
-
-// when using --answers flag, values should be empty to match UI behavior
-// when using --values flag, answers should be empty to match UI behavior
-// when using --answers and --values flag, both should be returned. UI only offers answers or values, not both
-func getAnswersAndValues(ctx *cli.Context, c *cliclient.MasterClient, currentAnswers map[string]string, interactive bool) (map[string]string, string, error) {
-	var err error
-	answers := make(map[string]string)
-	if ctx.String("answers") != "" {
-		answers, err = processAnswers(ctx, c, nil, currentAnswers, interactive)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-
-	values := ""
-	if ctx.String("values") != "" {
-		values, err = parseFileToString(ctx.String("values"))
-		if err != nil {
-			return nil, "", err
-		}
-	}
-	return answers, values, err
 }
