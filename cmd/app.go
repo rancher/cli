@@ -434,7 +434,11 @@ func appUpgrade(ctx *cli.Context) error {
 
 	answers := app.Answers
 	values := app.ValuesYaml
-	answers, values, err = processFileInputs(ctx, c, nil, answers, values, false)
+	answers, err = processAnswerUpdates(ctx, answers)
+	if err != nil {
+		return err
+	}
+	values, err = processValueUpgrades(ctx, values)
 	if err != nil {
 		return err
 	}
@@ -631,10 +635,15 @@ func templateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		answers, values, err := processFileInputs(ctx, c, nil, nil, "", false)
+		answers, err := processAnswerInstall(ctx, nil, nil, false)
 		if err != nil {
 			return err
 		}
+		values, err := processValueInstall(ctx, nil, "")
+		if err != nil {
+			return err
+		}
+
 		app.Files = files
 		app.Answers = answers
 		app.ValuesYaml = values
@@ -684,11 +693,14 @@ func templateInstall(ctx *cli.Context) error {
 		}
 
 		interactive := !ctx.Bool("no-prompt")
-		answers, values, err := processFileInputs(ctx, c, templateVersion, nil, "", interactive)
+		answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive)
 		if err != nil {
 			return err
 		}
-
+		values, err := processValueInstall(ctx, templateVersion, "")
+		if err != nil {
+			return err
+		}
 		namespace := ctx.String("namespace")
 		if namespace == "" {
 			namespace = template.Name + "-" + RandomLetters(5)
@@ -1083,77 +1095,16 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 	return nil
 }
 
-func processFileInputs(
-	ctx *cli.Context,
-	c *cliclient.MasterClient,
-	tv *managementClient.TemplateVersion,
-	answers map[string]string,
-	values string,
-	interactive bool) (map[string]string, string, error) {
-	var err error
-	if ctx.String("answers") != "" && ctx.String("values") != "" {
-		return nil, "", fmt.Errorf("cannot process an answers file and a values file")
-	}
-	if len(answers) != 0 && values != "" && !hasPassedInFile(ctx.String("answers"), ctx.String("values")) {
-		answers, err = processAnswers(ctx, c, tv, answers, interactive)
-		if err != nil {
-			return answers, values, err
-		}
-		values, err = processValues(ctx, tv, values)
-		if err != nil {
-			return answers, values, err
-		}
-	} else if (len(answers) != 0 && !hasPassedInFile(ctx.String("answers"), ctx.String("values"))) || ctx.String("answers") != "" {
-		values = ""
-		answers, err = processAnswers(ctx, c, tv, answers, interactive)
-		if err != nil {
-			return answers, values, err
-		}
-	} else if values != "" && !hasPassedInFile(ctx.String("answers"), ctx.String("values")) || ctx.String("values") != "" {
-		answers = nil
-		values, err = processValues(ctx, tv, values)
-		if err != nil {
-			return answers, values, err
-		}
-	} else {
-		values = ""
-		answers, err = processAnswers(ctx, c, tv, answers, interactive)
-		if err != nil {
-			return answers, values, err
-		}
-	}
-	return answers, values, nil
-}
-
-func hasPassedInFile(answersFilePathString string, valuesFilePathString string) bool {
-	if answersFilePathString != "" || valuesFilePathString != "" {
-		return true
-	}
-	return false
-}
-
-// processValues creates a map of the values file and fills in missing answers with defaults
-func processValues(ctx *cli.Context, tv *managementClient.TemplateVersion, existingValues string) (string, error) {
-	answers := make(map[string]string)
-	if existingValues != "" {
-		//parse values into map to ensure previous values are considered on update
-		valuesMap, err := createValuesMap([]byte(existingValues))
-		if err != nil {
-			return existingValues, err
-		}
-		valuesToAnswers(valuesMap, answers)
-	}
-	// add default values if answers missing from map
-	err := fillInDefaultAnswers(tv, answers)
+// processValueInstall creates a map of the values file and fills in missing answers with defaults
+func processValueInstall(ctx *cli.Context, tv *managementClient.TemplateVersion, existingValues string) (string, error) {
+	answers, err := processValues(ctx, existingValues)
 	if err != nil {
 		return existingValues, err
 	}
-
-	if ctx.String("values") != "" {
-		// if values file passed in, overwrite defaults with new key value pair
-		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
-			return existingValues, err
-		}
+	// add default values if answers missing from map
+	err = fillInDefaultAnswers(tv, answers)
+	if err != nil {
+		return existingValues, err
 	}
 
 	// change map back into string to be consistent with ui
@@ -1164,14 +1115,65 @@ func processValues(ctx *cli.Context, tv *managementClient.TemplateVersion, exist
 	return existingValues, nil
 }
 
-// processAnswers adds answers to given map, and prompts users to answers chart questions if interactive is true
-func processAnswers(
+// processValueUpgrades creates map from existing values and applies updates
+func processValueUpgrades(ctx *cli.Context, existingValues string) (string, error) {
+	answers, err := processValues(ctx, existingValues)
+	if err != nil {
+		return existingValues, err
+	}
+	// change map back into string to be consistent with ui
+	existingValues, err = parseMapToYamlString(answers)
+	if err != nil {
+		return existingValues, err
+	}
+	return existingValues, nil
+}
+
+// processValues creates a map of the values file
+func processValues(ctx *cli.Context, existingValues string) (map[string]string, error) {
+	answers := make(map[string]string)
+	if existingValues != "" {
+		//parse values into map to ensure previous values are considered on update
+		valuesMap, err := createValuesMap([]byte(existingValues))
+		if err != nil {
+			return answers, err
+		}
+		valuesToAnswers(valuesMap, answers)
+	}
+
+	if ctx.String("values") != "" {
+		// if values file passed in, overwrite defaults with new key value pair
+		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
+			return answers, err
+		}
+	}
+	return answers, nil
+}
+
+// processAnswerInstall adds answers to given map, and prompts users to answers chart questions if interactive is true
+func processAnswerInstall(
 	ctx *cli.Context,
-	c *cliclient.MasterClient,
 	tv *managementClient.TemplateVersion,
 	answers map[string]string,
 	interactive bool,
 ) (map[string]string, error) {
+	var err error
+	answers, err = processAnswerUpdates(ctx, answers)
+	if err != nil {
+		return answers, err
+	}
+	// interactive occurs before adding defaults to ensure all questions are asked
+	if interactive {
+		// answers to questions will be added to map
+		err := askQuestions(tv, answers)
+		if err != nil {
+			return answers, err
+		}
+	}
+	return answers, nil
+}
+
+func processAnswerUpdates(ctx *cli.Context, answers map[string]string) (map[string]string, error) {
 	if answers == nil || ctx.Bool("reset") {
 		// this would not be possible without returning a map
 		answers = make(map[string]string)
@@ -1189,21 +1191,6 @@ func processAnswers(
 		if len(parts) == 2 {
 			answers[parts[0]] = parts[1]
 		}
-	}
-
-	// interactive occurs before adding defaults to ensure all questions are asked
-	if interactive {
-		// answers to questions will be added to map
-		err := askQuestions(tv, answers)
-		if err != nil {
-			return answers, err
-		}
-	}
-	var err error
-	// add default answers to any remaining questions that have missing answers on install
-	err = fillInDefaultAnswers(tv, answers)
-	if err != nil {
-		return answers, err
 	}
 	return answers, nil
 }
@@ -1300,6 +1287,9 @@ func traverseValuesToAnswers(key string, obj interface{}, answers map[string]str
 func askQuestions(tv *managementClient.TemplateVersion, answers map[string]string) error {
 	var asked bool
 	var attempts int
+	if tv == nil {
+		return nil
+	}
 	for {
 		attempts++
 		for _, question := range tv.Questions {
