@@ -1377,7 +1377,7 @@ func fillInDefaultAnswers(tv *managementClient.TemplateVersion, answers map[stri
 				for _, subQuestion := range question.Subquestions {
 					// set the sub-question if the showIf check passes
 					if _, ok := answers[subQuestion.Variable]; !ok && checkShowIf(subQuestion.ShowIf, answers) {
-						answers[subQuestion.Variable] = question.Default
+						answers[subQuestion.Variable] = subQuestion.Default
 					}
 				}
 			}
