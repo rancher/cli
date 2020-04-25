@@ -682,7 +682,7 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 	}
 
 	interactive := !ctx.Bool("no-prompt")
-	answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive)
+	answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive, true)
 	if err != nil {
 		return err
 	}

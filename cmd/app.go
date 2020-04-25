@@ -635,7 +635,7 @@ func templateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		answers, err := processAnswerInstall(ctx, nil, nil, false)
+		answers, err := processAnswerInstall(ctx, nil, nil, false, false)
 		if err != nil {
 			return err
 		}
@@ -693,7 +693,7 @@ func templateInstall(ctx *cli.Context) error {
 		}
 
 		interactive := !ctx.Bool("no-prompt")
-		answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive)
+		answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive, false)
 		if err != nil {
 			return err
 		}
@@ -1156,6 +1156,7 @@ func processAnswerInstall(
 	tv *managementClient.TemplateVersion,
 	answers map[string]string,
 	interactive bool,
+	multicluster bool,
 ) (map[string]string, error) {
 	var err error
 	answers, err = processAnswerUpdates(ctx, answers)
@@ -1166,6 +1167,13 @@ func processAnswerInstall(
 	if interactive {
 		// answers to questions will be added to map
 		err := askQuestions(tv, answers)
+		if err != nil {
+			return answers, err
+		}
+	}
+	if multicluster && !interactive {
+		// add default values if answers missing from map
+		err = fillInDefaultAnswers(tv, answers)
 		if err != nil {
 			return answers, err
 		}
