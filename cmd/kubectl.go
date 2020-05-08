@@ -63,12 +63,8 @@ func runKubectl(ctx *cli.Context) error {
 		return err
 	}
 
-	kubeLocationFlag := "--kubeconfig=" + tmpfile.Name()
-
-	combinedArgs := []string{kubeLocationFlag}
-	combinedArgs = append(combinedArgs, ctx.Args()...)
-
-	cmd := exec.Command(path, combinedArgs...)
+	cmd := exec.Command(path, ctx.Args()...)
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+tmpfile.Name())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
