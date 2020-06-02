@@ -15,8 +15,8 @@ require (
 	github.com/patrickmn/go-cache v2.0.0+incompatible
 	github.com/pkg/errors v0.8.1
 	github.com/pkg/term v0.0.0-20160705081919-b1f72af2d630 // indirect
-	github.com/rancher/norman v0.0.0-20200326201949-eb806263e8ad
-	github.com/rancher/types v0.0.0-20200407154953-bd140b76a4df
+	github.com/rancher/norman v0.0.0-20200520181341-ab75acb55410
+	github.com/rancher/types v0.0.0-20200528213132-b5fb46b1825d
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli v1.20.0
