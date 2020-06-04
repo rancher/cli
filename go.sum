@@ -505,12 +505,8 @@ github.com/prometheus/procfs v0.0.8/go.mod h1:7Qr8sr6344vo1JqZ6HhLceV9o3AJ1Ff+Gx
 github.com/prometheus/prometheus v0.0.0-20180315085919-58e2a31db8de/go.mod h1:oAIUtOny2rjMX0OWN5vPR5/q/twIROJvdqnQKDdil/s=
 github.com/prometheus/prometheus v1.8.2-0.20200107122003-4708915ac6ef/go.mod h1:7U90zPoLkWjEIQcy/rweQla82OCTUzxVHE51G3OhJbI=
 github.com/prometheus/prometheus v2.3.2+incompatible/go.mod h1:oAIUtOny2rjMX0OWN5vPR5/q/twIROJvdqnQKDdil/s=
-github.com/rancher/norman v0.0.0-20200326201949-eb806263e8ad h1:Ha6G8j9yfKrvJQeKmPpNzyloJ+98GuD4a3zMwASlgbs=
-github.com/rancher/norman v0.0.0-20200326201949-eb806263e8ad/go.mod h1:g72A7RbW+GCqXicpQumVjmyHz2tP9AiiuRGRm+Ewnyo=
 github.com/rancher/norman v0.0.0-20200520181341-ab75acb55410 h1:iPheUCT5yzEWhMsILMUeFfbcwkhKur5BsuMTL/pGC5s=
 github.com/rancher/norman v0.0.0-20200520181341-ab75acb55410/go.mod h1:j0ffXOmInpTVfy/4M8zLrpgkUOwEe6YFBJ/tzkBss78=
-github.com/rancher/types v0.0.0-20200407154953-bd140b76a4df h1:NXMMnJZH+5ZMAKCTMod4PLcjMvI2gWyiyUfO/T07hjc=
-github.com/rancher/types v0.0.0-20200407154953-bd140b76a4df/go.mod h1:dFo1jHAqDecEB+ODKVTx1I7YXpW1qbH2ybOaU3SSDD4=
 github.com/rancher/types v0.0.0-20200528213132-b5fb46b1825d h1:+CcXmpmVUv9D68OOs9mqHgzctlCizqujDN4FT1yWcnM=
 github.com/rancher/types v0.0.0-20200528213132-b5fb46b1825d/go.mod h1:J6XqSEmTbADDyC4Dp6LLiceNtnlYvyHEcV4o7zG/0hg=
 github.com/rancher/wrangler v0.5.4-0.20200326191509-4054411d9736 h1:hqpVLgNUxU5sQUV6SzJPMY8Fy7T9Qht2QkA2Q7O/SH0=
