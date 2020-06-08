@@ -84,6 +84,7 @@ func mainErr() error {
 	}
 	app.Commands = []cli.Command{
 		cmd.AppCommand(),
+		cmd.BackupCommand(),
 		cmd.CatalogCommand(),
 		cmd.ClusterCommand(),
 		cmd.ContextCommand(),

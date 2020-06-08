@@ -14,6 +14,7 @@ import (
 	projectClient "github.com/rancher/types/client/project/v3"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 )
 
 type MasterClient struct {
@@ -21,6 +22,7 @@ type MasterClient struct {
 	ManagementClient *managementClient.Client
 	ProjectClient    *projectClient.Client
 	UserConfig       *config.ServerConfig
+	CRDClient        *clientset.Clientset
 }
 
 // NewMasterClient returns a new MasterClient with Cluster, Management and Project
