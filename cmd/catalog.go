@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -167,6 +168,8 @@ func catalogLs(ctx *cli.Context) error {
 }
 
 func catalogAdd(ctx *cli.Context) error {
+	passedArgs := ctx.Args()
+	fmt.Printf("\npassedArgs catalog: %v\n", passedArgs)
 	if len(ctx.Args()) < 2 {
 		return cli.ShowSubcommandHelp(ctx)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"regexp"
@@ -114,6 +115,7 @@ func mainErr() error {
 		logrus.Error(err)
 		os.Exit(1)
 	}
+	fmt.Printf("\nparsed: %v\n", parsed)
 
 	return app.Run(parsed)
 }

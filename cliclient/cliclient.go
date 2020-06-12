@@ -14,7 +14,6 @@ import (
 	projectClient "github.com/rancher/types/client/project/v3"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
-	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 )
 
 type MasterClient struct {
@@ -22,7 +21,6 @@ type MasterClient struct {
 	ManagementClient *managementClient.Client
 	ProjectClient    *projectClient.Client
 	UserConfig       *config.ServerConfig
-	CRDClient        *clientset.Clientset
 }
 
 // NewMasterClient returns a new MasterClient with Cluster, Management and Project
@@ -47,6 +45,23 @@ func NewMasterClient(config *config.ServerConfig) (*MasterClient, error) {
 		return nil, err
 	}
 	return mc, nil
+}
+
+func (mc *MasterClient) newK8sClient() error {
+	options := createClientOpts(mc.UserConfig)
+	options.URL = options.URL + "/clusters/" + mc.UserConfig.FocusedCluster()
+
+	// Setup the project client
+	cc, err := clusterClient.NewClient(options)
+	if err != nil {
+		if clientbase.IsNotFound(err) {
+			err = errorsPkg.WithMessage(err, "Current cluster not available, try running `rancher context switch`. Error")
+		}
+		return err
+	}
+	mc.ClusterClient = cc
+
+	return nil
 }
 
 // NewManagementClient returns a new MasterClient with only the Management client
