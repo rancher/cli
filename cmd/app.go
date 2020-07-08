@@ -438,7 +438,14 @@ func appUpgrade(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	values, err = processValueUpgrades(ctx, values)
+
+	var unmarshalledValues map[string]interface{}
+	err = yaml.Unmarshal([]byte(app.ValuesYaml), &unmarshalledValues)
+	if err != nil {
+		return err
+	}
+	valuesToAnswers(unmarshalledValues, answers)
+	values, err = processValueUpgrades(ctx, answers)
 	if err != nil {
 		return err
 	}
@@ -639,7 +646,7 @@ func templateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		values, err := processValueInstall(ctx, nil, "")
+		values, err := processValueInstall(ctx, nil, answers)
 		if err != nil {
 			return err
 		}
@@ -697,7 +704,7 @@ func templateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		values, err := processValueInstall(ctx, templateVersion, "")
+		values, err := processValueInstall(ctx, templateVersion, answers)
 		if err != nil {
 			return err
 		}
@@ -1096,58 +1103,48 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 }
 
 // processValueInstall creates a map of the values file and fills in missing answers with defaults
-func processValueInstall(ctx *cli.Context, tv *managementClient.TemplateVersion, existingValues string) (string, error) {
-	answers, err := processValues(ctx, existingValues)
+func processValueInstall(ctx *cli.Context, tv *managementClient.TemplateVersion, existingAnswers map[string]string) (string, error) {
+	answers, err := processValues(ctx, existingAnswers)
 	if err != nil {
-		return existingValues, err
+		return "", err
 	}
 	// add default values if answers missing from map
 	err = fillInDefaultAnswers(tv, answers)
 	if err != nil {
-		return existingValues, err
+		return "", err
 	}
 
 	// change map back into string to be consistent with ui
-	existingValues, err = parseMapToYamlString(answers)
+	strValues, err := parseMapToYamlString(answers)
 	if err != nil {
-		return existingValues, err
+		return "", err
 	}
-	return existingValues, nil
+	return strValues, nil
 }
 
 // processValueUpgrades creates map from existing values and applies updates
-func processValueUpgrades(ctx *cli.Context, existingValues string) (string, error) {
-	answers, err := processValues(ctx, existingValues)
+func processValueUpgrades(ctx *cli.Context, existingAnswers map[string]string) (string, error) {
+	answers, err := processValues(ctx, existingAnswers)
 	if err != nil {
-		return existingValues, err
+		return "", err
 	}
 	// change map back into string to be consistent with ui
-	existingValues, err = parseMapToYamlString(answers)
+	strValues, err := parseMapToYamlString(answers)
 	if err != nil {
-		return existingValues, err
+		return "", err
 	}
-	return existingValues, nil
+	return strValues, nil
 }
 
 // processValues creates a map of the values file
-func processValues(ctx *cli.Context, existingValues string) (map[string]string, error) {
-	answers := make(map[string]string)
-	if existingValues != "" {
-		//parse values into map to ensure previous values are considered on update
-		valuesMap, err := createValuesMap([]byte(existingValues))
-		if err != nil {
-			return answers, err
-		}
-		valuesToAnswers(valuesMap, answers)
-	}
-
+func processValues(ctx *cli.Context, existingAnswers map[string]string) (map[string]string, error) {
 	if ctx.String("values") != "" {
 		// if values file passed in, overwrite defaults with new key value pair
-		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
-			return answers, err
+		if err := parseValuesFile(ctx.String("values"), existingAnswers); err != nil {
+			return nil, err
 		}
 	}
-	return answers, nil
+	return existingAnswers, nil
 }
 
 // processAnswerInstall adds answers to given map, and prompts users to answers chart questions if interactive is true
