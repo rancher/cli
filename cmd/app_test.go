@@ -59,7 +59,7 @@ configmap: |-
 func TestValuesToAnswers(t *testing.T) {
 	assert := assert.New(t)
 
-	answers := map[string]string{}
+	answers := map[string]interface{}{}
 	values := map[string]interface{}{}
 	if err := yaml.Unmarshal([]byte(redisSample), &values); err != nil {
 		t.Error(err)
@@ -67,14 +67,14 @@ func TestValuesToAnswers(t *testing.T) {
 	valuesToAnswers(values, answers)
 
 	assert.Equal("docker.io", answers["image.registry"], "unexpected image.registry")
-	assert.Equal("true", answers["cluster.enabled"], "unexpected cluster.enabled")
+	assert.Equal(true, answers["cluster.enabled"], "unexpected cluster.enabled")
 	assert.Equal("1", answers["cluster.slaveCount"], "unexpected cluster.slaveCount")
-	assert.Equal("", answers["rbac.role.rules"], "unexpected rbac.role.rules")
-	assert.Equal("", answers["persistence"], "unexpected persistence")
+	assert.Equal(nil, answers["rbac.role.rules"], "unexpected rbac.role.rules")
+	assert.Equal(nil, answers["persistence"], "unexpected persistence")
 	assert.Equal("redis-server", answers["master.args[0]"], "unexpected master.args[0]")
 	assert.Equal("--maxmemory-policy volatile-ttl", answers["master.args[1]"], "unexpected master.args[1]")
 	assert.Equal("FLUSHDB,FLUSHALL", answers["master.disableCommands"], "unexpected master.disableCommands")
-	assert.Equal("", answers["master.service.loadBalancerIP"], "unexpected master.service.loadBalancerIP")
+	assert.Equal(nil, answers["master.service.loadBalancerIP"], "unexpected master.service.loadBalancerIP")
 	assert.Equal("ReadWriteOnce", answers["master.persistence.accessModes[0]"], "unexpected master.persistence.accessModes[0]")
 	assert.Equal("# Redis configuration file\nbind 127.0.0.1\nport 6379", answers["configmap"], "unexpected configmap")
 }
