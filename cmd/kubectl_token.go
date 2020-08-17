@@ -27,6 +27,20 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+const deleteCommandUsage = `
+Delete cached token used for kubectl login at ${PWD}/.cache/token
+
+Example:
+	# Delete a cached credential 
+	$ rancher token delete cluster1_c-1234
+
+	# Delete multiple cached credentials
+	$ rancher token delete cluster1_c-1234 cluster2_c-2345
+
+	# Delete all credentials 
+	$ rancher token delete all
+`
+
 type LoginInput struct {
 	server       string
 	userID       string
@@ -46,7 +60,7 @@ const (
 var samlProviders = map[string]bool{
 	"pingProvider":       true,
 	"adfsProvider":       true,
-	"keycloakProvider":   true,
+	"keyCloakProvider":   true,
 	"oktaProvider":       true,
 	"shibbolethProvider": true,
 }
@@ -60,7 +74,7 @@ var supportedAuthProviders = map[string]bool{
 	// all saml providers
 	"pingProvider":       true,
 	"adfsProvider":       true,
-	"keycloakProvider":   true,
+	"keyCloakProvider":   true,
 	"oktaProvider":       true,
 	"shibbolethProvider": true,
 }
@@ -96,10 +110,20 @@ func CredentialCommand() cli.Command {
 				Usage: "Skip verification of the CACerts presented by the Server",
 			},
 		},
+		Subcommands: []cli.Command{
+			cli.Command{
+				Name:   "delete",
+				Usage:  deleteCommandUsage,
+				Action: deleteCachedCredential,
+			},
+		},
 	}
 }
 
 func runCredential(ctx *cli.Context) error {
+	if ctx.Bool("delete") {
+		return deleteCachedCredential(ctx)
+	}
 	server := ctx.String("server")
 	if server == "" {
 		return fmt.Errorf("name of rancher server is required")
@@ -109,7 +133,7 @@ func runCredential(ctx *cli.Context) error {
 		return err
 	}
 	if url.Scheme == "" {
-		server = fmt.Sprintf("https://%s/", server)
+		server = fmt.Sprintf("https://%s", server)
 	}
 	userID := ctx.String("user")
 	if userID == "" {
@@ -117,11 +141,14 @@ func runCredential(ctx *cli.Context) error {
 	}
 	clusterID := ctx.String("cluster")
 
-	cachedCred, err := loadCachedCredential(fmt.Sprintf("%s_%s", userID, clusterID))
+	cachedCredName := fmt.Sprintf("%s_%s", userID, clusterID)
+	cachedCred, err := loadCachedCredential(cachedCredName)
 	if err != nil {
 		customPrint(fmt.Errorf("LoadToken: %v", err))
 	}
 	if cachedCred != nil {
+		customPrint(fmt.Sprintf("Using cached token, run 'rancher token delete %s' "+
+			"if there's an error", cachedCredName))
 		return json.NewEncoder(os.Stdout).Encode(cachedCred)
 	}
 
@@ -144,6 +171,30 @@ func runCredential(ctx *cli.Context) error {
 	}
 
 	return json.NewEncoder(os.Stdout).Encode(newCred)
+}
+
+func deleteCachedCredential(ctx *cli.Context) error {
+	if len(ctx.Args()) == 0 {
+		return cli.ShowSubcommandHelp(ctx)
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	cacheDir := filepath.Join(dir, kubeConfigCache)
+	if ctx.Args().First() == "all" {
+		customPrint(fmt.Sprintf("removing cached tokens [%s]", cacheDir))
+		return os.RemoveAll(cacheDir)
+	}
+	for _, key := range ctx.Args() {
+		cachePath := filepath.Join(cacheDir, fmt.Sprintf("%s%s", key, cachedFileExt))
+		customPrint(fmt.Sprintf("removing [%s]", cachePath))
+		err := os.Remove(cachePath)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
 }
 
 func loadCachedCredential(key string) (*ExecCredential, error) {
@@ -260,12 +311,23 @@ func basicAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token
 
 	body := fmt.Sprintf(`{"responseType":"%s", "username":"%s", "password":"%s"}`, responseType, username, password)
 
-	url := fmt.Sprintf("%sv3-public/%ss/%s?action=login", input.server, input.authProvider,
+	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, input.authProvider,
 		strings.ToLower(strings.Replace(input.authProvider, "Provider", "", 1)))
 
 	response, err := request(http.MethodPost, url, bytes.NewBufferString(body))
 	if err != nil {
 		return token, nil
+	}
+
+	apiError := map[string]interface{}{}
+	err = json.Unmarshal(response, &apiError)
+	if err != nil {
+		return token, err
+	}
+
+	if responseType := apiError["type"]; responseType == "error" {
+		return token, fmt.Errorf("error logging in: code: "+
+			"[%v] message:[%v]", apiError["code"], apiError["message"])
 	}
 
 	err = json.Unmarshal(response, &token)
@@ -372,7 +434,8 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 			client = &http.Client{Transport: tr, Timeout: 150 * time.Second}
 			res, err = client.Do(req)
 			if err != nil {
-				return token, err
+				// log error and use the token if login succeeds
+				customPrint(fmt.Errorf("DeleteToken: %v", err))
 			}
 			return token, nil
 
