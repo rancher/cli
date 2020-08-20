@@ -147,8 +147,6 @@ func runCredential(ctx *cli.Context) error {
 		customPrint(fmt.Errorf("LoadToken: %v", err))
 	}
 	if cachedCred != nil {
-		customPrint(fmt.Sprintf("Using cached token, run 'rancher token delete %s' "+
-			"if there's an error", cachedCredName))
 		return json.NewEncoder(os.Stdout).Encode(cachedCred)
 	}
 
