@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -1095,20 +1094,20 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 	return nil
 }
 
-// processValueInstall creates a map of the values file and fills in missing answers with defaults
+// processValueInstall creates a map of the values file and fills in missing entries with defaults
 func processValueInstall(ctx *cli.Context, tv *managementClient.TemplateVersion, existingValues string) (string, error) {
-	answers, err := processValues(ctx, existingValues)
+	values, err := processValues(ctx, existingValues)
 	if err != nil {
 		return existingValues, err
 	}
-	// add default values if answers missing from map
-	err = fillInDefaultAnswers(tv, answers)
+	// add default values if entries missing from map
+	err = fillInDefaultAnswers(tv, values)
 	if err != nil {
 		return existingValues, err
 	}
 
 	// change map back into string to be consistent with ui
-	existingValues, err = parseMapToYamlString(answers)
+	existingValues, err = parseMapToYamlString(values)
 	if err != nil {
 		return existingValues, err
 	}
@@ -1117,12 +1116,12 @@ func processValueInstall(ctx *cli.Context, tv *managementClient.TemplateVersion,
 
 // processValueUpgrades creates map from existing values and applies updates
 func processValueUpgrades(ctx *cli.Context, existingValues string) (string, error) {
-	answers, err := processValues(ctx, existingValues)
+	values, err := processValues(ctx, existingValues)
 	if err != nil {
 		return existingValues, err
 	}
 	// change map back into string to be consistent with ui
-	existingValues, err = parseMapToYamlString(answers)
+	existingValues, err = parseMapToYamlString(values)
 	if err != nil {
 		return existingValues, err
 	}
@@ -1131,23 +1130,23 @@ func processValueUpgrades(ctx *cli.Context, existingValues string) (string, erro
 
 // processValues creates a map of the values file
 func processValues(ctx *cli.Context, existingValues string) (map[string]interface{}, error) {
-	answers := make(map[string]interface{})
+	var err error
+	values := make(map[string]interface{})
 	if existingValues != "" {
-		//parse values into map to ensure previous values are considered on update
-		valuesMap, err := createValuesMap([]byte(existingValues))
+		// parse values into map to ensure previous values are considered on update
+		values, err = createValuesMap([]byte(existingValues))
 		if err != nil {
-			return answers, err
+			return values, err
 		}
-		valuesToAnswers(valuesMap, answers)
 	}
-
 	if ctx.String("values") != "" {
 		// if values file passed in, overwrite defaults with new key value pair
-		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
-			return answers, err
+		values, err = parseFile(ctx.String("values"))
+		if err != nil {
+			return values, err
 		}
 	}
-	return answers, nil
+	return values, nil
 }
 
 // processAnswerInstall adds answers to given map, and prompts users to answers chart questions if interactive is true
@@ -1228,16 +1227,6 @@ func parseAnswersFile(location string, answers map[string]string) error {
 	return nil
 }
 
-// parseValuesFile reads a values file and parses it to answers in helm strvals format
-func parseValuesFile(location string, answers map[string]interface{}) error {
-	values, err := parseFile(location)
-	if err != nil {
-		return err
-	}
-	valuesToAnswers(values, answers)
-	return nil
-}
-
 func parseFile(location string) (map[string]interface{}, error) {
 	bytes, err := ioutil.ReadFile(location)
 	if err != nil {
@@ -1259,39 +1248,6 @@ func createValuesMap(bytes []byte) (map[string]interface{}, error) {
 		}
 	}
 	return values, nil
-}
-
-func valuesToAnswers(values map[string]interface{}, answers map[string]interface{}) {
-	for k, v := range values {
-		traverseValuesToAnswers(k, v, answers)
-	}
-}
-
-func traverseValuesToAnswers(key string, obj interface{}, answers map[string]interface{}) {
-	if obj == nil {
-		return
-	}
-	raw := reflect.ValueOf(obj)
-	switch raw.Kind() {
-	case reflect.Map:
-		for _, subKey := range raw.MapKeys() {
-			v := raw.MapIndex(subKey).Interface()
-			nextKey := fmt.Sprintf("%s.%s", key, subKey)
-			traverseValuesToAnswers(nextKey, v, answers)
-		}
-	case reflect.Slice:
-		a, ok := obj.([]interface{})
-		if ok {
-			for i, v := range a {
-				nextKey := fmt.Sprintf("%s[%d]", key, i)
-				traverseValuesToAnswers(nextKey, v, answers)
-			}
-		}
-	case reflect.Bool:
-		answers[key] = obj
-	default:
-		answers[key] = fmt.Sprintf("%v", obj)
-	}
 }
 
 func askQuestions(tv *managementClient.TemplateVersion, answers map[string]string) error {
