@@ -27,6 +27,7 @@ func (m *MainTestSuite) TestParseArgs(c *check.C) {
 		{"rancher", "run", "--debug", "-f=b"},
 		{"rancher", "run", "--debug", "-=b"},
 		{"rancher", "run", "--debug", "-"},
+		{"rancher", "token", "--cache-dir=/path/to/cache"},
 	}
 	r0, err := parseArgs(input[0])
 	if err != nil {
@@ -61,4 +62,10 @@ func (m *MainTestSuite) TestParseArgs(c *check.C) {
 		c.Fatal(err)
 	}
 	c.Assert(r5, check.DeepEquals, []string{"rancher", "run", "--debug", "-"})
+
+	r6, err := parseArgs(input[6])
+	if err != nil {
+		c.Fatal(err)
+	}
+	c.Assert(r6, check.DeepEquals, []string{"rancher", "token", "--cache-dir=/path/to/cache"})
 }
