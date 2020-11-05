@@ -526,7 +526,7 @@ func generateKey() (string, error) {
 }
 
 func getCacheDir(ctx *cli.Context) (string, error) {
-	p := ctx.String("cache-path")
+	p := ctx.String("cache-dir")
 	if p == "" {
 		return os.Getwd()
 	}
