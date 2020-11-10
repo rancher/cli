@@ -17,7 +17,6 @@ import (
 	url2 "net/url"
 	"os"
 	"os/signal"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -110,11 +109,6 @@ func CredentialCommand() cli.Command {
 				Name:  "skip-verify",
 				Usage: "Skip verification of the CACerts presented by the Server",
 			},
-			cli.StringFlag{
-				Name:   "cache-dir",
-				Usage:  "The absolute path for the kubectl-token .cache directory",
-				EnvVar: "RANCHER_CACHE_DIR",
-			},
 		},
 		Subcommands: []cli.Command{
 			cli.Command{
@@ -147,13 +141,8 @@ func runCredential(ctx *cli.Context) error {
 	}
 	clusterID := ctx.String("cluster")
 
-	dir, err := getCacheDir(ctx)
-	if err != nil {
-		return err
-	}
-
 	cachedCredName := fmt.Sprintf("%s_%s", userID, clusterID)
-	cachedCred, err := loadCachedCredential(cachedCredName, dir)
+	cachedCred, err := loadCachedCredential(cachedCredName)
 	if err != nil {
 		customPrint(fmt.Errorf("LoadToken: %v", err))
 	}
@@ -175,7 +164,7 @@ func runCredential(ctx *cli.Context) error {
 		return err
 	}
 
-	if err := cacheCredential(newCred, fmt.Sprintf("%s_%s", userID, clusterID), dir); err != nil {
+	if err := cacheCredential(newCred, fmt.Sprintf("%s_%s", userID, clusterID)); err != nil {
 		customPrint(fmt.Errorf("CacheToken: %v", err))
 	}
 
@@ -186,7 +175,7 @@ func deleteCachedCredential(ctx *cli.Context) error {
 	if len(ctx.Args()) == 0 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
-	dir, err := getCacheDir(ctx)
+	dir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -206,7 +195,11 @@ func deleteCachedCredential(ctx *cli.Context) error {
 	return nil
 }
 
-func loadCachedCredential(key, dir string) (*ExecCredential, error) {
+func loadCachedCredential(key string) (*ExecCredential, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
 	cachePath := filepath.Join(dir, kubeConfigCache, fmt.Sprintf("%s%s", key, cachedFileExt))
 	f, err := os.Open(cachePath)
 	if err != nil {
@@ -229,12 +222,15 @@ func loadCachedCredential(key, dir string) (*ExecCredential, error) {
 	return execCredential, nil
 }
 
-func cacheCredential(cred *ExecCredential, id, dir string) error {
+func cacheCredential(cred *ExecCredential, id string) error {
 	// cache only if valid
 	if cred.Status.Token == "" {
 		return nil
 	}
-
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 	cachePathDir := filepath.Join(dir, kubeConfigCache)
 	if err := os.MkdirAll(cachePathDir, os.FileMode(0700)); err != nil {
 		return err
@@ -523,19 +519,6 @@ func generateKey() (string, error) {
 	}
 
 	return string(token), nil
-}
-
-func getCacheDir(ctx *cli.Context) (string, error) {
-	p := ctx.String("cache-dir")
-	if p == "" {
-		return os.Getwd()
-	}
-
-	if !path.IsAbs(p) {
-		return "", fmt.Errorf("cache dir requires an absolute path")
-	}
-
-	return p, nil
 }
 
 func getTLSConfig(input *LoginInput) (*tls.Config, error) {
