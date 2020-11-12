@@ -17,10 +17,10 @@ import (
 	url2 "net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/types/convert"
 	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/urfave/cli"
@@ -51,8 +51,6 @@ type LoginInput struct {
 }
 
 const (
-	kubeConfigCache = "/.cache/token"
-	cachedFileExt   = ".json"
 	authProviderURL = "%s/v3-public/authProviders"
 	authTokenURL    = "%s/v3-public/authTokens/%s"
 )
@@ -142,7 +140,7 @@ func runCredential(ctx *cli.Context) error {
 	clusterID := ctx.String("cluster")
 
 	cachedCredName := fmt.Sprintf("%s_%s", userID, clusterID)
-	cachedCred, err := loadCachedCredential(cachedCredName)
+	cachedCred, err := loadCachedCredential(ctx, cachedCredName)
 	if err != nil {
 		customPrint(fmt.Errorf("LoadToken: %v", err))
 	}
@@ -164,7 +162,7 @@ func runCredential(ctx *cli.Context) error {
 		return err
 	}
 
-	if err := cacheCredential(newCred, fmt.Sprintf("%s_%s", userID, clusterID)); err != nil {
+	if err := cacheCredential(ctx, newCred, fmt.Sprintf("%s_%s", userID, clusterID)); err != nil {
 		customPrint(fmt.Errorf("CacheToken: %v", err))
 	}
 
@@ -175,76 +173,116 @@ func deleteCachedCredential(ctx *cli.Context) error {
 	if len(ctx.Args()) == 0 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
-	dir, err := os.Getwd()
+
+	cf, err := loadConfig(ctx)
 	if err != nil {
 		return err
 	}
-	cacheDir := filepath.Join(dir, kubeConfigCache)
+
+	// dir is always set by global default.
+	dir := ctx.GlobalString("config")
+
+	if len(cf.Servers) == 0 {
+		customPrint(fmt.Sprintf("there are no cached tokens in [%s]", dir))
+		return nil
+	}
+
 	if ctx.Args().First() == "all" {
-		customPrint(fmt.Sprintf("removing cached tokens [%s]", cacheDir))
-		return os.RemoveAll(cacheDir)
+		customPrint(fmt.Sprintf("removing cached tokens in [%s]", dir))
+		for _, server := range cf.Servers {
+			server.KubeCredentials = make(map[string]*config.ExecCredential)
+		}
+		return cf.Write()
 	}
+
 	for _, key := range ctx.Args() {
-		cachePath := filepath.Join(cacheDir, fmt.Sprintf("%s%s", key, cachedFileExt))
-		customPrint(fmt.Sprintf("removing [%s]", cachePath))
-		err := os.Remove(cachePath)
-		if err != nil && !os.IsNotExist(err) {
-			return err
+		customPrint(fmt.Sprintf("removing [%s]", key))
+		for _, server := range cf.Servers {
+			server.KubeCredentials[key] = nil
 		}
 	}
-	return nil
+
+	return cf.Write()
 }
 
-func loadCachedCredential(key string) (*ExecCredential, error) {
-	dir, err := os.Getwd()
+func loadCachedCredential(ctx *cli.Context, key string) (*config.ExecCredential, error) {
+	sc, err := lookupServerConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cachePath := filepath.Join(dir, kubeConfigCache, fmt.Sprintf("%s%s", key, cachedFileExt))
-	f, err := os.Open(cachePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
 
-		return nil, err
+	cred := sc.KubeToken(key)
+	ts := cred.Status.ExpirationTimestamp
+	if cred != nil && ts.Time.Before(time.Now()) {
+		cf, err := loadConfig(ctx)
+		if err != nil {
+			return nil, err
+		}
+		cf.Servers[ctx.String("server")].KubeCredentials[key] = nil
+		if err := cf.Write(); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
-	defer f.Close()
-	var execCredential *ExecCredential
-	if err := json.NewDecoder(f).Decode(&execCredential); err != nil {
-		return nil, err
-	}
-	ts := execCredential.Status.ExpirationTimestamp
-	if ts != nil && ts.Time.Before(time.Now()) {
-		err = os.Remove(cachePath)
-		return nil, err
-	}
-	return execCredential, nil
+
+	return cred, nil
 }
 
-func cacheCredential(cred *ExecCredential, id string) error {
+// there is overlap between this and the lookupConfig() function. However, lookupConfig() requires
+// a server to be previously set in the Config, which might not be the case if rancher token
+// is run before rancher login. Perhaps we can depricate rancher token down the line and defer
+// all it does to login.
+func lookupServerConfig(ctx *cli.Context) (*config.ServerConfig, error) {
+	server := ctx.String("server")
+	if server == "" {
+		return nil, fmt.Errorf("name of rancher server is required")
+	}
+
+	cf, err := loadConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sc := cf.Servers[server]
+	if sc == nil {
+		sc = &config.ServerConfig{
+			KubeCredentials: make(map[string]*config.ExecCredential),
+		}
+		cf.Servers[server] = sc
+		if err := cf.Write(); err != nil {
+			return nil, err
+		}
+	}
+	return sc, nil
+}
+
+func cacheCredential(ctx *cli.Context, cred *config.ExecCredential, id string) error {
 	// cache only if valid
 	if cred.Status.Token == "" {
 		return nil
 	}
-	dir, err := os.Getwd()
+
+	server := ctx.String("server")
+	if server == "" {
+		return fmt.Errorf("name of rancher server is required")
+	}
+
+	cf, err := loadConfig(ctx)
 	if err != nil {
 		return err
 	}
-	cachePathDir := filepath.Join(dir, kubeConfigCache)
-	if err := os.MkdirAll(cachePathDir, os.FileMode(0700)); err != nil {
-		return err
-	}
-	path := filepath.Join(cachePathDir, fmt.Sprintf("%s%s", id, cachedFileExt))
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.FileMode(0600))
+
+	sc, err := lookupServerConfig(ctx)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	return json.NewEncoder(f).Encode(cred)
+
+	sc.KubeCredentials[id] = cred
+	cf.Servers[server] = sc
+	return cf.Write()
 }
 
-func loginAndGenerateCred(input *LoginInput) (*ExecCredential, error) {
+func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 	if input.authProvider == "" {
 		provider, err := getAuthProvider(input.server)
 		if err != nil {
@@ -269,12 +307,12 @@ func loginAndGenerateCred(input *LoginInput) (*ExecCredential, error) {
 			return nil, err
 		}
 	}
-	cred := &ExecCredential{
-		TypeMeta: TypeMeta{
-			Kind:       "ExecCredential",
+	cred := &config.ExecCredential{
+		TypeMeta: config.TypeMeta{
+			Kind:       "config.ExecCredential",
 			APIVersion: "client.authentication.k8s.io/v1beta1",
 		},
-		Status: &ExecCredentialStatus{},
+		Status: &config.ExecCredentialStatus{},
 	}
 	cred.Status.Token = token.Token
 	if token.ExpiresAt == "" {
@@ -285,7 +323,7 @@ func loginAndGenerateCred(input *LoginInput) (*ExecCredential, error) {
 		customPrint(fmt.Sprintf("\n error parsing time %s %v", token.ExpiresAt, err))
 		return nil, err
 	}
-	cred.Status.ExpirationTimestamp = &Time{Time: ts}
+	cred.Status.ExpirationTimestamp = &config.Time{Time: ts}
 	return cred, nil
 
 }
@@ -585,66 +623,4 @@ func customPrompt(field string, show bool) (result string, err error) {
 
 func customPrint(data interface{}) {
 	fmt.Fprintf(os.Stderr, "%v \n", data)
-}
-
-// ExecCredential is used by exec-based plugins to communicate credentials to
-// HTTP transports. //v1beta1/types.go
-type ExecCredential struct {
-	TypeMeta `json:",inline"`
-
-	// Spec holds information passed to the plugin by the transport. This contains
-	// request and runtime specific information, such as if the session is interactive.
-	Spec ExecCredentialSpec `json:"spec,omitempty"`
-
-	// Status is filled in by the plugin and holds the credentials that the transport
-	// should use to contact the API.
-	// +optional
-	Status *ExecCredentialStatus `json:"status,omitempty"`
-}
-
-// ExecCredentialSpec holds request and runtime specific information provided by
-// the transport.
-type ExecCredentialSpec struct{}
-
-// ExecCredentialStatus holds credentials for the transport to use.
-// Token and ClientKeyData are sensitive fields. This data should only be
-// transmitted in-memory between client and exec plugin process. Exec plugin
-// itself should at least be protected via file permissions.
-type ExecCredentialStatus struct {
-	// ExpirationTimestamp indicates a time when the provided credentials expire.
-	// +optional
-	ExpirationTimestamp *Time `json:"expirationTimestamp,omitempty"`
-	// Token is a bearer token used by the client for request authentication.
-	Token string `json:"token,omitempty"`
-	// PEM-encoded client TLS certificates (including intermediates, if any).
-	ClientCertificateData string `json:"clientCertificateData,omitempty"`
-	// PEM-encoded private key for the above certificate.
-	ClientKeyData string `json:"clientKeyData,omitempty"`
-}
-
-// TypeMeta describes an individual object in an API response or request
-// with strings representing the type of the object and its API schema version.
-// Structures that are versioned or persisted should inline TypeMeta.
-type TypeMeta struct {
-	// Kind is a string value representing the REST resource this object represents.
-	// Servers may infer this from the endpoint the client submits requests to.
-	// Cannot be updated.
-	// In CamelCase.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-	// +optional
-	Kind string `json:"kind,omitempty" protobuf:"bytes,1,opt,name=kind"`
-
-	// APIVersion defines the versioned schema of this representation of an object.
-	// Servers should convert recognized schemas to the latest internal value, and
-	// may reject unrecognized values.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-	// +optional
-	APIVersion string `json:"apiVersion,omitempty" protobuf:"bytes,2,opt,name=apiVersion"`
-}
-
-// Time is a wrapper around time.Time which supports correct
-// marshaling to YAML and JSON.  Wrappers are provided for many
-// of the factory methods that the time package offers.
-type Time struct {
-	time.Time `protobuf:"-"`
 }
