@@ -34,11 +34,13 @@ import (
 	managementClient "github.com/rancher/types/client/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
-	letters = "abcdefghijklmnopqrstuvwxyz0123456789"
-	cfgFile = "cli2.json"
+	letters             = "abcdefghijklmnopqrstuvwxyz0123456789"
+	cfgFile             = "cli2.json"
+	kubeConfigKeyFormat = "%s-%s"
 )
 
 var (
@@ -141,6 +143,31 @@ func listRoleTemplateBindings(ctx *cli.Context, b []RoleTemplateBinding) error {
 		})
 	}
 	return writer.Err()
+}
+
+func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
+	cf, err := loadConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	focusedServer := cf.FocusedServer()
+	kubeConfig, _ := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
+	return kubeConfig, nil
+}
+
+func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config) error {
+	cf, err := loadConfig(ctx)
+	if err != nil {
+		return err
+	}
+
+	if cf.FocusedServer().KubeConfigs == nil {
+		cf.FocusedServer().KubeConfigs = make(map[string]*api.Config)
+	}
+	focusedServer := cf.FocusedServer()
+	focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())] = kubeConfig
+	return cf.Write()
 }
 
 func usersToNameMapping(u []managementClient.User) map[string]string {
