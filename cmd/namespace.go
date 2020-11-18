@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+
+	"io/ioutil"
 
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
@@ -43,6 +46,33 @@ func NamespaceCommand() cli.Command {
 				},
 			},
 			{
+				Name:      "get",
+				Aliases:   []string{"g"},
+				Usage:     "Get a namespace by name or ID",
+				ArgsUsage: "[NAMESPACEID NAMESPACENAME]",
+				Action:    namespaceGet,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json', 'yaml' or Custom format: '{{.Namespace.ID}} {{.Namespace.Name}}'",
+					},
+					quietFlag,
+				},
+			},
+			{
+				Name:        "apply",
+				Usage:       "Apply a namespace from file",
+				Description: "\nApply a namespace in the current cluster.",
+				ArgsUsage:   "[NEWPROJECTNAME...]",
+				Action:      namespaceApply,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "filename, f",
+						Usage: "Filename that contains the configuration to apply",
+					},
+				},
+			},
+			{
 				Name:        "create",
 				Usage:       "Create a namespace",
 				Description: "\nCreates a namespace in the current cluster.",
@@ -52,6 +82,10 @@ func NamespaceCommand() cli.Command {
 					cli.StringFlag{
 						Name:  "description",
 						Usage: "Description to apply to the namespace",
+					},
+					cli.StringFlag{
+						Name:  "filename, f",
+						Usage: "Filename that contains the configuration to apply",
 					},
 				},
 			},
@@ -115,7 +149,7 @@ func namespaceLs(ctx *cli.Context) error {
 	return writer.Err()
 }
 
-func namespaceCreate(ctx *cli.Context) error {
+func namespaceGet(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
@@ -125,10 +159,108 @@ func namespaceCreate(ctx *cli.Context) error {
 		return err
 	}
 
-	newNamespace := &clusterClient.Namespace{
-		Name:        ctx.Args().First(),
-		ProjectID:   c.UserConfig.Project,
-		Description: ctx.String("description"),
+	var namespaceList []clusterClient.Namespace
+
+	for _, arg := range ctx.Args() {
+		namespace, err := getNamespaceByID(c, arg)
+		if err != nil {
+			return err
+		}
+		namespaceList = append(namespaceList, *namespace)
+	}
+
+	writer := NewTableWriter([][]string{
+		{"ID", "ID"},
+		{"NAME", "Namespace.Name"},
+		{"STATE", "Namespace.State"},
+		{"PROJECT", "Namespace.ProjectID"},
+		{"DESCRIPTION", "Namespace.Description"},
+	}, ctx)
+
+	defer writer.Close()
+
+	for _, item := range namespaceList {
+		writer.Write(&NamespaceData{
+			ID:        item.ID,
+			Namespace: item,
+		})
+	}
+
+	return writer.Err()
+}
+
+func namespaceApply(ctx *cli.Context) error {
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	var newNamespace *clusterClient.Namespace
+
+	if ctx.IsSet("filename") {
+		fileName := ctx.String("filename")
+		file, err := ioutil.ReadFile(fileName)
+		if err != nil {
+			return err
+		}
+		newNamespace = &clusterClient.Namespace{}
+		err = json.Unmarshal([]byte(file), newNamespace)
+		if err != nil {
+			return err
+		}
+		newNamespace.ProjectID = c.UserConfig.Project
+	} else {
+		newNamespace = &clusterClient.Namespace{
+			Name:        ctx.Args().First(),
+			ProjectID:   c.UserConfig.Project,
+			Description: ctx.String("description"),
+		}
+	}
+
+	existingNamespace, err := getNamespaceByID(c, newNamespace.ID)
+
+	if err != nil {
+		_, err = c.ClusterClient.Namespace.Create(newNamespace)
+		return err
+	}
+
+	_, err = c.ClusterClient.Namespace.Update(existingNamespace, newNamespace)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func namespaceCreate(ctx *cli.Context) error {
+	c, err := GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	var newNamespace *clusterClient.Namespace
+
+	if ctx.IsSet("filename") {
+		fileName := ctx.String("filename")
+		file, err := ioutil.ReadFile(fileName)
+		if err != nil {
+			return err
+		}
+		newNamespace = &clusterClient.Namespace{}
+		err = json.Unmarshal([]byte(file), newNamespace)
+		if err != nil {
+			return err
+		}
+
+	} else if ctx.NArg() != 0 {
+		newNamespace = &clusterClient.Namespace{
+			Name:        ctx.Args().First(),
+			ProjectID:   c.UserConfig.Project,
+			Description: ctx.String("description"),
+		}
+	} else {
+		return cli.ShowSubcommandHelp(ctx)
 	}
 
 	_, err = c.ClusterClient.Namespace.Create(newNamespace)
