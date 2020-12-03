@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -35,7 +36,10 @@ import (
 	"github.com/urfave/cli"
 )
 
-const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
+const (
+	letters = "abcdefghijklmnopqrstuvwxyz0123456789"
+	cfgFile = "cli2.json"
+)
 
 var (
 	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
@@ -229,10 +233,10 @@ func verifyCert(caCert []byte) (string, error) {
 }
 
 func loadConfig(ctx *cli.Context) (config.Config, error) {
+	// path will always be set by the global flag default
 	path := ctx.GlobalString("config")
-	if path == "" {
-		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
-	}
+	path = filepath.Join(path, cfgFile)
+
 	cf := config.Config{
 		Path:    path,
 		Servers: make(map[string]*config.ServerConfig),

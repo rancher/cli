@@ -81,6 +81,12 @@ func mainErr() error {
 			Name:  "debug",
 			Usage: "Debug logging",
 		},
+		cli.StringFlag{
+			Name:   "config, c",
+			Usage:  "Path to rancher config",
+			EnvVar: "RANCHER_CONFIG_DIR",
+			Value:  os.ExpandEnv("${HOME}/.rancher"),
+		},
 	}
 	app.Commands = []cli.Command{
 		cmd.AppCommand(),
