@@ -27,19 +27,19 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-const deleteCommandUsage = `
-Delete cached token used for kubectl login at ${PWD}/.cache/token
-
+const deleteExample = `
 Example:
-	# Delete a cached credential 
+	# Delete a cached credential
 	$ rancher token delete cluster1_c-1234
 
 	# Delete multiple cached credentials
 	$ rancher token delete cluster1_c-1234 cluster2_c-2345
 
-	# Delete all credentials 
+	# Delete all credentials
 	$ rancher token delete all
 `
+
+var deleteCommandUsage = fmt.Sprintf("Delete cached token used for kubectl login at [%s] \n %s", os.ExpandEnv("${HOME}/.rancher"), deleteExample)
 
 type LoginInput struct {
 	server       string
@@ -212,8 +212,11 @@ func loadCachedCredential(ctx *cli.Context, key string) (*config.ExecCredential,
 	}
 
 	cred := sc.KubeToken(key)
+	if cred == nil {
+		return cred, nil
+	}
 	ts := cred.Status.ExpirationTimestamp
-	if cred != nil && ts.Time.Before(time.Now()) {
+	if ts != nil && ts.Time.Before(time.Now()) {
 		cf, err := loadConfig(ctx)
 		if err != nil {
 			return nil, err
@@ -309,7 +312,7 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 	}
 	cred := &config.ExecCredential{
 		TypeMeta: config.TypeMeta{
-			Kind:       "config.ExecCredential",
+			Kind:       "ExecCredential",
 			APIVersion: "client.authentication.k8s.io/v1beta1",
 		},
 		Status: &config.ExecCredentialStatus{},
