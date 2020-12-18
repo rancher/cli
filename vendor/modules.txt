@@ -32,6 +32,8 @@ github.com/mattn/go-isatty
 github.com/mattn/go-tty
 # github.com/patrickmn/go-cache v2.0.0+incompatible
 github.com/patrickmn/go-cache
+# github.com/pkg/browser v0.0.0-20201207095918-0426ae3fba23
+github.com/pkg/browser
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
 # github.com/pkg/term v0.0.0-20160705081919-b1f72af2d630

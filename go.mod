@@ -13,6 +13,7 @@ require (
 	github.com/hashicorp/go-version v1.1.0
 	github.com/mattn/go-tty v0.0.0-20180219170247-931426f7535a // indirect
 	github.com/patrickmn/go-cache v2.0.0+incompatible
+	github.com/pkg/browser v0.0.0-20201207095918-0426ae3fba23
 	github.com/pkg/errors v0.8.1
 	github.com/pkg/term v0.0.0-20160705081919-b1f72af2d630 // indirect
 	github.com/rancher/norman v0.0.0-20200520181341-ab75acb55410
