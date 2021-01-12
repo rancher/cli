@@ -2,7 +2,10 @@ module github.com/rancher/cli
 
 go 1.13
 
-replace k8s.io/client-go => k8s.io/client-go v0.17.2
+replace (
+	k8s.io/apimachinery => k8s.io/apimachinery v0.17.2
+	k8s.io/client-go => k8s.io/client-go v0.17.2
+)
 
 require (
 	github.com/c-bata/go-prompt v0.0.0-20180219161504-f329ebd2409d
