@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 // Config holds the main config for the user
@@ -28,6 +29,7 @@ type ServerConfig struct {
 	Project         string                     `json:"project"`
 	CACerts         string                     `json:"cacert"`
 	KubeCredentials map[string]*ExecCredential `json:"kubeCredentials"`
+	KubeConfigs     map[string]*api.Config     `json:"kubeConfigs"`
 }
 
 func (c Config) Write() error {
