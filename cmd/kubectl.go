@@ -5,13 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 
-	"github.com/rancher/norman/clientbase"
-	client "github.com/rancher/types/client/management/v3"
 	"github.com/urfave/cli"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func KubectlCommand() cli.Command {
@@ -42,60 +37,14 @@ func runKubectl(ctx *cli.Context) error {
 		return err
 	}
 
-	config, err := loadConfig(ctx)
+	cluster, err := getClusterByID(c, c.UserConfig.FocusedCluster())
 	if err != nil {
 		return err
 	}
 
-	currentRancherServer := config.FocusedServer()
-	if currentRancherServer == nil {
-		return fmt.Errorf("no focused server")
-	}
-
-	currentToken := currentRancherServer.AccessKey
-	t, err := c.ManagementClient.Token.ByID(currentToken)
+	config, err := c.ManagementClient.Cluster.ActionGenerateKubeconfig(cluster)
 	if err != nil {
 		return err
-	}
-
-	currentUser := t.UserID
-	kubeConfig, err := getKubeConfigForUser(ctx, currentUser)
-	if err != nil {
-		return err
-	}
-
-	var isTokenValid bool
-	if kubeConfig != nil {
-		tokenID, err := extractKubeconfigTokenID(*kubeConfig)
-		if err != nil {
-			return err
-		}
-		isTokenValid, err = validateToken(tokenID, c.ManagementClient.Token)
-		if err != nil {
-			return err
-		}
-	}
-
-	if kubeConfig == nil || !isTokenValid {
-		cluster, err := getClusterByID(c, c.UserConfig.FocusedCluster())
-		if err != nil {
-			return err
-		}
-
-		config, err := c.ManagementClient.Cluster.ActionGenerateKubeconfig(cluster)
-		if err != nil {
-			return err
-		}
-
-		kubeConfigBytes := []byte(config.Config)
-		kubeConfig, err = clientcmd.Load(kubeConfigBytes)
-		if err != nil {
-			return err
-		}
-
-		if err := setKubeConfigForUser(ctx, currentUser, kubeConfig); err != nil {
-			return err
-		}
 	}
 
 	tmpfile, err := ioutil.TempFile("", "rancher-")
@@ -104,10 +53,13 @@ func runKubectl(ctx *cli.Context) error {
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if err := clientcmd.WriteToFile(*kubeConfig, tmpfile.Name()); err != nil {
+	_, err = tmpfile.Write([]byte(config.Config))
+	if err != nil {
 		return err
 	}
-	if err := tmpfile.Close(); err != nil {
+
+	err = tmpfile.Close()
+	if err != nil {
 		return err
 	}
 
@@ -121,30 +73,4 @@ func runKubectl(ctx *cli.Context) error {
 		return err
 	}
 	return nil
-}
-
-func extractKubeconfigTokenID(kubeconfig api.Config) (string, error) {
-	if len(kubeconfig.AuthInfos) != 1 {
-		return "", fmt.Errorf("invalid kubeconfig, expected to contain exactly 1 user")
-	}
-	var parts []string
-	for _, val := range kubeconfig.AuthInfos {
-		parts = strings.Split(val.Token, ":")
-		if len(parts) != 2 {
-			return "", fmt.Errorf("failed to parse kubeconfig token")
-		}
-	}
-
-	return parts[0], nil
-}
-
-func validateToken(tokenID string, tokenClient client.TokenOperations) (bool, error) {
-	token, err := tokenClient.ByID(tokenID)
-	if err != nil {
-		if !clientbase.IsNotFound(err) {
-			return false, err
-		}
-		return false, nil
-	}
-	return !token.Expired, nil
 }
