@@ -222,9 +222,8 @@ func addProjectMemberRoles(ctx *cli.Context) error {
 
 	for _, role := range roles {
 		rtb := managementClient.ProjectRoleTemplateBinding{
-			ProjectID:       projectID,
-			RoleTemplateID:  role,
-			UserPrincipalID: member.ID,
+			ProjectID:      projectID,
+			RoleTemplateID: role,
 		}
 		if member.PrincipalType == "user" {
 			rtb.UserPrincipalID = member.ID
