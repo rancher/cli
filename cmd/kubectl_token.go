@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/browser"
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/types/convert"
 	managementClient "github.com/rancher/types/client/management/v3"
@@ -419,6 +420,7 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 		input.server, id, encodedKey, responseType)
 
 	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s \n", loginRequest))
+	browser.OpenURL(loginRequest)
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
