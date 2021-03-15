@@ -1,17 +1,15 @@
-FROM golang:1.13.9
+FROM golang:1.16
 RUN apt-get update && \
     apt-get install -y xz-utils zip rsync
 
-RUN go get -u golang.org/x/lint/golint && \
-    go get -d golang.org/x/tools/cmd/goimports && \
-    # This needs to be kept up to date with rancher/types
-    git -C /go/src/golang.org/x/tools/cmd/goimports checkout -b release-branch.go1.13 origin/release-branch.go1.13 && \
-    go install golang.org/x/tools/cmd/goimports
+RUN curl -sL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.38.0;
 
-RUN curl -sL https://get.docker.com/builds/Linux/x86_64/docker-1.9.1 > /usr/bin/docker && \
+ENV DOCKER_VERSION=20.10.5
+
+RUN curl -sL https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz -o docker-${DOCKER_VERSION}.tgz && \
+    tar -zxvf docker-${DOCKER_VERSION}.tgz -C /usr/bin docker/docker --strip-components 1 && \
     chmod +x /usr/bin/docker
 
-ENV GO111MODULE off
 ENV PATH /go/bin:$PATH
 ENV DAPPER_SOURCE /go/src/github.com/rancher/cli
 ENV DAPPER_OUTPUT bin build/bin dist
