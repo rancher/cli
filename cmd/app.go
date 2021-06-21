@@ -46,14 +46,14 @@ Example:
 	$ rancher app install --answers /example/answers.yaml redis appFoo
 
 	# Install the redis template and set multiple answers and the version to install
-	$ rancher app install --set foo=bar --set baz=bunk --version 1.0.1 redis appFoo
+	$ rancher app install --set foo=bar --set-string baz=bunk --version 1.0.1 redis appFoo
 
 	# Install the redis template and specify the namespace for the app
 	$ rancher app install --namespace bar redis appFoo
 `
 	upgradeAppDescription = `
 Upgrade an existing app to a newer version via app template or app version in the current Rancher server.
-					
+
 Example:
 	# Upgrade the 'appFoo' app to latest version without any options
 	$ rancher app upgrade appFoo latest
@@ -62,7 +62,7 @@ Example:
 	$ rancher app upgrade appFoo ./redis
 
 	# Upgrade the 'appFoo' app and set multiple answers and the 0.2.0 version to install
-	$ rancher app upgrade --set foo=bar --set baz=bunk appFoo 0.2.0
+	$ rancher app upgrade --set foo=bar --set-string baz=bunk appFoo 0.2.0
 `
 )
 
@@ -171,6 +171,10 @@ func AppCommand() cli.Command {
 						Name:  "set",
 						Usage: "Set answers for the template, can be used multiple times. Example: --set foo=bar",
 					},
+					cli.StringSliceFlag{
+						Name:  "set-string",
+						Usage: "Set string answers for the template (Skips Helm's type conversion), can be used multiple times. Example: --set-string foo=bar",
+					},
 					cli.StringFlag{
 						Name:  "version",
 						Usage: "Version of the template to use",
@@ -224,6 +228,10 @@ func AppCommand() cli.Command {
 					cli.StringSliceFlag{
 						Name:  "set",
 						Usage: "Set answers for the template, can be used multiple times. Example: --set foo=bar",
+					},
+					cli.StringSliceFlag{
+						Name:  "set-string",
+						Usage: "Set string answers for the template (Skips Helm's type conversion), can be used multiple times. Example: --set-string foo=bar",
 					},
 					cli.BoolFlag{
 						Name:  "show-versions,v",
@@ -432,8 +440,9 @@ func appUpgrade(ctx *cli.Context) error {
 	}
 
 	answers := app.Answers
+	answersSetString := app.AnswersSetString
 	values := app.ValuesYaml
-	answers, err = processAnswerUpdates(ctx, answers)
+	answers, answersSetString, err = processAnswerUpdates(ctx, answers, answersSetString)
 	if err != nil {
 		return err
 	}
@@ -445,9 +454,10 @@ func appUpgrade(ctx *cli.Context) error {
 	force := ctx.Bool("force")
 
 	au := &projectClient.AppUpgradeConfig{
-		Answers:      answers,
-		ForceUpgrade: force,
-		ValuesYaml:   values,
+		Answers:          answers,
+		AnswersSetString: answersSetString,
+		ForceUpgrade:     force,
+		ValuesYaml:       values,
 	}
 
 	if resolveTemplatePath(appVersionOrLocalTemplatePath) {
@@ -634,7 +644,7 @@ func templateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		answers, err := processAnswerInstall(ctx, nil, nil, false, false)
+		answers, answersSetString, err := processAnswerInstall(ctx, nil, nil, nil, false, false)
 		if err != nil {
 			return err
 		}
@@ -645,6 +655,7 @@ func templateInstall(ctx *cli.Context) error {
 
 		app.Files = files
 		app.Answers = answers
+		app.AnswersSetString = answersSetString
 		app.ValuesYaml = values
 		namespace := ctx.String("namespace")
 		if namespace == "" {
@@ -692,7 +703,7 @@ func templateInstall(ctx *cli.Context) error {
 		}
 
 		interactive := !ctx.Bool("no-prompt")
-		answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive, false)
+		answers, answersSetString, err := processAnswerInstall(ctx, templateVersion, nil, nil, interactive, false)
 		if err != nil {
 			return err
 		}
@@ -709,6 +720,7 @@ func templateInstall(ctx *cli.Context) error {
 			return err
 		}
 		app.Answers = answers
+		app.AnswersSetString = answersSetString
 		app.ValuesYaml = values
 		app.ExternalID = templateVersion.ExternalID
 		app.TargetNamespace = namespace
@@ -1153,53 +1165,64 @@ func processValues(ctx *cli.Context, existingValues string) (map[string]interfac
 func processAnswerInstall(
 	ctx *cli.Context,
 	tv *managementClient.TemplateVersion,
-	answers map[string]string,
+	answers,
+	answersSetString map[string]string,
 	interactive bool,
 	multicluster bool,
-) (map[string]string, error) {
+) (map[string]string, map[string]string, error) {
 	var err error
-	answers, err = processAnswerUpdates(ctx, answers)
+	answers, answersSetString, err = processAnswerUpdates(ctx, answers, answersSetString)
 	if err != nil {
-		return answers, err
+		return answers, answersSetString, err
 	}
 	// interactive occurs before adding defaults to ensure all questions are asked
 	if interactive {
 		// answers to questions will be added to map
 		err := askQuestions(tv, answers)
 		if err != nil {
-			return answers, err
+			return answers, answersSetString, err
 		}
 	}
 	if multicluster && !interactive {
 		// add default values if answers missing from map
 		err = fillInDefaultAnswersStringMap(tv, answers)
 		if err != nil {
-			return answers, err
+			return answers, answersSetString, err
 		}
 	}
-	return answers, nil
+	return answers, answersSetString, nil
 }
 
-func processAnswerUpdates(ctx *cli.Context, answers map[string]string) (map[string]string, error) {
+func processAnswerUpdates(ctx *cli.Context, answers, answersSetString map[string]string) (map[string]string, map[string]string, error) {
+	logrus.Println("ok")
 	if answers == nil || ctx.Bool("reset") {
 		// this would not be possible without returning a map
 		answers = make(map[string]string)
 	}
-
+	if answersSetString == nil || ctx.Bool("reset") {
+		// this would not be possible without returning a map
+		answersSetString = make(map[string]string)
+	}
 	if ctx.String("answers") != "" {
 		err := parseAnswersFile(ctx.String("answers"), answers)
 		if err != nil {
-			return answers, err
+			return answers, answersSetString, err
 		}
 	}
-
 	for _, answer := range ctx.StringSlice("set") {
 		parts := strings.SplitN(answer, "=", 2)
 		if len(parts) == 2 {
 			answers[parts[0]] = parts[1]
 		}
 	}
-	return answers, nil
+	for _, answer := range ctx.StringSlice("set-string") {
+		parts := strings.SplitN(answer, "=", 2)
+		logrus.Printf("%v\n", parts)
+		if len(parts) == 2 {
+			answersSetString[parts[0]] = parts[1]
+		}
+	}
+	return answers, answersSetString, nil
 }
 
 // parseMapToYamlString create yaml string from answers map
