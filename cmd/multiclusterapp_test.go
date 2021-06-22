@@ -3,7 +3,7 @@ package cmd
 import (
 	"testing"
 
-	client "github.com/rancher/types/client/management/v3"
+	client "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/stretchr/testify/assert"
 )
 

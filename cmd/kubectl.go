@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/rancher/norman/clientbase"
-	client "github.com/rancher/types/client/management/v3"
+	client "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/urfave/cli"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"

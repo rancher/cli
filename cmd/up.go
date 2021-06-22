@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 
 	"github.com/rancher/cli/cliclient"
-	client "github.com/rancher/types/client/management/v3"
+	client "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/urfave/cli"
 )
 

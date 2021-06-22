@@ -22,7 +22,7 @@ import (
 
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/types/convert"
-	managementClient "github.com/rancher/types/client/management/v3"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/urfave/cli"
 	"golang.org/x/crypto/ssh/terminal"
 )
