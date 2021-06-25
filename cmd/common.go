@@ -31,7 +31,7 @@ import (
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
-	managementClient "github.com/rancher/types/client/management/v3"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"k8s.io/client-go/tools/clientcmd/api"
