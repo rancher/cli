@@ -11,6 +11,14 @@ For usage information see: https://rancher.com/docs/rancher/v2.x/en/cli/
 
 Check the [releases page](https://github.com/rancher/cli/releases) for direct downloads of the binary. After you download it, you can add it to your `$PATH` or [build your own from source](#building-from-source).
 
+### Chocolatey (Windows)
+
+You can install `cli` using [Chocolatey](https://chocolatey.org/):
+
+```sh
+choco install rancher-cli
+```
+
 ## Setting up Rancher CLI with a Rancher Server
 
 The CLI requires your Rancher Server address, along with [credentials for authentication](https://rancher.com/docs/rancher/v2.x/en/user-settings/api-keys/). Rancher CLI pulls this information from a JSON file, `cli2.json`, which is created the first time you run `rancher login`. By default, the path of this file is `~/.rancher/cli2.json`.
