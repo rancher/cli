@@ -26,6 +26,8 @@ func (s *CommonTestSuite) TestParseClusterAndProjectID(c *check.C) {
 	testParse(c, "cocal:p-12345", "", "", true)
 	testParse(c, "c-123:p-123", "", "", true)
 	testParse(c, "", "", "", true)
+	testParse(c, "c-m-12345678:p-12345", "c-m-12345678", "p-12345", false)
+	testParse(c, "c-m-123:p-12345", "", "", true)
 }
 
 func testParse(c *check.C, testID, expectedCluster, expectedProject string, errorExpected bool) {
