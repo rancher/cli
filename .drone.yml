@@ -236,6 +236,7 @@ steps:
       from_secret: github_token
     checksum:
     - sha256
+    checksum_flatten: true
     files:
     - "dist/artifacts/${DRONE_TAG}/rancher*"
   when:
@@ -257,6 +258,7 @@ steps:
       from_secret: github_token
     checksum:
     - sha256
+    checksum_flatten: true
     files:
     - "dist/artifacts/${DRONE_TAG}/rancher*"
     prerelease: true
