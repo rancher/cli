@@ -17,6 +17,7 @@ import (
 	url2 "net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -39,7 +40,7 @@ Example:
 	$ rancher token delete all
 `
 
-var deleteCommandUsage = fmt.Sprintf("Delete cached token used for kubectl login at [%s] \n %s", os.ExpandEnv("${HOME}/.rancher"), deleteExample)
+var deleteCommandUsage = fmt.Sprintf("Delete cached token used for kubectl login at [%s] \n %s", filepath.Join(os.ExpandEnv("${HOME}"), ".rancher"), deleteExample)
 
 type LoginInput struct {
 	server       string

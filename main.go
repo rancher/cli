@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -32,7 +33,7 @@ Run '{{.Name}} COMMAND --help' for more information on a command.
 
 var CommandHelpTemplate = `{{.Usage}}
 {{if .Description}}{{.Description}}{{end}}
-Usage: 
+Usage:
 	{{.HelpName}} {{if .Flags}}[OPTIONS] {{end}}{{if ne "None" .ArgsUsage}}{{if ne "" .ArgsUsage}}{{.ArgsUsage}}{{else}}[arg...]{{end}}{{end}}
 
 {{if .Flags}}Options:{{range .Flags}}
@@ -85,7 +86,7 @@ func mainErr() error {
 			Name:   "config, c",
 			Usage:  "Path to rancher config",
 			EnvVar: "RANCHER_CONFIG_DIR",
-			Value:  os.ExpandEnv("${HOME}/.rancher"),
+			Value:  filepath.Join(os.ExpandEnv("${HOME}"), ".rancher"),
 		},
 	}
 	app.Commands = []cli.Command{
