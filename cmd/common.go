@@ -333,6 +333,14 @@ func GetResourceType(c *cliclient.MasterClient, resource string) (string, error)
 			}
 		}
 	}
+	if c.CAPIClient != nil {
+		for key := range c.CAPIClient.APIBaseClient.Types {
+			lowerKey := strings.ToLower(key)
+			if strings.HasPrefix(lowerKey, "cluster.x-k8s.io") && lowerKey == strings.ToLower(resource) {
+				return key, nil
+			}
+		}
+	}
 	return "", fmt.Errorf("unknown resource type: %s", resource)
 }
 
@@ -347,6 +355,11 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 		}
 		var schemaClient clientbase.APIBaseClientInterface
 		// the schemaType dictates which client we need to use
+		if c.CAPIClient != nil {
+			if strings.HasPrefix(rt, "cluster.x-k8s.io") {
+				schemaClient = c.CAPIClient
+			}
+		}
 		if c.ManagementClient != nil {
 			if _, ok := c.ManagementClient.APIBaseClient.Types[rt]; ok {
 				schemaClient = c.ManagementClient

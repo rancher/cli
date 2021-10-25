@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-
 	"regexp"
 	"strings"
 
@@ -97,6 +96,7 @@ func mainErr() error {
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
 		cmd.LoginCommand(),
+		cmd.MachineCommand(),
 		cmd.MultiClusterAppCommand(),
 		cmd.NamespaceCommand(),
 		cmd.NodeCommand(),

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -78,12 +79,7 @@ func nodeSSH(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, nodeName, "node")
-	if err != nil {
-		return err
-	}
-
-	sshNode, err := getNodeByID(ctx, c, resource.ID)
+	sshNode, key, err := getNodeAndKey(ctx, c, nodeName)
 	if err != nil {
 		return err
 	}
@@ -91,18 +87,46 @@ func nodeSSH(ctx *cli.Context) error {
 	if user == "" {
 		user = sshNode.SshUser
 	}
-
-	key, err := getSSHKey(c, sshNode)
-	if err != nil {
-		return err
-	}
-
 	ipAddress := sshNode.IPAddress
 	if ctx.Bool("external") {
 		ipAddress = sshNode.ExternalIPAddress
 	}
 
 	return processExitCode(callSSH(key, ipAddress, user, args))
+}
+
+func getNodeAndKey(ctx *cli.Context, c *cliclient.MasterClient, nodeName string) (managementClient.Node, []byte, error) {
+	sshNode := managementClient.Node{}
+	resource, err := Lookup(c, nodeName, "node")
+	if err != nil {
+		return sshNode, nil, err
+	}
+
+	sshNode, err = getNodeByID(ctx, c, resource.ID)
+	if err != nil {
+		return sshNode, nil, err
+	}
+
+	link := sshNode.Links["nodeConfig"]
+	if link == "" {
+		// Get the machine and use that instead.
+		machine, err := getMachineByNodeName(ctx, c, nodeName)
+		if err != nil {
+			return sshNode, nil, fmt.Errorf("failed to find SSH key for node [%s]", nodeName)
+		}
+
+		link = machine.Links["sshkeys"]
+	}
+
+	key, sshUser, err := getSSHKey(c, link, getNodeName(sshNode))
+	if err != nil {
+		return sshNode, nil, err
+	}
+	if sshUser != "" {
+		sshNode.SshUser = sshUser
+	}
+
+	return sshNode, key, nil
 }
 
 func callSSH(content []byte, ip string, user string, args []string) error {
@@ -134,15 +158,14 @@ func callSSH(content []byte, ip string, user string, args []string) error {
 	return cmd.Run()
 }
 
-func getSSHKey(c *cliclient.MasterClient, node managementClient.Node) ([]byte, error) {
-	link, ok := node.Links["nodeConfig"]
-	if !ok {
-		return nil, fmt.Errorf("failed to find SSH key for %s", getNodeName(node))
+func getSSHKey(c *cliclient.MasterClient, link, nodeName string) ([]byte, string, error) {
+	if link == "" {
+		return nil, "", fmt.Errorf("failed to find SSH key for %s", nodeName)
 	}
 
 	req, err := http.NewRequest("GET", link, nil)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	req.SetBasicAuth(c.UserConfig.AccessKey, c.UserConfig.SecretKey)
 	req.Header.Add("Accept-Encoding", "zip")
@@ -153,7 +176,7 @@ func getSSHKey(c *cliclient.MasterClient, node managementClient.Node) ([]byte, e
 		roots := x509.NewCertPool()
 		ok := roots.AppendCertsFromPEM([]byte(c.UserConfig.CACerts))
 		if !ok {
-			return []byte{}, err
+			return []byte{}, "", err
 		}
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -165,33 +188,57 @@ func getSSHKey(c *cliclient.MasterClient, node managementClient.Node) ([]byte, e
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer resp.Body.Close()
 
 	zipFiles, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("%s", zipFiles)
+		return nil, "", fmt.Errorf("%s", zipFiles)
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(zipFiles), resp.ContentLength)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
+	var sshKey []byte
+	var sshUser string
 	for _, file := range zipReader.File {
 		if path.Base(file.Name) == "id_rsa" {
-			r, err := file.Open()
+			sshKey, err = readFile(file)
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
-			defer r.Close()
-			return ioutil.ReadAll(r)
+		} else if path.Base(file.Name) == "config.json" {
+			config, err := readFile(file)
+			if err != nil {
+				return nil, "", err
+			}
+
+			var data map[string]interface{}
+			err = json.Unmarshal(config, &data)
+			if err != nil {
+				return nil, "", err
+			}
+			sshUser, _ = data["SSHUser"].(string)
 		}
 	}
-	return nil, errors.New("can't find private key file")
+	if len(sshKey) == 0 {
+		return sshKey, "", errors.New("can't find private key file")
+	}
+	return sshKey, sshUser, nil
+}
+
+func readFile(file *zip.File) ([]byte, error) {
+	r, err := file.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return ioutil.ReadAll(r)
 }
