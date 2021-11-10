@@ -110,7 +110,7 @@ func getNodeAndKey(ctx *cli.Context, c *cliclient.MasterClient, nodeName string)
 	link := sshNode.Links["nodeConfig"]
 	if link == "" {
 		// Get the machine and use that instead.
-		machine, err := getMachineByNodeName(ctx, c, nodeName)
+		machine, err := getMachineByNodeName(ctx, c, sshNode.NodeName)
 		if err != nil {
 			return sshNode, nil, fmt.Errorf("failed to find SSH key for node [%s]", nodeName)
 		}
