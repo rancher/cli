@@ -250,6 +250,9 @@ func clusterCreate(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
+	if ctx.Bool("import") {
+		return clusterImport(ctx)
+	}
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
@@ -266,23 +269,12 @@ func clusterCreate(ctx *cli.Context) error {
 		}
 	}
 
-	rkeConfig, err := getRKEConfig(ctx)
+	config, err := getClusterConfig(ctx)
 	if err != nil {
 		return err
 	}
 
-	clusterConfig := &managementClient.Cluster{
-		Name:                          ctx.Args().First(),
-		Description:                   ctx.String("description"),
-		RancherKubernetesEngineConfig: rkeConfig,
-	}
-
-	if ctx.String("psp-default-policy") != "" {
-		clusterConfig.DefaultPodSecurityPolicyTemplateID = ctx.String("psp-default-policy")
-	}
-
-	createdCluster, err := c.ManagementClient.Cluster.Create(clusterConfig)
-
+	createdCluster, err := c.ManagementClient.Cluster.Create(config)
 	if err != nil {
 		return err
 	}
@@ -752,48 +744,61 @@ func getClusterK8sOptions(c *cliclient.MasterClient) []string {
 	return options
 }
 
-func getRKEConfig(ctx *cli.Context) (*managementClient.RancherKubernetesEngineConfig, error) {
-	if ctx.Bool("import") {
-		return nil, nil
+func getClusterConfig(ctx *cli.Context) (*managementClient.Cluster, error) {
+	config := managementClient.Cluster{
+		RancherKubernetesEngineConfig: new(managementClient.RancherKubernetesEngineConfig),
 	}
-
-	rkeConfig := &managementClient.RancherKubernetesEngineConfig{}
 
 	if ctx.String("rke-config") != "" {
 		bytes, err := readFileReturnJSON(ctx.String("rke-config"))
 		if err != nil {
 			return nil, err
 		}
-		bytes, err = fixTopLevelKeys(bytes)
+
+		var jsonObject map[string]interface{}
+		if err = json.Unmarshal(bytes, &jsonObject); err != nil {
+			return nil, err
+		}
+
+		// Most values in RancherKubernetesEngineConfig are defined with struct tags for both JSON and YAML in camelCase.
+		// Changing the tags will be a breaking change. For proper deserialization, we must convert all keys to camelCase.
+		// Note that we ignore kebab-case keys. Users themselves should ensure any relevant keys
+		// (especially top-level keys in `services`, like `kube-api` or `kube-controller`) are camelCase or snake-case in cluster config.
+		convertSnakeCaseKeysToCamelCase(jsonObject)
+
+		marshalled, err := json.Marshal(jsonObject)
 		if err != nil {
 			return nil, err
 		}
-		err = json.Unmarshal(bytes, &rkeConfig)
-		if err != nil {
+		if err = json.Unmarshal(marshalled, &config); err != nil {
 			return nil, err
 		}
 	}
 
+	config.Name = ctx.Args().First()
+	config.Description = ctx.String("description")
+
 	ignoreDockerVersion := ctx.BoolT("disable-docker-version")
-	rkeConfig.IgnoreDockerVersion = &ignoreDockerVersion
+	config.RancherKubernetesEngineConfig.IgnoreDockerVersion = &ignoreDockerVersion
 
 	if ctx.String("k8s-version") != "" {
-		rkeConfig.Version = ctx.String("k8s-version")
+		config.RancherKubernetesEngineConfig.Version = ctx.String("k8s-version")
 	}
 
 	if ctx.String("network-provider") != "" {
-		rkeConfig.Network = &managementClient.NetworkConfig{
+		config.RancherKubernetesEngineConfig.Network = &managementClient.NetworkConfig{
 			Plugin: ctx.String("network-provider"),
 		}
 	}
 
 	if ctx.String("psp-default-policy") != "" {
-		rkeConfig.Services = &managementClient.RKEConfigServices{
+		config.DefaultPodSecurityPolicyTemplateID = ctx.String("psp-default-policy")
+		config.RancherKubernetesEngineConfig.Services = &managementClient.RKEConfigServices{
 			KubeAPI: &managementClient.KubeAPIService{
 				PodSecurityPolicy: true,
 			},
 		}
 	}
 
-	return rkeConfig, nil
+	return &config, nil
 }
