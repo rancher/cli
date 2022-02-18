@@ -554,23 +554,6 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 	return "", "", fmt.Errorf("Unable to extract clusterid and projectid from [%s]", id)
 }
 
-func fixTopLevelKeys(bytes []byte) ([]byte, error) {
-	old := map[string]interface{}{}
-	new := map[string]interface{}{}
-
-	err := json.Unmarshal(bytes, &old)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling: %v", err)
-	}
-
-	for key, val := range old {
-		newKey := convert.ToJSONKey(key)
-		new[newKey] = val
-	}
-
-	return json.Marshal(new)
-}
-
 // Return a JSON blob of the file at path
 func readFileReturnJSON(path string) ([]byte, error) {
 	file, err := ioutil.ReadFile(path)
@@ -582,6 +565,23 @@ func readFileReturnJSON(path string) ([]byte, error) {
 		return file, nil
 	}
 	return yaml.YAMLToJSON(file)
+}
+
+// renameKeys renames the keys in a given map of arbitrary depth with a provided function for string keys.
+func renameKeys(input map[string]interface{}, f func(string) string) {
+	for k, v := range input {
+		delete(input, k)
+		newKey := f(k)
+		input[newKey] = v
+		if innerMap, ok := v.(map[string]interface{}); ok {
+			renameKeys(innerMap, f)
+		}
+	}
+}
+
+// convertSnakeCaseKeysToCamelCase takes a map and recursively transforms all snake_case keys into camelCase keys.
+func convertSnakeCaseKeysToCamelCase(input map[string]interface{}) {
+	renameKeys(input, convert.ToJSONKey)
 }
 
 // Return true if the first non-whitespace bytes in buf is prefix.

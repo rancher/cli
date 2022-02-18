@@ -30,6 +30,35 @@ func (s *CommonTestSuite) TestParseClusterAndProjectID(c *check.C) {
 	testParse(c, "c-m-123:p-12345", "", "", true)
 }
 
+func (s *CommonTestSuite) TestConvertSnakeCaseKeysToCamelCase(c *check.C) {
+	cases := []struct {
+		input   map[string]interface{}
+		renamed map[string]interface{}
+	}{
+		{
+			map[string]interface{}{"foo_bar": "hello"},
+			map[string]interface{}{"fooBar": "hello"},
+		},
+		{
+			map[string]interface{}{"fooBar": "hello"},
+			map[string]interface{}{"fooBar": "hello"},
+		},
+		{
+			map[string]interface{}{"foobar": "hello", "some_key": "valueUnmodified", "bar-baz": "bar-baz"},
+			map[string]interface{}{"foobar": "hello", "someKey": "valueUnmodified", "bar-baz": "bar-baz"},
+		},
+		{
+			map[string]interface{}{"foo_bar": "hello", "backup_config": map[string]interface{}{"hello_world": true}, "config_id": 123},
+			map[string]interface{}{"fooBar": "hello", "backupConfig": map[string]interface{}{"helloWorld": true}, "configId": 123},
+		},
+	}
+
+	for _, tc := range cases {
+		convertSnakeCaseKeysToCamelCase(tc.input)
+		c.Assert(tc.input, check.DeepEquals, tc.renamed)
+	}
+}
+
 func testParse(c *check.C, testID, expectedCluster, expectedProject string, errorExpected bool) {
 	actualCluster, actualProject, actualErr := parseClusterAndProjectID(testID)
 	c.Assert(actualCluster, check.Equals, expectedCluster)
