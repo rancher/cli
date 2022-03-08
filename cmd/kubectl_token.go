@@ -348,7 +348,7 @@ func basicAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token
 		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
 	}
 
-	body := fmt.Sprintf(`{"responseType":"%s", "username":"%s", "password":"%s"}`, responseType, username, password)
+	body := fmt.Sprintf(`{"responseType":%q, "username":%q, "password":%q}`, responseType, username, password)
 
 	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, input.authProvider,
 		strings.ToLower(strings.Replace(input.authProvider, "Provider", "", 1)))
