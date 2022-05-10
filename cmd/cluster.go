@@ -675,13 +675,26 @@ func getClusterByID(
 func getClusterProvider(cluster managementClient.Cluster) string {
 	switch cluster.Driver {
 	case "imported":
-		return "Imported"
+		switch cluster.Provider {
+		case "rke2":
+			return "RKE2"
+		case "k3s":
+			return "K3S"
+		default:
+			return "Imported"
+		}
+	case "k3s":
+		return "K3S"
+	case "rke2":
+		return "RKE2"
 	case "rancherKubernetesEngine":
 		return "Rancher Kubernetes Engine"
-	case "azureKubernetesService":
-		return "Azure Container Service"
-	case "googleKubernetesEngine":
+	case "azureKubernetesService", "AKS":
+		return "Azure Kubernetes Service"
+	case "googleKubernetesEngine", "GKE":
 		return "Google Kubernetes Engine"
+	case "EKS":
+		return "Elastic Kubernetes Service"
 	default:
 		return "Unknown"
 	}
