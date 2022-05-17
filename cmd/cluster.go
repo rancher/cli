@@ -59,7 +59,7 @@ func ClusterCommand() cli.Command {
 			{
 				Name:        "create",
 				Usage:       "Creates a new empty cluster",
-				Description: "Creates a new empty cluster",
+				Description: "Create a new custom cluster with desired configuration",
 				ArgsUsage:   "[NEWCLUSTERNAME...]",
 				Action:      clusterCreate,
 				Flags: []cli.Flag{
