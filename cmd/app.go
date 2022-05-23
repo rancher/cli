@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -19,9 +18,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/norman/clientbase"
-	clusterClient "github.com/rancher/types/client/cluster/v3"
-	managementClient "github.com/rancher/types/client/management/v3"
-	projectClient "github.com/rancher/types/client/project/v3"
+	clusterClient "github.com/rancher/rancher/pkg/client/generated/cluster/v3"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
+	projectClient "github.com/rancher/rancher/pkg/client/generated/project/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"gopkg.in/yaml.v2"
@@ -47,14 +46,14 @@ Example:
 	$ rancher app install --answers /example/answers.yaml redis appFoo
 
 	# Install the redis template and set multiple answers and the version to install
-	$ rancher app install --set foo=bar --set baz=bunk --version 1.0.1 redis appFoo
+	$ rancher app install --set foo=bar --set-string baz=bunk --version 1.0.1 redis appFoo
 
 	# Install the redis template and specify the namespace for the app
 	$ rancher app install --namespace bar redis appFoo
 `
 	upgradeAppDescription = `
 Upgrade an existing app to a newer version via app template or app version in the current Rancher server.
-					
+
 Example:
 	# Upgrade the 'appFoo' app to latest version without any options
 	$ rancher app upgrade appFoo latest
@@ -63,7 +62,7 @@ Example:
 	$ rancher app upgrade appFoo ./redis
 
 	# Upgrade the 'appFoo' app and set multiple answers and the 0.2.0 version to install
-	$ rancher app upgrade --set foo=bar --set baz=bunk appFoo 0.2.0
+	$ rancher app upgrade --set foo=bar --set-string baz=bunk appFoo 0.2.0
 `
 )
 
@@ -172,6 +171,10 @@ func AppCommand() cli.Command {
 						Name:  "set",
 						Usage: "Set answers for the template, can be used multiple times. Example: --set foo=bar",
 					},
+					cli.StringSliceFlag{
+						Name:  "set-string",
+						Usage: "Set string answers for the template (Skips Helm's type conversion), can be used multiple times. Example: --set-string foo=bar",
+					},
 					cli.StringFlag{
 						Name:  "version",
 						Usage: "Version of the template to use",
@@ -225,6 +228,10 @@ func AppCommand() cli.Command {
 					cli.StringSliceFlag{
 						Name:  "set",
 						Usage: "Set answers for the template, can be used multiple times. Example: --set foo=bar",
+					},
+					cli.StringSliceFlag{
+						Name:  "set-string",
+						Usage: "Set string answers for the template (Skips Helm's type conversion), can be used multiple times. Example: --set-string foo=bar",
 					},
 					cli.BoolFlag{
 						Name:  "show-versions,v",
@@ -433,8 +440,9 @@ func appUpgrade(ctx *cli.Context) error {
 	}
 
 	answers := app.Answers
+	answersSetString := app.AnswersSetString
 	values := app.ValuesYaml
-	answers, err = processAnswerUpdates(ctx, answers)
+	answers, answersSetString, err = processAnswerUpdates(ctx, answers, answersSetString)
 	if err != nil {
 		return err
 	}
@@ -446,9 +454,10 @@ func appUpgrade(ctx *cli.Context) error {
 	force := ctx.Bool("force")
 
 	au := &projectClient.AppUpgradeConfig{
-		Answers:      answers,
-		ForceUpgrade: force,
-		ValuesYaml:   values,
+		Answers:          answers,
+		AnswersSetString: answersSetString,
+		ForceUpgrade:     force,
+		ValuesYaml:       values,
 	}
 
 	if resolveTemplatePath(appVersionOrLocalTemplatePath) {
@@ -635,7 +644,7 @@ func templateInstall(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		answers, err := processAnswerInstall(ctx, nil, nil, false, false)
+		answers, answersSetString, err := processAnswerInstall(ctx, nil, nil, nil, false, false)
 		if err != nil {
 			return err
 		}
@@ -646,6 +655,7 @@ func templateInstall(ctx *cli.Context) error {
 
 		app.Files = files
 		app.Answers = answers
+		app.AnswersSetString = answersSetString
 		app.ValuesYaml = values
 		namespace := ctx.String("namespace")
 		if namespace == "" {
@@ -693,7 +703,7 @@ func templateInstall(ctx *cli.Context) error {
 		}
 
 		interactive := !ctx.Bool("no-prompt")
-		answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive, false)
+		answers, answersSetString, err := processAnswerInstall(ctx, templateVersion, nil, nil, interactive, false)
 		if err != nil {
 			return err
 		}
@@ -710,6 +720,7 @@ func templateInstall(ctx *cli.Context) error {
 			return err
 		}
 		app.Answers = answers
+		app.AnswersSetString = answersSetString
 		app.ValuesYaml = values
 		app.ExternalID = templateVersion.ExternalID
 		app.TargetNamespace = namespace
@@ -1095,20 +1106,20 @@ func createNamespace(c *cliclient.MasterClient, n string) error {
 	return nil
 }
 
-// processValueInstall creates a map of the values file and fills in missing answers with defaults
+// processValueInstall creates a map of the values file and fills in missing entries with defaults
 func processValueInstall(ctx *cli.Context, tv *managementClient.TemplateVersion, existingValues string) (string, error) {
-	answers, err := processValues(ctx, existingValues)
+	values, err := processValues(ctx, existingValues)
 	if err != nil {
 		return existingValues, err
 	}
-	// add default values if answers missing from map
-	err = fillInDefaultAnswers(tv, answers)
+	// add default values if entries missing from map
+	err = fillInDefaultAnswers(tv, values)
 	if err != nil {
 		return existingValues, err
 	}
 
 	// change map back into string to be consistent with ui
-	existingValues, err = parseMapToYamlString(answers)
+	existingValues, err = parseMapToYamlString(values)
 	if err != nil {
 		return existingValues, err
 	}
@@ -1117,12 +1128,12 @@ func processValueInstall(ctx *cli.Context, tv *managementClient.TemplateVersion,
 
 // processValueUpgrades creates map from existing values and applies updates
 func processValueUpgrades(ctx *cli.Context, existingValues string) (string, error) {
-	answers, err := processValues(ctx, existingValues)
+	values, err := processValues(ctx, existingValues)
 	if err != nil {
 		return existingValues, err
 	}
 	// change map back into string to be consistent with ui
-	existingValues, err = parseMapToYamlString(answers)
+	existingValues, err = parseMapToYamlString(values)
 	if err != nil {
 		return existingValues, err
 	}
@@ -1130,81 +1141,92 @@ func processValueUpgrades(ctx *cli.Context, existingValues string) (string, erro
 }
 
 // processValues creates a map of the values file
-func processValues(ctx *cli.Context, existingValues string) (map[string]string, error) {
-	answers := make(map[string]string)
+func processValues(ctx *cli.Context, existingValues string) (map[string]interface{}, error) {
+	var err error
+	values := make(map[string]interface{})
 	if existingValues != "" {
-		//parse values into map to ensure previous values are considered on update
-		valuesMap, err := createValuesMap([]byte(existingValues))
+		// parse values into map to ensure previous values are considered on update
+		values, err = createValuesMap([]byte(existingValues))
 		if err != nil {
-			return answers, err
+			return values, err
 		}
-		valuesToAnswers(valuesMap, answers)
 	}
-
 	if ctx.String("values") != "" {
 		// if values file passed in, overwrite defaults with new key value pair
-		if err := parseValuesFile(ctx.String("values"), answers); err != nil {
-			return answers, err
+		values, err = parseFile(ctx.String("values"))
+		if err != nil {
+			return values, err
 		}
 	}
-	return answers, nil
+	return values, nil
 }
 
 // processAnswerInstall adds answers to given map, and prompts users to answers chart questions if interactive is true
 func processAnswerInstall(
 	ctx *cli.Context,
 	tv *managementClient.TemplateVersion,
-	answers map[string]string,
+	answers,
+	answersSetString map[string]string,
 	interactive bool,
 	multicluster bool,
-) (map[string]string, error) {
+) (map[string]string, map[string]string, error) {
 	var err error
-	answers, err = processAnswerUpdates(ctx, answers)
+	answers, answersSetString, err = processAnswerUpdates(ctx, answers, answersSetString)
 	if err != nil {
-		return answers, err
+		return answers, answersSetString, err
 	}
 	// interactive occurs before adding defaults to ensure all questions are asked
 	if interactive {
 		// answers to questions will be added to map
 		err := askQuestions(tv, answers)
 		if err != nil {
-			return answers, err
+			return answers, answersSetString, err
 		}
 	}
 	if multicluster && !interactive {
 		// add default values if answers missing from map
-		err = fillInDefaultAnswers(tv, answers)
+		err = fillInDefaultAnswersStringMap(tv, answers)
 		if err != nil {
-			return answers, err
+			return answers, answersSetString, err
 		}
 	}
-	return answers, nil
+	return answers, answersSetString, nil
 }
 
-func processAnswerUpdates(ctx *cli.Context, answers map[string]string) (map[string]string, error) {
+func processAnswerUpdates(ctx *cli.Context, answers, answersSetString map[string]string) (map[string]string, map[string]string, error) {
+	logrus.Println("ok")
 	if answers == nil || ctx.Bool("reset") {
 		// this would not be possible without returning a map
 		answers = make(map[string]string)
 	}
-
+	if answersSetString == nil || ctx.Bool("reset") {
+		// this would not be possible without returning a map
+		answersSetString = make(map[string]string)
+	}
 	if ctx.String("answers") != "" {
 		err := parseAnswersFile(ctx.String("answers"), answers)
 		if err != nil {
-			return answers, err
+			return answers, answersSetString, err
 		}
 	}
-
 	for _, answer := range ctx.StringSlice("set") {
 		parts := strings.SplitN(answer, "=", 2)
 		if len(parts) == 2 {
 			answers[parts[0]] = parts[1]
 		}
 	}
-	return answers, nil
+	for _, answer := range ctx.StringSlice("set-string") {
+		parts := strings.SplitN(answer, "=", 2)
+		logrus.Printf("%v\n", parts)
+		if len(parts) == 2 {
+			answersSetString[parts[0]] = parts[1]
+		}
+	}
+	return answers, answersSetString, nil
 }
 
 // parseMapToYamlString create yaml string from answers map
-func parseMapToYamlString(answerMap map[string]string) (string, error) {
+func parseMapToYamlString(answerMap map[string]interface{}) (string, error) {
 	yamlFileString, err := yaml.Marshal(answerMap)
 	if err != nil {
 		return "", err
@@ -1225,16 +1247,6 @@ func parseAnswersFile(location string, answers map[string]string) error {
 			answers[key] = fmt.Sprintf("%v", value)
 		}
 	}
-	return nil
-}
-
-// parseValuesFile reads a values file and parses it to answers in helm strvals format
-func parseValuesFile(location string, answers map[string]string) error {
-	values, err := parseFile(location)
-	if err != nil {
-		return err
-	}
-	valuesToAnswers(values, answers)
 	return nil
 }
 
@@ -1261,37 +1273,6 @@ func createValuesMap(bytes []byte) (map[string]interface{}, error) {
 	return values, nil
 }
 
-func valuesToAnswers(values map[string]interface{}, answers map[string]string) {
-	for k, v := range values {
-		traverseValuesToAnswers(k, v, answers)
-	}
-}
-
-func traverseValuesToAnswers(key string, obj interface{}, answers map[string]string) {
-	if obj == nil {
-		return
-	}
-	raw := reflect.ValueOf(obj)
-	switch raw.Kind() {
-	case reflect.Map:
-		for _, subKey := range raw.MapKeys() {
-			v := raw.MapIndex(subKey).Interface()
-			nextKey := fmt.Sprintf("%s.%s", key, subKey)
-			traverseValuesToAnswers(nextKey, v, answers)
-		}
-	case reflect.Slice:
-		a, ok := obj.([]interface{})
-		if ok {
-			for i, v := range a {
-				nextKey := fmt.Sprintf("%s[%d]", key, i)
-				traverseValuesToAnswers(nextKey, v, answers)
-			}
-		}
-	default:
-		answers[key] = fmt.Sprintf("%v", obj)
-	}
-}
-
 func askQuestions(tv *managementClient.TemplateVersion, answers map[string]string) error {
 	var asked bool
 	var attempts int
@@ -1301,13 +1282,13 @@ func askQuestions(tv *managementClient.TemplateVersion, answers map[string]strin
 	for {
 		attempts++
 		for _, question := range tv.Questions {
-			if _, ok := answers[question.Variable]; !ok && checkShowIf(question.ShowIf, answers) {
+			if _, ok := answers[question.Variable]; !ok && checkShowIfStringMap(question.ShowIf, answers) {
 				asked = true
 				answers[question.Variable] = askQuestion(question)
-				if checkShowSubquestionIf(question, answers) {
+				if checkShowSubquestionIfStringMap(question, answers) {
 					for _, subQuestion := range question.Subquestions {
 						// only ask the question if there is not an answer and it passes the ShowIf check
-						if _, ok := answers[subQuestion.Variable]; !ok && checkShowIf(subQuestion.ShowIf, answers) {
+						if _, ok := answers[subQuestion.Variable]; !ok && checkShowIfStringMap(subQuestion.ShowIf, answers) {
 							answers[subQuestion.Variable] = askSubQuestion(subQuestion)
 						}
 					}
@@ -1374,7 +1355,7 @@ func askSubQuestion(q managementClient.SubQuestion) string {
 }
 
 // fillInDefaultAnswers parses through questions and creates an answer map with default answers if missing from map
-func fillInDefaultAnswers(tv *managementClient.TemplateVersion, answers map[string]string) error {
+func fillInDefaultAnswers(tv *managementClient.TemplateVersion, answers map[string]interface{}) error {
 	if tv == nil {
 		return nil
 	}
@@ -1399,7 +1380,51 @@ func fillInDefaultAnswers(tv *managementClient.TemplateVersion, answers map[stri
 
 // checkShowIf uses the ShowIf field to determine if a question should be asked
 // this field comes in the format <key>=<value> where key is a question id and value is the answer
-func checkShowIf(s string, answers map[string]string) bool {
+func checkShowIf(s string, answers map[string]interface{}) bool {
+	// No ShowIf so always ask the question
+	if len(s) == 0 {
+		return true
+	}
+
+	pieces := strings.Split(s, "=")
+	if len(pieces) != 2 {
+		return false
+	}
+
+	//if the key exists and the val matches the expression ask the question
+	if val, ok := answers[pieces[0]]; ok && fmt.Sprintf("%v", val) == pieces[1] {
+		return true
+	}
+	return false
+}
+
+// fillInDefaultAnswersStringMap parses through questions and creates an answer map with default answers if missing from map
+func fillInDefaultAnswersStringMap(tv *managementClient.TemplateVersion, answers map[string]string) error {
+	if tv == nil {
+		return nil
+	}
+	for _, question := range tv.Questions {
+		if _, ok := answers[question.Variable]; !ok && checkShowIfStringMap(question.ShowIf, answers) {
+			answers[question.Variable] = question.Default
+			if checkShowSubquestionIfStringMap(question, answers) {
+				for _, subQuestion := range question.Subquestions {
+					// set the sub-question if the showIf check passes
+					if _, ok := answers[subQuestion.Variable]; !ok && checkShowIfStringMap(subQuestion.ShowIf, answers) {
+						answers[subQuestion.Variable] = subQuestion.Default
+					}
+				}
+			}
+		}
+	}
+	if answers == nil {
+		return errors.New("could not generate default answers")
+	}
+	return nil
+}
+
+// checkShowIfStringMap uses the ShowIf field to determine if a question should be asked
+// this field comes in the format <key>=<value> where key is a question id and value is the answer
+func checkShowIfStringMap(s string, answers map[string]string) bool {
 	// No ShowIf so always ask the question
 	if len(s) == 0 {
 		return true
@@ -1417,7 +1442,16 @@ func checkShowIf(s string, answers map[string]string) bool {
 	return false
 }
 
-func checkShowSubquestionIf(q managementClient.Question, answers map[string]string) bool {
+func checkShowSubquestionIf(q managementClient.Question, answers map[string]interface{}) bool {
+	if val, ok := answers[q.Variable]; ok {
+		if fmt.Sprintf("%v", val) == q.ShowSubquestionIf {
+			return true
+		}
+	}
+	return false
+}
+
+func checkShowSubquestionIfStringMap(q managementClient.Question, answers map[string]string) bool {
 	if val, ok := answers[q.Variable]; ok {
 		if val == q.ShowSubquestionIf {
 			return true

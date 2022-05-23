@@ -3,53 +3,73 @@ package cmd
 import (
 	"testing"
 
-	client "github.com/rancher/types/client/management/v3"
+	client "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFromMultiClusterAppAnswers(t *testing.T) {
 	assert := assert.New(t)
-	answers := []client.Answer{
+	answerSlice := []client.Answer{
 		{
 			ProjectID: "c-1:p-1",
 			Values: map[string]string{
-				"k1": "v1",
-				"k2": "v2",
+				"var-1": "val1",
+				"var-2": "val2",
+			},
+			ValuesSetString: map[string]string{
+				"str-var-1": "str-val1",
+				"str-var-2": "str-val2",
 			},
 		}, {
 			ProjectID: "c-1:p-2",
 			Values: map[string]string{
-				"k3": "v3",
-				"k4": "v4",
+				"var-3": "val3",
+			},
+			ValuesSetString: map[string]string{
+				"str-var-3": "str-val3",
 			},
 		}, {
 			ClusterID: "c-1",
 			Values: map[string]string{
-				"k5": "v5",
-				"k6": "v6",
+				"var-4": "val4",
+			},
+			ValuesSetString: map[string]string{
+				"str-var-4": "str-val4",
 			},
 		}, {
 			ClusterID: "c-2",
 			Values: map[string]string{
-				"k7": "v7",
-				"k8": "v8",
+				"var-5": "val5",
+			},
+			ValuesSetString: map[string]string{
+				"str-var-5": "str-val5",
 			},
 		}, {
 			Values: map[string]string{
-				"k9":  "v9",
-				"k10": "v10",
+				"var-6": "val6",
+			},
+			ValuesSetString: map[string]string{
+				"str-var-6": "str-val6",
 			},
 		},
 	}
 
-	answerMap := fromMultiClusterAppAnswers(answers)
-	assert.Equal(len(answerMap), 10)
-	assert.Equal(answerMap["c-1:p-1:k1"], "v1")
-	assert.Equal(answerMap["c-1:p-1:k2"], "v2")
-	assert.Equal(answerMap["c-1:p-2:k3"], "v3")
-	assert.Equal(answerMap["c-1:k5"], "v5")
-	assert.Equal(answerMap["c-2:k7"], "v7")
-	assert.Equal(answerMap["k9"], "v9")
+	answers, answersSetString := fromMultiClusterAppAnswers(answerSlice)
+	assert.Equal(len(answers), 6)
+	assert.Equal(answers["c-1:p-1:var-1"], "val1")
+	assert.Equal(answers["c-1:p-1:var-2"], "val2")
+	assert.Equal(answers["c-1:p-2:var-3"], "val3")
+	assert.Equal(answers["c-1:var-4"], "val4")
+	assert.Equal(answers["c-2:var-5"], "val5")
+	assert.Equal(answers["var-6"], "val6")
+
+	assert.Equal(len(answersSetString), 6)
+	assert.Equal(answersSetString["c-1:p-1:str-var-1"], "str-val1")
+	assert.Equal(answersSetString["c-1:p-1:str-var-2"], "str-val2")
+	assert.Equal(answersSetString["c-1:p-2:str-var-3"], "str-val3")
+	assert.Equal(answersSetString["c-1:str-var-4"], "str-val4")
+	assert.Equal(answersSetString["c-2:str-var-5"], "str-val5")
+	assert.Equal(answersSetString["str-var-6"], "str-val6")
 }
 
 func TestGetReadableTargetNames(t *testing.T) {

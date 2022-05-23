@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,12 +31,17 @@ import (
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/convert"
-	managementClient "github.com/rancher/types/client/management/v3"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
+const (
+	letters             = "abcdefghijklmnopqrstuvwxyz0123456789"
+	cfgFile             = "cli2.json"
+	kubeConfigKeyFormat = "%s-%s"
+)
 
 var (
 	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
@@ -139,6 +145,31 @@ func listRoleTemplateBindings(ctx *cli.Context, b []RoleTemplateBinding) error {
 	return writer.Err()
 }
 
+func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
+	cf, err := loadConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	focusedServer := cf.FocusedServer()
+	kubeConfig, _ := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
+	return kubeConfig, nil
+}
+
+func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config) error {
+	cf, err := loadConfig(ctx)
+	if err != nil {
+		return err
+	}
+
+	if cf.FocusedServer().KubeConfigs == nil {
+		cf.FocusedServer().KubeConfigs = make(map[string]*api.Config)
+	}
+	focusedServer := cf.FocusedServer()
+	focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())] = kubeConfig
+	return cf.Write()
+}
+
 func usersToNameMapping(u []managementClient.User) map[string]string {
 	userMapping := make(map[string]string)
 	for _, user := range u {
@@ -229,10 +260,10 @@ func verifyCert(caCert []byte) (string, error) {
 }
 
 func loadConfig(ctx *cli.Context) (config.Config, error) {
+	// path will always be set by the global flag default
 	path := ctx.GlobalString("config")
-	if path == "" {
-		path = os.ExpandEnv("${HOME}/.rancher/cli2.json")
-	}
+	path = filepath.Join(path, cfgFile)
+
 	cf := config.Config{
 		Path:    path,
 		Servers: make(map[string]*config.ServerConfig),
@@ -302,6 +333,14 @@ func GetResourceType(c *cliclient.MasterClient, resource string) (string, error)
 			}
 		}
 	}
+	if c.CAPIClient != nil {
+		for key := range c.CAPIClient.APIBaseClient.Types {
+			lowerKey := strings.ToLower(key)
+			if strings.HasPrefix(lowerKey, "cluster.x-k8s.io") && lowerKey == strings.ToLower(resource) {
+				return key, nil
+			}
+		}
+	}
 	return "", fmt.Errorf("unknown resource type: %s", resource)
 }
 
@@ -316,6 +355,11 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 		}
 		var schemaClient clientbase.APIBaseClientInterface
 		// the schemaType dictates which client we need to use
+		if c.CAPIClient != nil {
+			if strings.HasPrefix(rt, "cluster.x-k8s.io") {
+				schemaClient = c.CAPIClient
+			}
+		}
 		if c.ManagementClient != nil {
 			if _, ok := c.ManagementClient.APIBaseClient.Types[rt]; ok {
 				schemaClient = c.ManagementClient
@@ -501,8 +545,9 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 	// Examples:
 	// c-qmpbm:p-mm62v
 	// c-qmpbm:project-mm62v
+	// c-m-j2s7m6lq:p-mm62v
 	// See https://github.com/rancher/rancher/issues/14400
-	if match, _ := regexp.MatchString("((local)|(c-[[:alnum:]]{5})):(p|project)-[[:alnum:]]{5}", id); match {
+	if match, _ := regexp.MatchString("((local)|(c-[[:alnum:]]{5})|(c-m-[[:alnum:]]{8})):(p|project)-[[:alnum:]]{5}", id); match {
 		parts := SplitOnColon(id)
 		return parts[0], parts[1], nil
 	}

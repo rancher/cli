@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/rancher/cli/cliclient"
-	managementClient "github.com/rancher/types/client/management/v3"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -774,7 +774,8 @@ func getRKEConfig(ctx *cli.Context) (*managementClient.RancherKubernetesEngineCo
 		}
 	}
 
-	rkeConfig.IgnoreDockerVersion = ctx.BoolT("disable-docker-version")
+	ignoreDockerVersion := ctx.BoolT("disable-docker-version")
+	rkeConfig.IgnoreDockerVersion = &ignoreDockerVersion
 
 	if ctx.String("k8s-version") != "" {
 		rkeConfig.Version = ctx.String("k8s-version")

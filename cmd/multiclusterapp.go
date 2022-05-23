@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -9,7 +10,7 @@ import (
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/norman/types"
 	"github.com/rancher/norman/types/slice"
-	managementClient "github.com/rancher/types/client/management/v3"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -18,7 +19,7 @@ const (
 	installMultiClusterAppDescription = `
 Install a multi-cluster app in the current Rancher server. This defaults to the newest version of the app template.
 Specify a version using '--version' if required.
-					
+
 Example:
 	# Install the redis template with no other options
 	$ rancher multiclusterapp install redis appFoo
@@ -27,7 +28,7 @@ Example:
 	$ rancher multiclusterapp install --answers /example/answers.yaml redis appFoo
 
 	# Install the redis template and set multiple answers and the version to install
-	$ rancher multiclusterapp install --set foo=bar --set baz=bunk --version 1.0.1 redis appFoo
+	$ rancher multiclusterapp install --set foo=bar --set-string baz=bunk --version 1.0.1 redis appFoo
 
 	# Install the redis template and set target projects to install
 	$ rancher multiclusterapp install --target mycluster:Default --target c-98pjr:p-w6c5f redis appFoo
@@ -52,6 +53,11 @@ type MultiClusterAppData struct {
 	App     managementClient.MultiClusterApp
 	Version string
 	Targets string
+}
+
+type scopeAnswers struct {
+	Answers          map[string]string
+	AnswersSetString map[string]string
 }
 
 func MultiClusterAppCommand() cli.Command {
@@ -103,6 +109,11 @@ func MultiClusterAppCommand() cli.Command {
 						Name: "set",
 						Usage: "Set answers for the template, can be used multiple times. You can set overriding answers for specific clusters or projects " +
 							"by providing cluster ID or project ID as the prefix. Example: --set foo=bar --set c-rvcrl:foo=bar --set c-rvcrl:p-8w2x8:foo=bar",
+					},
+					cli.StringSliceFlag{
+						Name: "set-string",
+						Usage: "Set string answers for the template (Skips Helm's type conversion), can be used multiple times. You can set overriding answers for specific clusters or projects " +
+							"by providing cluster ID or project ID as the prefix. Example: --set-string foo=bar --set-string c-rvcrl:foo=bar --set-string c-rvcrl:p-8w2x8:foo=bar",
 					},
 					cli.StringFlag{
 						Name:  "version",
@@ -188,6 +199,11 @@ func MultiClusterAppCommand() cli.Command {
 						Usage: "Set answers for the template, can be used multiple times. You can set overriding answers for specific clusters or projects " +
 							"by providing cluster ID or project ID as the prefix. Example: --set foo=bar --set c-rvcrl:foo=bar --set c-rvcrl:p-8w2x8:foo=bar",
 					},
+					cli.StringSliceFlag{
+						Name: "set-string",
+						Usage: "Set string answers for the template (Skips Helm's type conversion), can be used multiple times. You can set overriding answers for specific clusters or projects " +
+							"by providing cluster ID or project ID as the prefix. Example: --set-string foo=bar --set-string c-rvcrl:foo=bar --set-string c-rvcrl:p-8w2x8:foo=bar",
+					},
 					cli.BoolFlag{
 						Name:  "reset",
 						Usage: "Reset all catalog app answers",
@@ -233,6 +249,10 @@ func MultiClusterAppCommand() cli.Command {
 					cli.StringSliceFlag{
 						Name:  "set",
 						Usage: "Set overriding answers for the new target projects",
+					},
+					cli.StringSliceFlag{
+						Name:  "set-string",
+						Usage: "Set overriding string answers for the new target projects",
 					},
 				},
 			},
@@ -517,12 +537,12 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 	}
 
 	update := make(map[string]interface{})
-	answers := fromMultiClusterAppAnswers(app.Answers)
-	answers, err = processAnswerUpdates(ctx, answers)
+	answers, answersSetString := fromMultiClusterAppAnswers(app.Answers)
+	answers, answersSetString, err = processAnswerUpdates(ctx, answers, answersSetString)
 	if err != nil {
 		return err
 	}
-	update["answers"], err = toMultiClusterAppAnswers(c, answers)
+	update["answers"], err = toMultiClusterAppAnswers(c, answers, answersSetString)
 	if err != nil {
 		return err
 	}
@@ -534,7 +554,7 @@ func multiClusterAppUpgrade(ctx *cli.Context) error {
 	}
 	toUpgradeTemplateversionID := strings.TrimSuffix(templateVersion.ID, templateVersion.Version) + version
 	// Check if the template version is valid before applying it
-	templateVersion, err = c.ManagementClient.TemplateVersion.ByID(toUpgradeTemplateversionID)
+	_, err = c.ManagementClient.TemplateVersion.ByID(toUpgradeTemplateversionID)
 	if err != nil {
 		templateName := strings.TrimSuffix(toUpgradeTemplateversionID, "-"+version)
 		return fmt.Errorf(
@@ -682,7 +702,7 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 	}
 
 	interactive := !ctx.Bool("no-prompt")
-	answers, err := processAnswerInstall(ctx, templateVersion, nil, interactive, true)
+	answers, answersSetString, err := processAnswerInstall(ctx, templateVersion, nil, nil, interactive, true)
 	if err != nil {
 		return err
 	}
@@ -703,7 +723,7 @@ func multiClusterAppTemplateInstall(ctx *cli.Context) error {
 		})
 	}
 
-	app.Answers, err = toMultiClusterAppAnswers(c, answers)
+	app.Answers, err = toMultiClusterAppAnswers(c, answers, answersSetString)
 	if err != nil {
 		return err
 	}
@@ -776,83 +796,112 @@ func lookupProjectIDFromProjectScope(c *cliclient.MasterClient, scope string) (s
 
 }
 
-func toMultiClusterAppAnswers(c *cliclient.MasterClient, answers map[string]string) ([]managementClient.Answer, error) {
-	answerMap := make(map[string]map[string]string)
-	var answerArray []managementClient.Answer
-	for k, v := range answers {
-		parts := strings.SplitN(k, ":", 3)
-		if len(parts) == 1 {
-			//global scope
-			if answerMap[""] == nil {
-				answerMap[""] = make(map[string]string)
-			}
-			answerMap[""][k] = v
-		} else if len(parts) == 2 {
-			//cluster scope
-			clusterNameOrID := parts[0]
-			clusterID, err := lookupClusterIDFromClusterScope(c, clusterNameOrID)
-			if err != nil {
-				return nil, err
-			}
-			setValueInAnswerMap(answerMap, clusterNameOrID, clusterID, parts[1], v)
-		} else if len(parts) == 3 {
-			//project scope
-			projectScope := concatScope(parts[0], parts[1])
-			projectID, err := lookupProjectIDFromProjectScope(c, projectScope)
-			if err != nil {
-				return nil, err
-			}
-			setValueInAnswerMap(answerMap, projectScope, projectID, parts[2], v)
-		}
+func toMultiClusterAppAnswers(c *cliclient.MasterClient, answers, answersSetString map[string]string) ([]managementClient.Answer, error) {
+	answerMap := make(map[string]scopeAnswers)
+	var answerSlice []managementClient.Answer
+	if err := setValueInAnswerMapByScope(c, answerMap, answers, "Answers"); err != nil {
+		return nil, err
+	}
+	if err := setValueInAnswerMapByScope(c, answerMap, answersSetString, "AnswersSetString"); err != nil {
+		return nil, err
 	}
 	for k, v := range answerMap {
 		answer := managementClient.Answer{
-			Values: v,
+			Values:          v.Answers,
+			ValuesSetString: v.AnswersSetString,
 		}
 		if strings.Contains(k, ":") {
 			answer.ProjectID = k
 		} else if k != "" {
 			answer.ClusterID = k
 		}
-		answerArray = append(answerArray, answer)
+		answerSlice = append(answerSlice, answer)
 	}
-	return answerArray, nil
+	return answerSlice, nil
 }
 
-func setValueInAnswerMap(answerMap map[string]map[string]string, scope string, scopeID string, plainKey string, value string) {
-	if answerMap[scopeID] == nil {
-		answerMap[scopeID] = make(map[string]string)
+func setValueInAnswerMapByScope(c *cliclient.MasterClient, answerMap map[string]scopeAnswers, inputAnswers map[string]string, scopeAnswersFieldStr string) error {
+	for k, v := range inputAnswers {
+		switch parts := strings.SplitN(k, ":", 3); {
+		case len(parts) == 1:
+			// Global scope
+			setValueInAnswerMap(answerMap, "", "", scopeAnswersFieldStr, k, v)
+		case len(parts) == 2:
+			// Cluster scope
+			clusterNameOrID := parts[0]
+			clusterID, err := lookupClusterIDFromClusterScope(c, clusterNameOrID)
+			if err != nil {
+				return err
+			}
+			setValueInAnswerMap(answerMap, clusterNameOrID, clusterID, scopeAnswersFieldStr, parts[1], v)
+		case len(parts) == 3:
+			// Project scope
+			projectScope := concatScope(parts[0], parts[1])
+			projectID, err := lookupProjectIDFromProjectScope(c, projectScope)
+			if err != nil {
+				return err
+			}
+			setValueInAnswerMap(answerMap, projectScope, projectID, scopeAnswersFieldStr, parts[2], v)
+		}
 	}
-	if _, ok := answerMap[scopeID][plainKey]; ok {
+	return nil
+}
+
+func setValueInAnswerMap(answerMap map[string]scopeAnswers, scope, scopeID, fieldNameToUpdate, key, value string) {
+	var exist bool
+	if answerMap[scopeID].Answers == nil && answerMap[scopeID].AnswersSetString == nil {
+		answerMap[scopeID] = scopeAnswers{
+			Answers:          make(map[string]string),
+			AnswersSetString: make(map[string]string),
+		}
+	}
+	scopeAnswersStruct := answerMap[scopeID]
+	scopeAnswersMap := reflect.ValueOf(&scopeAnswersStruct).Elem().FieldByName(fieldNameToUpdate)
+	for _, k := range scopeAnswersMap.MapKeys() {
+		if reflect.ValueOf(key) == k {
+			exist = true
+			break
+		}
+	}
+	if exist {
 		// It is possible that there are different forms of the same answer key in aggregated answers
 		// In this case, name format from users overrides id format from existing app answers.
 		if scope != scopeID {
-			answerMap[scopeID][plainKey] = value
+			scopeAnswersMap.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 		}
 	} else {
-		answerMap[scopeID][plainKey] = value
+		scopeAnswersMap.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 	}
 }
 
-func fromMultiClusterAppAnswers(answers []managementClient.Answer) map[string]string {
-	answerMap := make(map[string]string)
-	for _, answer := range answers {
+func fromMultiClusterAppAnswers(answerSlice []managementClient.Answer) (map[string]string, map[string]string) {
+	answers := make(map[string]string)
+	answersSetString := make(map[string]string)
+	for _, answer := range answerSlice {
 		for k, v := range answer.Values {
-			scope := ""
-			if answer.ProjectID != "" {
-				scope = answer.ProjectID
-			} else if answer.ClusterID != "" {
-				scope = answer.ClusterID
-			}
-
-			scopedKey := k
-			if scope != "" {
-				scopedKey = concatScope(scope, k)
-			}
-			answerMap[scopedKey] = v
+			scopedKey := getAnswerScopedKey(answer, k)
+			answers[scopedKey] = v
+		}
+		for k, v := range answer.ValuesSetString {
+			scopedKey := getAnswerScopedKey(answer, k)
+			answersSetString[scopedKey] = v
 		}
 	}
-	return answerMap
+	return answers, answersSetString
+}
+
+func getAnswerScopedKey(answer managementClient.Answer, key string) string {
+	scope := ""
+	if answer.ProjectID != "" {
+		scope = answer.ProjectID
+	} else if answer.ClusterID != "" {
+		scope = answer.ClusterID
+	}
+	scopedKey := key
+	if scope != "" {
+		scopedKey = concatScope(scope, key)
+	}
+	return scopedKey
 }
 
 func addMcappTargetProject(ctx *cli.Context) error {
@@ -910,12 +959,11 @@ func getTargetInput(ctx *cli.Context, c *cliclient.MasterClient) (*managementCli
 	if err != nil {
 		return nil, err
 	}
-
-	answers, err := processAnswerUpdates(ctx, nil)
+	answers, answersSetString, err := processAnswerUpdates(ctx, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	mcaAnswers, err := toMultiClusterAppAnswers(c, answers)
+	mcaAnswers, err := toMultiClusterAppAnswers(c, answers, answersSetString)
 	if err != nil {
 		return nil, err
 	}
@@ -1213,6 +1261,13 @@ func outputMultiClusterAppAnswers(ctx *cli.Context, c *cliclient.MasterClient, a
 				"Scope":    scope,
 				"Question": key,
 				"Answer":   value,
+			})
+		}
+		for key, value := range r.ValuesSetString {
+			writer.Write(map[string]string{
+				"Scope":    scope,
+				"Question": key,
+				"Answer":   fmt.Sprintf("\"%s\"", value),
 			})
 		}
 	}

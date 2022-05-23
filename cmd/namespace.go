@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
-	clusterClient "github.com/rancher/types/client/cluster/v3"
+	clusterClient "github.com/rancher/rancher/pkg/client/generated/cluster/v3"
 	"github.com/urfave/cli"
 )
 

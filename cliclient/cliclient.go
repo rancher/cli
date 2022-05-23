@@ -9,9 +9,10 @@ import (
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
-	clusterClient "github.com/rancher/types/client/cluster/v3"
-	managementClient "github.com/rancher/types/client/management/v3"
-	projectClient "github.com/rancher/types/client/project/v3"
+	capiClient "github.com/rancher/rancher/pkg/client/generated/cluster/v1alpha4"
+	clusterClient "github.com/rancher/rancher/pkg/client/generated/cluster/v3"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
+	projectClient "github.com/rancher/rancher/pkg/client/generated/project/v3"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -21,6 +22,7 @@ type MasterClient struct {
 	ManagementClient *managementClient.Client
 	ProjectClient    *projectClient.Client
 	UserConfig       *config.ServerConfig
+	CAPIClient       *capiClient.Client
 }
 
 // NewMasterClient returns a new MasterClient with Cluster, Management and Project
@@ -40,6 +42,7 @@ func NewMasterClient(config *config.ServerConfig) (*MasterClient, error) {
 	g.Go(mc.newManagementClient)
 	g.Go(mc.newClusterClient)
 	g.Go(mc.newProjectClient)
+	g.Go(mc.newCAPIClient)
 
 	if err := g.Wait(); err != nil {
 		return nil, err
@@ -143,8 +146,24 @@ func (mc *MasterClient) newProjectClient() error {
 	return nil
 }
 
+func (mc *MasterClient) newCAPIClient() error {
+	options := createClientOpts(mc.UserConfig)
+	options.URL = strings.TrimSuffix(options.URL, "/v3") + "/v1"
+
+	// Setup the CAPI client
+	cc, err := capiClient.NewClient(options)
+	if err != nil {
+		return err
+	}
+	mc.CAPIClient = cc
+
+	return nil
+}
+
 func (mc *MasterClient) ByID(resource *ntypes.Resource, respObject interface{}) error {
-	if _, ok := mc.ManagementClient.APIBaseClient.Types[resource.Type]; ok {
+	if strings.HasPrefix(resource.Type, "cluster.x-k8s.io") {
+		return mc.CAPIClient.ByID(resource.Type, resource.ID, &respObject)
+	} else if _, ok := mc.ManagementClient.APIBaseClient.Types[resource.Type]; ok {
 		return mc.ManagementClient.ByID(resource.Type, resource.ID, &respObject)
 	} else if _, ok := mc.ProjectClient.APIBaseClient.Types[resource.Type]; ok {
 		return mc.ProjectClient.ByID(resource.Type, resource.ID, &respObject)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-
 	"regexp"
 	"strings"
 
@@ -81,6 +80,12 @@ func mainErr() error {
 			Name:  "debug",
 			Usage: "Debug logging",
 		},
+		cli.StringFlag{
+			Name:   "config, c",
+			Usage:  "Path to rancher config",
+			EnvVar: "RANCHER_CONFIG_DIR",
+			Value:  os.ExpandEnv("${HOME}/.rancher"),
+		},
 	}
 	app.Commands = []cli.Command{
 		cmd.AppCommand(),
@@ -91,6 +96,7 @@ func mainErr() error {
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
 		cmd.LoginCommand(),
+		cmd.MachineCommand(),
 		cmd.MultiClusterAppCommand(),
 		cmd.NamespaceCommand(),
 		cmd.NodeCommand(),
@@ -101,6 +107,7 @@ func mainErr() error {
 		cmd.SSHCommand(),
 		cmd.UpCommand(),
 		cmd.WaitCommand(),
+		cmd.CredentialCommand(),
 	}
 
 	for _, com := range app.Commands {

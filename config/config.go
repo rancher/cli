@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 // Config holds the main config for the user
@@ -21,12 +22,14 @@ type Config struct {
 
 //ServerConfig holds the config for each server the user has setup
 type ServerConfig struct {
-	AccessKey string `json:"accessKey"`
-	SecretKey string `json:"secretKey"`
-	TokenKey  string `json:"tokenKey"`
-	URL       string `json:"url"`
-	Project   string `json:"project"`
-	CACerts   string `json:"cacert"`
+	AccessKey       string                     `json:"accessKey"`
+	SecretKey       string                     `json:"secretKey"`
+	TokenKey        string                     `json:"tokenKey"`
+	URL             string                     `json:"url"`
+	Project         string                     `json:"project"`
+	CACerts         string                     `json:"cacert"`
+	KubeCredentials map[string]*ExecCredential `json:"kubeCredentials"`
+	KubeConfigs     map[string]*api.Config     `json:"kubeConfigs"`
 }
 
 func (c Config) Write() error {
@@ -53,6 +56,10 @@ func (c Config) FocusedServer() *ServerConfig {
 
 func (c ServerConfig) FocusedCluster() string {
 	return strings.Split(c.Project, ":")[0]
+}
+
+func (c ServerConfig) KubeToken(key string) *ExecCredential {
+	return c.KubeCredentials[key]
 }
 
 func (c ServerConfig) EnvironmentURL() (string, error) {

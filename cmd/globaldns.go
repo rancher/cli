@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/rancher/cli/cliclient"
-	managementClient "github.com/rancher/types/client/management/v3"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/urfave/cli"
 )
 
@@ -43,8 +43,8 @@ const (
 
 type globalDNSHolder struct {
 	ID       string
-	Provider managementClient.GlobalDNSProvider
-	Entry    managementClient.GlobalDNS
+	Provider managementClient.GlobalDnsProvider
+	Entry    managementClient.GlobalDns
 	Target   string
 }
 
@@ -291,7 +291,7 @@ func globalDNSProviderLs(ctx *cli.Context) error {
 		return err
 	}
 
-	providers, err := c.ManagementClient.GlobalDNSProvider.List(defaultListOpts(ctx))
+	providers, err := c.ManagementClient.GlobalDnsProvider.List(defaultListOpts(ctx))
 	if err != nil {
 		return err
 	}
@@ -350,7 +350,7 @@ func globalDNSProviderCreate(ctx *cli.Context) error {
 		return errors.New("--type is required")
 	}
 
-	provider := &managementClient.GlobalDNSProvider{
+	provider := &managementClient.GlobalDnsProvider{
 		Name:       name,
 		RootDomain: rootDomain,
 	}
@@ -404,7 +404,7 @@ func globalDNSProviderCreate(ctx *cli.Context) error {
 	}
 	provider.Members = members
 
-	if _, err = c.ManagementClient.GlobalDNSProvider.Create(provider); nil != err {
+	if _, err = c.ManagementClient.GlobalDnsProvider.Create(provider); nil != err {
 		return err
 	}
 
@@ -475,7 +475,7 @@ func globalDNSProviderUpdate(ctx *cli.Context) error {
 		return fmt.Errorf("unsupported provider type for %q", name)
 	}
 
-	_, err = c.ManagementClient.GlobalDNSProvider.Update(provider, update)
+	_, err = c.ManagementClient.GlobalDnsProvider.Update(provider, update)
 	return err
 }
 
@@ -495,7 +495,7 @@ func globalDNSProviderDelete(ctx *cli.Context) error {
 			return err
 		}
 
-		if err = c.ManagementClient.GlobalDNSProvider.Delete(provider); nil != err {
+		if err = c.ManagementClient.GlobalDnsProvider.Delete(provider); nil != err {
 			return err
 		}
 	}
@@ -526,7 +526,7 @@ func addGlobalDNSProviderMembers(ctx *cli.Context) error {
 	update := make(map[string][]managementClient.Member)
 	update["members"] = members
 
-	_, err = c.ManagementClient.GlobalDNSProvider.Update(provider, update)
+	_, err = c.ManagementClient.GlobalDnsProvider.Update(provider, update)
 	return err
 }
 
@@ -553,7 +553,7 @@ func deleteGlobalDNSProviderMembers(ctx *cli.Context) error {
 	update := make(map[string]interface{})
 	update["members"] = members
 
-	_, err = c.ManagementClient.GlobalDNSProvider.Update(provider, update)
+	_, err = c.ManagementClient.GlobalDnsProvider.Update(provider, update)
 	return err
 }
 
@@ -563,7 +563,7 @@ func globalDNSLs(ctx *cli.Context) error {
 		return err
 	}
 
-	entries, err := c.ManagementClient.GlobalDNS.List(defaultListOpts(ctx))
+	entries, err := c.ManagementClient.GlobalDns.List(defaultListOpts(ctx))
 	if err != nil {
 		return err
 	}
@@ -597,7 +597,7 @@ func globalDNSLs(ctx *cli.Context) error {
 	return writer.Err()
 }
 
-func getEntryTarget(c *cliclient.MasterClient, clusterCache map[string]managementClient.Cluster, projectCache map[string]managementClient.Project, entry *managementClient.GlobalDNS) (string, error) {
+func getEntryTarget(c *cliclient.MasterClient, clusterCache map[string]managementClient.Cluster, projectCache map[string]managementClient.Project, entry *managementClient.GlobalDns) (string, error) {
 	var target string
 	if entry.MultiClusterAppID != "" {
 		_, app, err := searchForMcapp(c, entry.MultiClusterAppID)
@@ -660,7 +660,7 @@ func globalDNSCreate(ctx *cli.Context) error {
 		return fmt.Errorf("please specify either --multi-cluster-app or --project as the global DNS entry target")
 	}
 
-	entry := &managementClient.GlobalDNS{
+	entry := &managementClient.GlobalDns{
 		FQDN: fqdn,
 		TTL:  ttl,
 	}
@@ -691,7 +691,7 @@ func globalDNSCreate(ctx *cli.Context) error {
 		entry.ProjectIDs = projectIDs
 	}
 
-	if _, err = c.ManagementClient.GlobalDNS.Create(entry); nil != err {
+	if _, err = c.ManagementClient.GlobalDns.Create(entry); nil != err {
 		return err
 	}
 
@@ -738,7 +738,7 @@ func globalDNSUpdate(ctx *cli.Context) error {
 			input := &managementClient.UpdateGlobalDNSTargetsInput{
 				ProjectIDs: entry.ProjectIDs,
 			}
-			if err := c.ManagementClient.GlobalDNS.ActionRemoveProjects(entry, input); err != nil {
+			if err := c.ManagementClient.GlobalDns.ActionRemoveProjects(entry, input); err != nil {
 				return err
 			}
 		}
@@ -748,13 +748,13 @@ func globalDNSUpdate(ctx *cli.Context) error {
 		update["ttl"] = ctx.Int64(argTTL)
 	}
 
-	if _, err := c.ManagementClient.GlobalDNS.Update(entry, update); err != nil {
+	if _, err := c.ManagementClient.GlobalDns.Update(entry, update); err != nil {
 		// Rollback target projects on update failure
 		if ctx.IsSet(argMultiClusterApp) && len(entry.ProjectIDs) > 0 {
 			input := &managementClient.UpdateGlobalDNSTargetsInput{
 				ProjectIDs: entry.ProjectIDs,
 			}
-			if rbErr := c.ManagementClient.GlobalDNS.ActionAddProjects(entry, input); rbErr != nil {
+			if rbErr := c.ManagementClient.GlobalDns.ActionAddProjects(entry, input); rbErr != nil {
 				return fmt.Errorf("failed to update global DNS entry: %v and failed to rollback to previous target projects: %v", err, rbErr)
 			}
 		}
@@ -779,7 +779,7 @@ func globalDNSDelete(ctx *cli.Context) error {
 			return err
 		}
 
-		if err = c.ManagementClient.GlobalDNS.Delete(entry); nil != err {
+		if err = c.ManagementClient.GlobalDns.Delete(entry); nil != err {
 			return err
 		}
 	}
@@ -809,7 +809,7 @@ func addGlobalDNSMembers(ctx *cli.Context) error {
 	update := make(map[string]interface{})
 	update["members"] = members
 
-	_, err = c.ManagementClient.GlobalDNS.Update(entry, update)
+	_, err = c.ManagementClient.GlobalDns.Update(entry, update)
 	return err
 }
 
@@ -836,7 +836,7 @@ func deleteGlobalDNSMembers(ctx *cli.Context) error {
 	update := make(map[string]interface{})
 	update["members"] = members
 
-	_, err = c.ManagementClient.GlobalDNS.Update(entry, update)
+	_, err = c.ManagementClient.GlobalDns.Update(entry, update)
 	return err
 }
 
@@ -865,7 +865,7 @@ func deleteGlobalDNSProjects(ctx *cli.Context) error {
 		ProjectIDs: projectIDs,
 	}
 
-	return c.ManagementClient.GlobalDNS.ActionRemoveProjects(entry, input)
+	return c.ManagementClient.GlobalDns.ActionRemoveProjects(entry, input)
 }
 
 func addGlobalDNSProjects(ctx *cli.Context) error {
@@ -892,7 +892,7 @@ func addGlobalDNSProjects(ctx *cli.Context) error {
 	update := make(map[string]interface{})
 	if entry.MultiClusterAppID != "" {
 		update["multiClusterAppId"] = ""
-		if _, err := c.ManagementClient.GlobalDNS.Update(entry, update); err != nil {
+		if _, err := c.ManagementClient.GlobalDns.Update(entry, update); err != nil {
 			return err
 		}
 	}
@@ -901,11 +901,11 @@ func addGlobalDNSProjects(ctx *cli.Context) error {
 		ProjectIDs: projectIDs,
 	}
 
-	if err := c.ManagementClient.GlobalDNS.ActionAddProjects(entry, input); err != nil {
+	if err := c.ManagementClient.GlobalDns.ActionAddProjects(entry, input); err != nil {
 		// Rollback target mcapp on add-project failure
 		if entry.MultiClusterAppID != "" {
 			update["multiClusterAppId"] = entry.MultiClusterAppID
-			if _, rbErr := c.ManagementClient.GlobalDNS.Update(entry, update); rbErr != nil {
+			if _, rbErr := c.ManagementClient.GlobalDns.Update(entry, update); rbErr != nil {
 				return fmt.Errorf("failed to add target projects to the entry: %v and failed to rollback to previous multi-cluster app target: %v", err, rbErr)
 			}
 		}
@@ -914,20 +914,20 @@ func addGlobalDNSProjects(ctx *cli.Context) error {
 	return nil
 }
 
-func searchForGlobalDNSProvider(c *cliclient.MasterClient, name string) (*managementClient.GlobalDNSProvider, error) {
-	resource, err := Lookup(c, name, managementClient.GlobalDNSProviderType)
+func searchForGlobalDNSProvider(c *cliclient.MasterClient, name string) (*managementClient.GlobalDnsProvider, error) {
+	resource, err := Lookup(c, name, managementClient.GlobalDnsProviderType)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.ManagementClient.GlobalDNSProvider.ByID(resource.ID)
+	return c.ManagementClient.GlobalDnsProvider.ByID(resource.ID)
 }
 
-func searchForGlobalDNS(c *cliclient.MasterClient, name string) (*managementClient.GlobalDNS, error) {
-	resource, err := Lookup(c, name, managementClient.GlobalDNSType)
+func searchForGlobalDNS(c *cliclient.MasterClient, name string) (*managementClient.GlobalDns, error) {
+	resource, err := Lookup(c, name, managementClient.GlobalDnsType)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.ManagementClient.GlobalDNS.ByID(resource.ID)
+	return c.ManagementClient.GlobalDns.ByID(resource.ID)
 }

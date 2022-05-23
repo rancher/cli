@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/rancher/cli/cliclient"
-	managementClient "github.com/rancher/types/client/management/v3"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/urfave/cli"
 )
 
@@ -222,9 +222,8 @@ func addProjectMemberRoles(ctx *cli.Context) error {
 
 	for _, role := range roles {
 		rtb := managementClient.ProjectRoleTemplateBinding{
-			ProjectID:       projectID,
-			RoleTemplateID:  role,
-			UserPrincipalID: member.ID,
+			ProjectID:      projectID,
+			RoleTemplateID: role,
 		}
 		if member.PrincipalType == "user" {
 			rtb.UserPrincipalID = member.ID
