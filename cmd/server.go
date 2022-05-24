@@ -83,6 +83,10 @@ func serverDelete(ctx *cli.Context) error {
 		return err
 	}
 
+	if err := validateServersConfig(cf); err != nil {
+		return err
+	}
+
 	var serverName string
 	if ctx.NArg() == 1 {
 		serverName = ctx.Args().First()
@@ -114,6 +118,10 @@ func serverLs(ctx *cli.Context) error {
 		return err
 	}
 
+	if err := validateServersConfig(cf); err != nil {
+		return err
+	}
+
 	writer := NewTableWriter([][]string{
 		{"CURRENT", "Current"},
 		{"NAME", "Name"},
@@ -141,6 +149,10 @@ func serverLs(ctx *cli.Context) error {
 func serverSwitch(ctx *cli.Context) error {
 	cf, err := loadConfig(ctx)
 	if err != nil {
+		return err
+	}
+
+	if err := validateServersConfig(cf); err != nil {
 		return err
 	}
 
@@ -237,4 +249,11 @@ func getServerNames(cf config.Config) []string {
 	}
 	sort.Strings(serverNames)
 	return serverNames
+}
+
+func validateServersConfig(cnf config.Config) error {
+	if len(cnf.Servers) == 0 {
+		return errors.New("no servers are currently configured")
+	}
+	return nil
 }
