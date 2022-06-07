@@ -1034,6 +1034,9 @@ func getFilteredTemplate(ctx *cli.Context, c *cliclient.MasterClient, templateID
 
 // getTemplateLatestVersion returns the newest version of the template
 func getTemplateLatestVersion(template *managementClient.Template) (string, error) {
+	if len(template.VersionLinks) == 0 {
+		return "", errors.New("no versions found for this template (the chart you are trying to install may be intentionally hidden or deprecated for your Rancher version)")
+	}
 	sorted, err := sortTemplateVersions(template)
 	if err != nil {
 		return "", err
