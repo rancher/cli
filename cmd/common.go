@@ -573,8 +573,15 @@ func renameKeys(input map[string]interface{}, f func(string) string) {
 		delete(input, k)
 		newKey := f(k)
 		input[newKey] = v
-		if innerMap, ok := v.(map[string]interface{}); ok {
-			renameKeys(innerMap, f)
+		switch innerValue := v.(type) {
+		case map[string]interface{}:
+			renameKeys(innerValue, f)
+		case []interface{}:
+			for _, iv := range innerValue {
+				if innerMap, ok := iv.(map[string]interface{}); ok {
+					renameKeys(innerMap, f)
+				}
+			}
 		}
 	}
 }

@@ -51,6 +51,10 @@ func (s *CommonTestSuite) TestConvertSnakeCaseKeysToCamelCase(c *check.C) {
 			map[string]interface{}{"foo_bar": "hello", "backup_config": map[string]interface{}{"hello_world": true}, "config_id": 123},
 			map[string]interface{}{"fooBar": "hello", "backupConfig": map[string]interface{}{"helloWorld": true}, "configId": 123},
 		},
+		{
+			map[string]interface{}{"foo_bar": "hello", "some_array": []interface{}{map[string]interface{}{"some_key": "valueUnmodified"}}, "backup_config": map[string]interface{}{"hello_world": true}},
+			map[string]interface{}{"fooBar": "hello", "someArray": []interface{}{map[string]interface{}{"someKey": "valueUnmodified"}}, "backupConfig": map[string]interface{}{"helloWorld": true}},
+		},
 	}
 
 	for _, tc := range cases {
