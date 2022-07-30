@@ -9,7 +9,13 @@ For usage information see: https://rancher.com/docs/rancher/v2.x/en/cli/
 
 ## Installing
 
+
+```bash
+scoop install rancher-cli
+```
+
 Check the [releases page](https://github.com/rancher/cli/releases) for direct downloads of the binary. After you download it, you can add it to your `$PATH` or [build your own from source](#building-from-source).
+
 
 ## Setting up Rancher CLI with a Rancher Server
 
