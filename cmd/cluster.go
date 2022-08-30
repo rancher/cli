@@ -106,7 +106,7 @@ func ClusterCommand() cli.Command {
 			},
 			{
 				Name:      "add-node",
-				Usage:     "Outputs the docker command needed to add a node to an existing Rancher cluster",
+				Usage:     "Outputs the docker command needed to add a node to an existing Rancher custom cluster",
 				ArgsUsage: "[CLUSTERID CLUSTERNAME]",
 				Action:    clusterAddNode,
 				Flags: []cli.Flag{
@@ -353,10 +353,10 @@ func clusterAddNode(ctx *cli.Context) error {
 		}
 
 		if len(nodePools.Data) > 0 {
-			return errors.New("a node can't be added to the cluster this way")
+			return errors.New("a node can't be manually registered to a cluster utilizing node-pools")
 		}
 	} else {
-		return errors.New("a node can't be added to the cluster this way")
+		return errors.New("a node can only be manually registered to a custom cluster")
 	}
 
 	clusterToken, err := getClusterRegToken(ctx, c, cluster.ID)
