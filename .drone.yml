@@ -9,7 +9,7 @@ platform:
 steps:
 - name: build
   pull: default
-  image: rancher/dapper:1.10.3
+  image: rancher/dapper:v0.6.0
   commands:
   - dapper ci
   privileged: true
@@ -19,7 +19,7 @@ steps:
 
 - name: build-all-binaries
   pull: default
-  image: rancher/dapper:1.10.3
+  image: rancher/dapper:v0.6.0
   commands:
   - dapper ci
   - ls -lR dist/artifacts
@@ -35,12 +35,11 @@ steps:
     ref:
       include:
       - "refs/heads/master"
-      - "refs/heads/v1.6"
       - "refs/tags/v*"
 
 - name: stage-binaries
   pull: default
-  image: rancher/dapper:1.10.3
+  image: rancher/dapper:v0.6.0
   commands:
   - "cp -r ./bin/* ./package/"
   when:
@@ -50,7 +49,6 @@ steps:
     ref:
       include:
       - "refs/heads/master"
-      - "refs/heads/v1.6"
       - "refs/tags/v*"
 
 - name: docker-publish-20-release
@@ -100,54 +98,6 @@ steps:
       - "refs/heads/master"
       - "refs/tags/v*"
 
-- name: docker-publish-16-release
-  pull: default
-  image: plugins/docker
-  settings:
-    password:
-      from_secret: docker_password
-    username:
-      from_secret: docker_username
-    build_args:
-    - "VERSION=${DRONE_TAG}"
-    context: package/
-    dockerfile: package/Dockerfile
-    repo: rancher/cli
-    tag:
-    - latest
-  when:
-    event:
-    - tag
-    ref:
-      exclude:
-      - "refs/tags/*rc*"
-      include:
-      - "refs/heads/v1.6"
-      - "refs/tags/v1.6*"
-
-- name: docker-publish-16-rc
-  pull: default
-  image: plugins/docker
-  settings:
-    password:
-      from_secret: docker_password
-    username:
-      from_secret: docker_username
-    build_args:
-    - "VERSION=${DRONE_TAG}"
-    context: package/
-    dockerfile: package/Dockerfile
-    repo: rancher/cli
-    tag:
-    - "${DRONE_TAG}"
-  when:
-    event:
-    - tag
-    ref:
-      include:
-      - "refs/heads/v1.6"
-      - "refs/tags/v1.6*"
-
 - name: binary-publish-release-2
   pull: default
   image: plugins/gcs
@@ -188,46 +138,6 @@ steps:
       - "refs/heads/master"
       - "refs/tags/v*"
 
-- name: binary-publish-release-16
-  pull: default
-  image: plugins/gcs
-  settings:
-    token:
-      from_secret: google_auth_key
-    acl:
-    - allUsers:READER
-    cache_control: "public,max-age=3600"
-    source: "dist/artifacts/${DRONE_TAG}"
-    target: "releases.rancher.com/cli/${DRONE_TAG}"
-  when:
-    event:
-    - tag
-    ref:
-      include:
-      - "refs/heads/v1.6"
-      - "refs/tags/v1.6*"
-
-- name: binary-publish-latest-16
-  pull: default
-  image: plugins/gcs
-  settings:
-    token:
-      from_secret: google_auth_key
-    acl:
-    - allUsers:READER
-    cache_control: "public,max-age=3600"
-    source: dist/artifacts/latest
-    target: releases.rancher.com/cli/latest
-  when:
-    event:
-    - tag
-    ref:
-      exclude:
-      - "refs/tags/*rc*"
-      include:
-      - "refs/heads/v1.6"
-      - "refs/tags/v1.6*"
-
 - name: github-binary-publish-release
   pull: default
   image: plugins/github-release
@@ -247,7 +157,6 @@ steps:
       - "refs/tags/*rc*"
       include:
       - "refs/heads/master"
-      - "refs/heads/v1.6"
       - "refs/tags/v*"
 
 - name: github-binary-publish-prerelease
@@ -267,6 +176,19 @@ steps:
     - tag
     ref:
     - "refs/tags/*rc*"
+
+- name: create-pr-in-rancher
+  image: registry.suse.com/bci/bci-base:latest
+  environment:
+    PAT_USERNAME:
+      from_secret: pat_username
+    PAT_TOKEN:
+      from_secret: github_token
+  commands:
+  - scripts/create-pr-in-rancher
+  when:
+    event:
+    - tag
 
 volumes:
 - name: socket
