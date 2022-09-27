@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/rancher/cli/cliclient"
+	"github.com/rancher/norman/types"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -98,18 +99,26 @@ func ClusterCommand() cli.Command {
 				Name:        "import",
 				Usage:       "Import an existing Kubernetes cluster into a Rancher cluster",
 				Description: importDescription,
-				ArgsUsage:   "[CLUSTERID CLUSTERNAME]",
+				ArgsUsage:   "CLUSTERID|--cluster-name CLUSTERNAME",
 				Action:      clusterImport,
 				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "cluster-name, name, n",
+						Usage: "Specify cluster by `CLUSTERNAME` instead of CLUSTERID",
+					},
 					quietFlag,
 				},
 			},
 			{
 				Name:      "add-node",
 				Usage:     "Outputs the docker command needed to add a node to an existing Rancher custom cluster",
-				ArgsUsage: "[CLUSTERID CLUSTERNAME]",
+				ArgsUsage: "CLUSTERID|--cluster-name CLUSTERNAME",
 				Action:    clusterAddNode,
 				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "cluster-name, name, n",
+						Usage: "Specify cluster by `CLUSTERNAME` instead of CLUSTERID",
+					},
 					cli.StringSliceFlag{
 						Name:  "label",
 						Usage: "Label to apply to a node in the format [name]=[value]",
@@ -136,22 +145,40 @@ func ClusterCommand() cli.Command {
 			{
 				Name:      "delete",
 				Aliases:   []string{"rm"},
-				Usage:     "Delete a cluster",
-				ArgsUsage: "[CLUSTERID/CLUSTERNAME...]",
+				Usage:     "Delete one or more clusters",
+				ArgsUsage: "CLUSTERID|--cluster-name CLUSTERNAME",
 				Action:    clusterDelete,
+				Flags: []cli.Flag{
+					cli.StringSliceFlag{
+						Name:  "cluster-name, name, n",
+						Usage: "Specify cluster by `CLUSTERNAME` instead of CLUSTERID. Supply multiple times for multiple cluster names.",
+					},
+				},
 			},
 			{
 				Name:      "export",
 				Usage:     "Export a cluster",
-				ArgsUsage: "[CLUSTERID/CLUSTERNAME...]",
+				ArgsUsage: "CLUSTERID|--cluster-name CLUSTERNAME",
 				Action:    clusterExport,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "cluster-name, name, n",
+						Usage: "Specify cluster by `CLUSTERNAME` instead of CLUSTERID",
+					},
+				},
 			},
 			{
 				Name:      "kubeconfig",
 				Aliases:   []string{"kf"},
-				Usage:     "Return the kube config used to access the cluster",
-				ArgsUsage: "[CLUSTERID CLUSTERNAME]",
+				Usage:     "Return the kubeconfig used to access the cluster",
+				ArgsUsage: "CLUSTERID|--cluster-name CLUSTERNAME",
 				Action:    clusterKubeConfig,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "cluster-name, name, n",
+						Usage: "Specify cluster by `CLUSTERNAME` instead of CLUSTERID",
+					},
+				},
 			},
 			{
 				Name:        "add-member-role",
@@ -284,7 +311,7 @@ func clusterCreate(ctx *cli.Context) error {
 }
 
 func clusterImport(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
+	if ctx.NArg() == 0 && ctx.String("cluster-name") == "" {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
@@ -293,7 +320,12 @@ func clusterImport(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "cluster")
+	var resource *types.Resource
+	if name := ctx.String("cluster-name"); name != "" {
+		resource, err = LookupByName(c, name, "cluster")
+	} else {
+		resource, err = LookupByID(c, ctx.Args().First(), "cluster")
+	}
 	if err != nil {
 		return err
 	}
@@ -325,7 +357,7 @@ func clusterImport(ctx *cli.Context) error {
 
 // clusterAddNode prints the command needed to add a node to a cluster
 func clusterAddNode(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
+	if ctx.NArg() == 0 && ctx.String("cluster-name") == "" {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
@@ -334,7 +366,12 @@ func clusterAddNode(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "cluster")
+	var resource *types.Resource
+	if name := ctx.String("cluster-name"); name != "" {
+		resource, err = LookupByName(c, name, "cluster")
+	} else {
+		resource, err = LookupByID(c, ctx.Args().First(), "cluster")
+	}
 	if err != nil {
 		return err
 	}
@@ -400,18 +437,25 @@ func clusterAddNode(ctx *cli.Context) error {
 }
 
 func clusterDelete(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
+	if ctx.NArg() == 0 && len(ctx.StringSlice("cluster-name")) == 0 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
+
+	clusterNames := ctx.StringSlice("cluster-name")
+	clusterIDs := ctx.Args()
 
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
 	}
+	schemaclient, err := lookupSchemaClient(c, "cluster")
+	if err != nil {
+		return err
+	}
 
-	for _, cluster := range ctx.Args() {
+	for _, clusterID := range clusterIDs {
 
-		resource, err := Lookup(c, cluster, "cluster")
+		resource, err := lookupByIDWithClient(schemaclient, clusterID, "cluster")
 		if err != nil {
 			return err
 		}
@@ -425,13 +469,32 @@ func clusterDelete(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+		fmt.Printf("Cluster with ID %s deleted\n", clusterID)
+	}
+
+	for _, clusterName := range clusterNames {
+		resource, err := lookupByNameWithClient(schemaclient, clusterName, "cluster")
+		if err != nil {
+			return err
+		}
+
+		cluster, err := getClusterByID(c, resource.ID)
+		if err != nil {
+			return err
+		}
+
+		err = c.ManagementClient.Cluster.Delete(cluster)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Cluster with name %s deleted\n", clusterName)
 	}
 
 	return nil
 }
 
 func clusterExport(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
+	if ctx.NArg() == 0 && ctx.String("cluster-name") == "" {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
@@ -440,7 +503,12 @@ func clusterExport(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "cluster")
+	var resource *types.Resource
+	if name := ctx.String("cluster-name"); name != "" {
+		resource, err = LookupByName(c, name, "cluster")
+	} else {
+		resource, err = LookupByID(c, ctx.Args().First(), "cluster")
+	}
 	if err != nil {
 		return err
 	}
@@ -464,7 +532,7 @@ func clusterExport(ctx *cli.Context) error {
 }
 
 func clusterKubeConfig(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
+	if ctx.NArg() == 0 && ctx.String("cluster-name") == "" {
 		return cli.ShowSubcommandHelp(ctx)
 	}
 
@@ -473,7 +541,12 @@ func clusterKubeConfig(ctx *cli.Context) error {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "cluster")
+	var resource *types.Resource
+	if name := ctx.String("cluster-name"); name != "" {
+		resource, err = LookupByName(c, name, "cluster")
+	} else {
+		resource, err = LookupByID(c, ctx.Args().First(), "cluster")
+	}
 	if err != nil {
 		return err
 	}
