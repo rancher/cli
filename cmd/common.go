@@ -720,3 +720,11 @@ func tickerContext(ctx context.Context, duration time.Duration) <-chan time.Time
 	}()
 	return ticker.C
 }
+
+func ConfigDir() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(homeDir, ".rancher"), nil
+}

@@ -75,6 +75,12 @@ func mainErr() error {
 	app.Version = VERSION
 	app.Author = "Rancher Labs, Inc."
 	app.Email = ""
+
+	configDir, err := cmd.ConfigDir()
+	if err != nil {
+		return err
+	}
+
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",
@@ -84,7 +90,7 @@ func mainErr() error {
 			Name:   "config, c",
 			Usage:  "Path to rancher config",
 			EnvVar: "RANCHER_CONFIG_DIR",
-			Value:  os.ExpandEnv("${HOME}/.rancher"),
+			Value:  configDir,
 		},
 	}
 	app.Commands = []cli.Command{

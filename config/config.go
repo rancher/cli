@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -20,7 +20,7 @@ type Config struct {
 	CurrentServer string
 }
 
-//ServerConfig holds the config for each server the user has setup
+// ServerConfig holds the config for each server the user has setup
 type ServerConfig struct {
 	AccessKey       string                     `json:"accessKey"`
 	SecretKey       string                     `json:"secretKey"`
@@ -33,11 +33,10 @@ type ServerConfig struct {
 }
 
 func (c Config) Write() error {
-	err := os.MkdirAll(path.Dir(c.Path), 0700)
+	err := os.MkdirAll(filepath.Dir(c.Path), 0700)
 	if err != nil {
 		return err
 	}
-
 	logrus.Infof("Saving config to %s", c.Path)
 	p := c.Path
 	c.Path = ""
