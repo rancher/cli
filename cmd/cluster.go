@@ -130,6 +130,10 @@ func ClusterCommand() cli.Command {
 						Name:  "worker",
 						Usage: "Use node as a worker",
 					},
+					cli.StringSliceFlag{
+						Name:  "taint",
+						Usage: "Taint to apply to a node in the format [name]=[value:effect]",
+					},
 					quietFlag,
 				},
 			},
@@ -386,6 +390,12 @@ func clusterAddNode(ctx *cli.Context) error {
 	if labels := ctx.StringSlice("label"); labels != nil {
 		for _, label := range labels {
 			command = command + fmt.Sprintf(" --label %v", label)
+		}
+	}
+
+	if taints := ctx.StringSlice("taint"); taints != nil {
+		for _, taint := range taints {
+			command = command + fmt.Sprintf(" --taint %v", taint)
 		}
 	}
 
