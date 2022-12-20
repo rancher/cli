@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 
@@ -18,6 +19,8 @@ type Config struct {
 	Path string `json:"path,omitempty"`
 	// CurrentServer the user has in focus
 	CurrentServer string
+	// Helper executable to store config
+	Helper string
 }
 
 //ServerConfig holds the config for each server the user has setup
@@ -33,6 +36,17 @@ type ServerConfig struct {
 }
 
 func (c Config) Write() error {
+	switch c.Helper {
+	case "build-in":
+		return c.writeNative()
+	default:
+		// if rancher config was loaded by external helper
+		// use the same helper to persist the config
+		return c.writeWithHelper()
+	}
+}
+
+func (c Config) writeNative() error {
 	err := os.MkdirAll(path.Dir(c.Path), 0700)
 	if err != nil {
 		return err
@@ -48,6 +62,19 @@ func (c Config) Write() error {
 	defer output.Close()
 
 	return json.NewEncoder(output).Encode(c)
+}
+
+func (c Config) writeWithHelper() error {
+	logrus.Infof("Saving config with helper %s", c.Helper)
+	jsonConfig, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(c.Helper, "store", string(jsonConfig))
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	err = cmd.Run()
+	return err
 }
 
 func (c Config) FocusedServer() *ServerConfig {

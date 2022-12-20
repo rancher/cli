@@ -86,6 +86,12 @@ func mainErr() error {
 			EnvVar: "RANCHER_CONFIG_DIR",
 			Value:  os.ExpandEnv("${HOME}/.rancher"),
 		},
+		cli.StringFlag{
+			Name:   "config-helper",
+			Usage:  "Helper executable to load/store config",
+			EnvVar: "RANCHER_CONFIG_HELPER",
+			Value:  os.ExpandEnv("build-in"),
+		},
 	}
 	app.Commands = []cli.Command{
 		cmd.AppCommand(),

@@ -262,6 +262,17 @@ func verifyCert(caCert []byte) (string, error) {
 }
 
 func loadConfig(ctx *cli.Context) (config.Config, error) {
+	switch ctx.GlobalString("config-helper") {
+	case "build-in":
+		return loadConfigNative(ctx)
+	default:
+		// allow loading of rancher config by triggering an
+		// external helper executable
+		return loadConfigWithHelper(ctx)
+	}
+}
+
+func loadConfigNative(ctx *cli.Context) (config.Config, error) {
 	// path will always be set by the global flag default
 	path := ctx.GlobalString("config")
 	path = filepath.Join(path, cfgFile)
@@ -269,6 +280,7 @@ func loadConfig(ctx *cli.Context) (config.Config, error) {
 	cf := config.Config{
 		Path:    path,
 		Servers: make(map[string]*config.ServerConfig),
+		Helper:  ctx.GlobalString("config-helper"),
 	}
 
 	content, err := ioutil.ReadFile(path)
@@ -281,6 +293,26 @@ func loadConfig(ctx *cli.Context) (config.Config, error) {
 	err = json.Unmarshal(content, &cf)
 	cf.Path = path
 
+	return cf, err
+}
+
+// fetch rancher cli config by executing an external helper
+func loadConfigWithHelper(ctx *cli.Context) (config.Config, error) {
+	cf := config.Config{
+		Path:    "",
+		Servers: make(map[string]*config.ServerConfig),
+		Helper:  ctx.GlobalString("config-helper"),
+	}
+
+	cmd := exec.Command(ctx.GlobalString("config-helper"), "get")
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	content, err := cmd.Output()
+	if err != nil {
+		return cf, err
+	}
+
+	err = json.Unmarshal(content, &cf)
 	return cf, err
 }
 
