@@ -90,7 +90,7 @@ func mainErr() error {
 			Name:   "config-helper",
 			Usage:  "Helper executable to load/store config",
 			EnvVar: "RANCHER_CONFIG_HELPER",
-			Value:  os.ExpandEnv("build-in"),
+			Value:  os.ExpandEnv("built-in"),
 		},
 	}
 	app.Commands = []cli.Command{

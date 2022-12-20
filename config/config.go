@@ -37,7 +37,7 @@ type ServerConfig struct {
 
 func (c Config) Write() error {
 	switch c.Helper {
-	case "build-in":
+	case "built-in":
 		return c.writeNative()
 	default:
 		// if rancher config was loaded by external helper

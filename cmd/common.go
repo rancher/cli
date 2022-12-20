@@ -263,7 +263,7 @@ func verifyCert(caCert []byte) (string, error) {
 
 func loadConfig(ctx *cli.Context) (config.Config, error) {
 	switch ctx.GlobalString("config-helper") {
-	case "build-in":
+	case "built-in":
 		return loadConfigNative(ctx)
 	default:
 		// allow loading of rancher config by triggering an
