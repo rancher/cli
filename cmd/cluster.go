@@ -277,9 +277,6 @@ func clusterCreate(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
 		return cli.ShowSubcommandHelp(ctx)
 	}
-	if ctx.Bool("import") {
-		return clusterImport(ctx)
-	}
 	c, err := GetClient(ctx)
 	if err != nil {
 		return err
@@ -831,58 +828,61 @@ func getClusterK8sOptions(c *cliclient.MasterClient) []string {
 }
 
 func getClusterConfig(ctx *cli.Context) (*managementClient.Cluster, error) {
-	config := managementClient.Cluster{
-		RancherKubernetesEngineConfig: new(managementClient.RancherKubernetesEngineConfig),
-	}
-
-	if ctx.String("rke-config") != "" {
-		bytes, err := readFileReturnJSON(ctx.String("rke-config"))
-		if err != nil {
-			return nil, err
-		}
-
-		var jsonObject map[string]interface{}
-		if err = json.Unmarshal(bytes, &jsonObject); err != nil {
-			return nil, err
-		}
-
-		// Most values in RancherKubernetesEngineConfig are defined with struct tags for both JSON and YAML in camelCase.
-		// Changing the tags will be a breaking change. For proper deserialization, we must convert all keys to camelCase.
-		// Note that we ignore kebab-case keys. Users themselves should ensure any relevant keys
-		// (especially top-level keys in `services`, like `kube-api` or `kube-controller`) are camelCase or snake-case in cluster config.
-		convertSnakeCaseKeysToCamelCase(jsonObject)
-
-		marshalled, err := json.Marshal(jsonObject)
-		if err != nil {
-			return nil, err
-		}
-		if err = json.Unmarshal(marshalled, &config); err != nil {
-			return nil, err
-		}
-	}
-
+	config := managementClient.Cluster{}
 	config.Name = ctx.Args().First()
 	config.Description = ctx.String("description")
 
-	ignoreDockerVersion := ctx.BoolT("disable-docker-version")
-	config.RancherKubernetesEngineConfig.IgnoreDockerVersion = &ignoreDockerVersion
+	if !ctx.Bool("import") {
+		config.RancherKubernetesEngineConfig = new(managementClient.RancherKubernetesEngineConfig)
+		ignoreDockerVersion := ctx.BoolT("disable-docker-version")
+		config.RancherKubernetesEngineConfig.IgnoreDockerVersion = &ignoreDockerVersion
 
-	if ctx.String("k8s-version") != "" {
-		config.RancherKubernetesEngineConfig.Version = ctx.String("k8s-version")
-	}
+		if ctx.String("k8s-version") != "" {
+			config.RancherKubernetesEngineConfig.Version = ctx.String("k8s-version")
+		}
 
-	if ctx.String("network-provider") != "" {
-		config.RancherKubernetesEngineConfig.Network = &managementClient.NetworkConfig{
-			Plugin: ctx.String("network-provider"),
+		if ctx.String("network-provider") != "" {
+			config.RancherKubernetesEngineConfig.Network = &managementClient.NetworkConfig{
+				Plugin: ctx.String("network-provider"),
+			}
+		}
+
+		if ctx.String("rke-config") != "" {
+			bytes, err := readFileReturnJSON(ctx.String("rke-config"))
+			if err != nil {
+				return nil, err
+			}
+
+			var jsonObject map[string]interface{}
+			if err = json.Unmarshal(bytes, &jsonObject); err != nil {
+				return nil, err
+			}
+
+			// Most values in RancherKubernetesEngineConfig are defined with struct tags for both JSON and YAML in camelCase.
+			// Changing the tags will be a breaking change. For proper deserialization, we must convert all keys to camelCase.
+			// Note that we ignore kebab-case keys. Users themselves should ensure any relevant keys
+			// (especially top-level keys in `services`, like `kube-api` or `kube-controller`) are camelCase or snake-case in cluster config.
+			convertSnakeCaseKeysToCamelCase(jsonObject)
+
+			marshalled, err := json.Marshal(jsonObject)
+			if err != nil {
+				return nil, err
+			}
+			if err = json.Unmarshal(marshalled, &config); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	if ctx.String("psp-default-policy") != "" {
 		config.DefaultPodSecurityPolicyTemplateID = ctx.String("psp-default-policy")
-		config.RancherKubernetesEngineConfig.Services = &managementClient.RKEConfigServices{
-			KubeAPI: &managementClient.KubeAPIService{
-				PodSecurityPolicy: true,
-			},
+
+		if config.RancherKubernetesEngineConfig != nil {
+			config.RancherKubernetesEngineConfig.Services = &managementClient.RKEConfigServices{
+				KubeAPI: &managementClient.KubeAPIService{
+					PodSecurityPolicy: true,
+				},
+			}
 		}
 	}
 
