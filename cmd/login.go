@@ -61,6 +61,10 @@ func LoginCommand() cli.Command {
 				Name:  "skip-verify",
 				Usage: "Skip verification of the CACerts presented by the Server",
 			},
+			cli.BoolFlag{
+				Name:  "insecure",
+				Usage: "Allow insecure server connections",
+			},
 		},
 	}
 }
@@ -80,7 +84,9 @@ func loginSetup(ctx *cli.Context) error {
 		serverName = "rancherDefault"
 	}
 
-	serverConfig := &config.ServerConfig{}
+	serverConfig := &config.ServerConfig{
+		Insecure: ctx.Bool("insecure"),
+	}
 
 	// Validate the url and drop the path
 	u, err := url.ParseRequestURI(ctx.Args().First())

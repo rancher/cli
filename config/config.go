@@ -30,6 +30,7 @@ type ServerConfig struct {
 	CACerts         string                     `json:"cacert"`
 	KubeCredentials map[string]*ExecCredential `json:"kubeCredentials"`
 	KubeConfigs     map[string]*api.Config     `json:"kubeConfigs"`
+	Insecure        bool                       `json:"insecure"`
 }
 
 func (c Config) Write() error {
