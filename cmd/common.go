@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -45,8 +44,7 @@ const (
 )
 
 var (
-	errNoURL    = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
-	errNotFound = errors.New("not found")
+	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
 	// ManagementResourceTypes lists the types we use the management client for
 	ManagementResourceTypes = []string{"cluster", "node", "project"}
 	// ProjectResourceTypes lists the types we use the cluster client for
@@ -346,155 +344,90 @@ func GetResourceType(c *cliclient.MasterClient, resource string) (string, error)
 	return "", fmt.Errorf("unknown resource type: %s", resource)
 }
 
-// Lookup looks up a resource by ID first, and then by name if it's not found by ID.
 func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Resource, error) {
 	var byName *ntypes.Resource
 
 	for _, schemaType := range types {
-		schemaClient, err := lookupSchemaClient(c, schemaType)
+		rt, err := GetResourceType(c, schemaType)
 		if err != nil {
+			logrus.Debugf("Error GetResourceType: %v", err)
 			return nil, err
 		}
+		var schemaClient clientbase.APIBaseClientInterface
+		// the schemaType dictates which client we need to use
+		if c.CAPIClient != nil {
+			if strings.HasPrefix(rt, "cluster.x-k8s.io") {
+				schemaClient = c.CAPIClient
+			}
+		}
+		if c.ManagementClient != nil {
+			if _, ok := c.ManagementClient.APIBaseClient.Types[rt]; ok {
+				schemaClient = c.ManagementClient
+			}
+		}
+		if c.ProjectClient != nil {
+			if _, ok := c.ProjectClient.APIBaseClient.Types[rt]; ok {
+				schemaClient = c.ProjectClient
+			}
+		}
+		if c.ClusterClient != nil {
+			if _, ok := c.ClusterClient.APIBaseClient.Types[rt]; ok {
+				schemaClient = c.ClusterClient
+			}
+		}
+
 		// Attempt to get the resource by ID
-		resource, err := lookupByIDWithClient(schemaClient, name, schemaType)
-		if err != nil && !errors.Is(err, errNotFound) {
+		var resource ntypes.Resource
+
+		if err := schemaClient.ByID(schemaType, name, &resource); !clientbase.IsNotFound(err) && err != nil {
+			logrus.Debugf("Error schemaClient.ByID: %v", err)
 			return nil, err
-		}
-		if resource != nil {
-			return resource, nil
+		} else if err == nil && resource.ID == name {
+			return &resource, nil
 		}
 
 		// Resource was not found assuming the ID, check if it's the name of a resource
-		resource, err = lookupByNameWithClient(schemaClient, name, schemaType)
-		if err != nil && !errors.Is(err, errNotFound) {
+		var collection ntypes.ResourceCollection
+
+		listOpts := &ntypes.ListOpts{
+			Filters: map[string]interface{}{
+				"name":         name,
+				"removed_null": 1,
+			},
+		}
+
+		if err := schemaClient.List(schemaType, listOpts, &collection); !clientbase.IsNotFound(err) && err != nil {
+			logrus.Debugf("Error schemaClient.List: %v", err)
 			return nil, err
 		}
 
+		if len(collection.Data) > 1 {
+			ids := []string{}
+			for _, data := range collection.Data {
+				ids = append(ids, data.ID)
+			}
+			return nil, fmt.Errorf("Multiple resources of type %s found for name %s: %v", schemaType, name, ids)
+		}
+
 		// No matches for this schemaType, try the next one
-		if resource == nil {
+		if len(collection.Data) == 0 {
 			continue
 		}
 
 		if byName != nil {
-			return nil, fmt.Errorf("multiple resources named %s: %s:%s, %s:%s", name, resource.Type,
-				resource.ID, byName.Type, byName.ID)
+			return nil, fmt.Errorf("Multiple resources named %s: %s:%s, %s:%s", name, collection.Data[0].Type,
+				collection.Data[0].ID, byName.Type, byName.ID)
 		}
 
-		byName = resource
+		byName = &collection.Data[0]
 
 	}
 
 	if byName == nil {
-		return nil, fmt.Errorf("resource %s: %w", name, errNotFound)
+		return nil, fmt.Errorf("Not found: %s", name)
 	}
 
 	return byName, nil
-}
-
-func lookupSchemaClient(c *cliclient.MasterClient, schemaType string) (clientbase.APIBaseClientInterface, error) {
-	rt, err := GetResourceType(c, schemaType)
-	if err != nil {
-		logrus.Debugf("Error GetResourceType: %v", err)
-		return nil, err
-	}
-	var schemaClient clientbase.APIBaseClientInterface
-	// the schemaType dictates which client we need to use
-	if c.CAPIClient != nil {
-		if strings.HasPrefix(rt, "cluster.x-k8s.io") {
-			schemaClient = c.CAPIClient
-		}
-	}
-	if c.ManagementClient != nil {
-		if _, ok := c.ManagementClient.APIBaseClient.Types[rt]; ok {
-			schemaClient = c.ManagementClient
-		}
-	}
-	if c.ProjectClient != nil {
-		if _, ok := c.ProjectClient.APIBaseClient.Types[rt]; ok {
-			schemaClient = c.ProjectClient
-		}
-	}
-	if c.ClusterClient != nil {
-		if _, ok := c.ClusterClient.APIBaseClient.Types[rt]; ok {
-			schemaClient = c.ClusterClient
-		}
-	}
-	return schemaClient, nil
-}
-
-// LookupByName looks up a resource by name
-func LookupByName(c *cliclient.MasterClient, name, schemaType string) (*ntypes.Resource, error) {
-	schemaClient, err := lookupSchemaClient(c, schemaType)
-	if err != nil {
-		return nil, err
-	}
-	return lookupByNameWithClient(schemaClient, name, schemaType)
-}
-
-func lookupByNameWithClient(schemaClient clientbase.APIBaseClientInterface, name, schemaType string) (*ntypes.Resource, error) {
-	var collection ntypes.ResourceCollection
-
-	listOpts := &ntypes.ListOpts{
-		Filters: map[string]interface{}{
-			"name":         name,
-			"removed_null": 1,
-		},
-	}
-
-	if err := schemaClient.List(schemaType, listOpts, &collection); err != nil {
-		logrus.Debugf("Error schemaClient.List: %v", err)
-		if clientbase.IsNotFound(err) {
-			return nil, fmt.Errorf("resource of type %s with name %s: %w", schemaType, name, errNotFound)
-		}
-		// prevents 403 from falsely returning as an unhandled error
-		if apiError, ok := err.(*clientbase.APIError); ok {
-			if apiError.StatusCode == http.StatusForbidden {
-				return nil, fmt.Errorf("resource of type %s with name %s: %w", schemaType, name, errNotFound)
-			}
-		}
-		return nil, err
-	}
-
-	if len(collection.Data) > 1 {
-		ids := []string{}
-		for _, data := range collection.Data {
-			ids = append(ids, data.ID)
-		}
-		return nil, fmt.Errorf("multiple resources of type %s found for name %s: %v", schemaType, name, ids)
-	}
-	if len(collection.Data) == 0 {
-		return nil, fmt.Errorf("resource of type %s with name %s: %w", schemaType, name, errNotFound)
-	}
-
-	return &collection.Data[0], nil
-}
-
-// LookupByID looks up a resource by it's ID
-func LookupByID(c *cliclient.MasterClient, id, schemaType string) (*ntypes.Resource, error) {
-	schemaClient, err := lookupSchemaClient(c, schemaType)
-	if err != nil {
-		return nil, err
-	}
-	return lookupByIDWithClient(schemaClient, id, schemaType)
-}
-
-func lookupByIDWithClient(schemaClient clientbase.APIBaseClientInterface, id, schemaType string) (*ntypes.Resource, error) {
-	var resource ntypes.Resource
-
-	if err := schemaClient.ByID(schemaType, id, &resource); err != nil {
-		logrus.Debugf("Error schemaClient.ByID: %v", err)
-		if clientbase.IsNotFound(err) {
-			return nil, fmt.Errorf("resource of type %s with ID %s: %w", schemaType, id, errNotFound)
-		}
-		// prevents 403 from falsely returning as an unhandled error
-		if apiError, ok := err.(*clientbase.APIError); ok {
-			if apiError.StatusCode == http.StatusForbidden {
-				return nil, fmt.Errorf("resource of type %s with ID %s: %w", schemaType, id, errNotFound)
-			}
-		}
-		return nil, err
-	}
-	return &resource, nil
 }
 
 func RandomName() string {
