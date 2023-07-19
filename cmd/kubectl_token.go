@@ -70,7 +70,6 @@ var supportedAuthProviders = map[string]bool{
 	"activeDirectoryProvider": true,
 	"azureADProvider":         true,
 
-
 	// all saml providers
 	"pingProvider":       true,
 	"adfsProvider":       true,
