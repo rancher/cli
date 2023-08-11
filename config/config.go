@@ -20,7 +20,7 @@ type Config struct {
 	CurrentServer string
 }
 
-//ServerConfig holds the config for each server the user has setup
+// ServerConfig holds the config for each server the user has setup
 type ServerConfig struct {
 	AccessKey       string                     `json:"accessKey"`
 	SecretKey       string                     `json:"secretKey"`
