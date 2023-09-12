@@ -9,7 +9,7 @@ platform:
 steps:
 - name: build
   pull: default
-  image: rancher/dapper:1.10.3
+  image: rancher/dapper:v0.6.0
   commands:
   - dapper ci
   privileged: true
@@ -19,7 +19,7 @@ steps:
 
 - name: build-all-binaries
   pull: default
-  image: rancher/dapper:1.10.3
+  image: rancher/dapper:v0.6.0
   commands:
   - dapper ci
   - ls -lR dist/artifacts
@@ -40,7 +40,7 @@ steps:
 
 - name: stage-binaries
   pull: default
-  image: rancher/dapper:1.10.3
+  image: rancher/dapper:v0.6.0
   commands:
   - "cp -r ./bin/* ./package/"
   when:
