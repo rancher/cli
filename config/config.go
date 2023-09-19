@@ -59,6 +59,30 @@ func LoadFromPath(path string) (Config, error) {
 	return cf, nil
 }
 
+// GetFilePermissionWarnings returns the following warnings based on the file permission:
+// - one warning if the file is group-readable
+// - one warning if the file is world-readable
+// We want this because configuration may have sensitive information (eg: creds).
+// A nil error is returned if the file doesn't exist.
+func GetFilePermissionWarnings(path string) ([]string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+		return []string{}, fmt.Errorf("get file info: %w", err)
+	}
+
+	var warnings []string
+	if info.Mode()&0040 > 0 {
+		warnings = append(warnings, fmt.Sprintf("Rancher configuration file %s is group-readable. This is insecure.", path))
+	}
+	if info.Mode()&0004 > 0 {
+		warnings = append(warnings, fmt.Sprintf("Rancher configuration file %s is world-readable. This is insecure.", path))
+	}
+	return warnings, nil
+}
+
 func (c Config) Write() error {
 	err := os.MkdirAll(path.Dir(c.Path), 0700)
 	if err != nil {
@@ -68,7 +92,7 @@ func (c Config) Write() error {
 	logrus.Infof("Saving config to %s", c.Path)
 	p := c.Path
 	c.Path = ""
-	output, err := os.Create(p)
+	output, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}

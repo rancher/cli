@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cmd"
+	"github.com/rancher/cli/config"
 	rancherprompt "github.com/rancher/cli/rancher_prompt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -70,6 +71,17 @@ func mainErr() error {
 		if ctx.GlobalBool("debug") {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
+
+		path := cmd.GetConfigPath(ctx)
+		warnings, err := config.GetFilePermissionWarnings(path)
+		if err != nil {
+			// We don't want to block the execution of the CLI in that case
+			logrus.Errorf("Unable to verify config file permission: %s. Continuing.", err)
+		}
+		for _, warning := range warnings {
+			logrus.Warning(warning)
+		}
+
 		return nil
 	}
 	app.Version = VERSION
