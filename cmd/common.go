@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -259,27 +258,15 @@ func verifyCert(caCert []byte) (string, error) {
 	return string(caCert), nil
 }
 
-func loadConfig(ctx *cli.Context) (config.Config, error) {
+func GetConfigPath(ctx *cli.Context) string {
 	// path will always be set by the global flag default
 	path := ctx.GlobalString("config")
-	path = filepath.Join(path, cfgFile)
+	return filepath.Join(path, cfgFile)
+}
 
-	cf := config.Config{
-		Path:    path,
-		Servers: make(map[string]*config.ServerConfig),
-	}
-
-	content, err := ioutil.ReadFile(path)
-	if os.IsNotExist(err) {
-		return cf, nil
-	} else if err != nil {
-		return cf, err
-	}
-
-	err = json.Unmarshal(content, &cf)
-	cf.Path = path
-
-	return cf, err
+func loadConfig(ctx *cli.Context) (config.Config, error) {
+	path := GetConfigPath(ctx)
+	return config.LoadFromPath(path)
 }
 
 func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {

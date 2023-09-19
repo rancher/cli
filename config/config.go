@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
 	"path"
@@ -30,6 +31,32 @@ type ServerConfig struct {
 	CACerts         string                     `json:"cacert"`
 	KubeCredentials map[string]*ExecCredential `json:"kubeCredentials"`
 	KubeConfigs     map[string]*api.Config     `json:"kubeConfigs"`
+}
+
+// LoadFromPath attempts to load a config from the given file path. If the file
+// doesn't exist, an empty config is returned.
+func LoadFromPath(path string) (Config, error) {
+	cf := Config{
+		Path:    path,
+		Servers: make(map[string]*ServerConfig),
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		// it's okay if the file is empty, we still return a valid config
+		if os.IsNotExist(err) {
+			return cf, nil
+		}
+
+		return cf, err
+	}
+
+	if err := json.Unmarshal(content, &cf); err != nil {
+		return cf, fmt.Errorf("unmarshaling %s: %w", path, err)
+	}
+	cf.Path = path
+
+	return cf, nil
 }
 
 func (c Config) Write() error {
