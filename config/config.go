@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
 	"path"
@@ -32,6 +33,56 @@ type ServerConfig struct {
 	KubeConfigs     map[string]*api.Config     `json:"kubeConfigs"`
 }
 
+// LoadFromPath attempts to load a config from the given file path. If the file
+// doesn't exist, an empty config is returned.
+func LoadFromPath(path string) (Config, error) {
+	cf := Config{
+		Path:    path,
+		Servers: make(map[string]*ServerConfig),
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		// it's okay if the file is empty, we still return a valid config
+		if os.IsNotExist(err) {
+			return cf, nil
+		}
+
+		return cf, err
+	}
+
+	if err := json.Unmarshal(content, &cf); err != nil {
+		return cf, fmt.Errorf("unmarshaling %s: %w", path, err)
+	}
+	cf.Path = path
+
+	return cf, nil
+}
+
+// GetFilePermissionWarnings returns the following warnings based on the file permission:
+// - one warning if the file is group-readable
+// - one warning if the file is world-readable
+// We want this because configuration may have sensitive information (eg: creds).
+// A nil error is returned if the file doesn't exist.
+func GetFilePermissionWarnings(path string) ([]string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+		return []string{}, fmt.Errorf("get file info: %w", err)
+	}
+
+	var warnings []string
+	if info.Mode()&0040 > 0 {
+		warnings = append(warnings, fmt.Sprintf("Rancher configuration file %s is group-readable. This is insecure.", path))
+	}
+	if info.Mode()&0004 > 0 {
+		warnings = append(warnings, fmt.Sprintf("Rancher configuration file %s is world-readable. This is insecure.", path))
+	}
+	return warnings, nil
+}
+
 func (c Config) Write() error {
 	err := os.MkdirAll(path.Dir(c.Path), 0700)
 	if err != nil {
@@ -41,7 +92,7 @@ func (c Config) Write() error {
 	logrus.Infof("Saving config to %s", c.Path)
 	p := c.Path
 	c.Path = ""
-	output, err := os.Create(p)
+	output, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
