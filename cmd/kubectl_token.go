@@ -415,7 +415,7 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 
 	client := &http.Client{Transport: tr, Timeout: 300 * time.Second}
 
-	loginRequest := fmt.Sprintf("%s/login?requestId=%s&publicKey=%s&responseType=%s",
+	loginRequest := fmt.Sprintf("%s/dashboard/auth/login?requestId=%s&publicKey=%s&responseType=%s",
 		input.server, id, encodedKey, responseType)
 
 	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s \n", loginRequest))
