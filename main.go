@@ -75,6 +75,7 @@ func mainErr() error {
 	app.Version = VERSION
 	app.Author = "Rancher Labs, Inc."
 	app.Email = ""
+	app.EnableBashCompletion = true
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "debug",
