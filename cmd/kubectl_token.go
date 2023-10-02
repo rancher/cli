@@ -68,6 +68,7 @@ var supportedAuthProviders = map[string]bool{
 	"freeIpaProvider":         true,
 	"openLdapProvider":        true,
 	"activeDirectoryProvider": true,
+	"azureADProvider":         true,
 
 	// all saml providers
 	"pingProvider":       true,
