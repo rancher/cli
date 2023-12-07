@@ -1,21 +1,15 @@
-FROM golang:1.16
-RUN apt-get update && \
-    apt-get install -y xz-utils zip rsync
+FROM registry.suse.com/bci/golang:1.19
 
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.46.2;
+RUN zypper -n install docker rsync xz zip
 
+ENV GOLANGCI_LINT v1.53.3
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin "$GOLANGCI_LINT"
 
-ENV DOCKER_VERSION=20.10.5
-
-RUN curl -sL https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz -o docker-${DOCKER_VERSION}.tgz && \
-    tar -zxvf docker-${DOCKER_VERSION}.tgz -C /usr/bin docker/docker --strip-components 1 && \
-    chmod +x /usr/bin/docker
-
-ENV PATH /go/bin:$PATH
 ENV DAPPER_SOURCE /go/src/github.com/rancher/cli
 ENV DAPPER_OUTPUT bin build/bin dist
 ENV DAPPER_DOCKER_SOCKET true
 ENV DAPPER_ENV TAG REPO GOOS CROSS DRONE_TAG
+
 WORKDIR ${DAPPER_SOURCE}
 ENTRYPOINT ["./scripts/entry"]
 CMD ["ci"]
