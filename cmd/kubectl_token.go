@@ -42,18 +42,26 @@ Example:
 var deleteCommandUsage = fmt.Sprintf("Delete cached token used for kubectl login at [%s] \n %s", os.ExpandEnv("${HOME}/.rancher"), deleteExample)
 
 type LoginInput struct {
-	server       string
-	userID       string
-	clusterID    string
-	authProvider string
-	caCerts      string
-	skipVerify   bool
+	server        string
+	userID        string
+	clusterID     string
+	authProvider  string
+	caCerts       string
+	skipVerify    bool
+	useDeviceFlow bool
 }
 
 const (
 	authProviderURL = "%s/v3-public/authProviders"
 	authTokenURL    = "%s/v3-public/authTokens/%s"
+	authLoginURL    = "%s/v3-public/githubProviders/github?action=login"
 )
+
+var oauthProviders = map[string]bool{
+	"azureADProvider":     true,
+	"githubProvider":      true,
+	"googleOAuthProvider": true,
+}
 
 var samlProviders = map[string]bool{
 	"pingProvider":       true,
@@ -107,6 +115,10 @@ func CredentialCommand() cli.Command {
 				Name:  "skip-verify",
 				Usage: "Skip verification of the CACerts presented by the Server",
 			},
+			cli.BoolFlag{
+				Name:  "use-device-flow",
+				Usage: "Use the device code flow for OAuth 2.0",
+			},
 		},
 		Subcommands: []cli.Command{
 			cli.Command{
@@ -155,6 +167,8 @@ func runCredential(ctx *cli.Context) error {
 		authProvider: ctx.String("auth-provider"),
 		caCerts:      ctx.String("cacerts"),
 		skipVerify:   ctx.Bool("skip-verify"),
+		// TODO: Auto-detect
+		useDeviceFlow: ctx.Bool("use-device-flow"),
 	}
 
 	newCred, err := loginAndGenerateCred(input)
@@ -300,6 +314,11 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 	token := managementClient.Token{}
 	if samlProviders[input.authProvider] {
 		token, err = samlAuth(input, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+	} else if oauthProviders[input.authProvider] {
+		token, err = oauthAuth(input, tlsConfig)
 		if err != nil {
 			return nil, err
 		}
