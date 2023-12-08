@@ -55,6 +55,12 @@ const (
 	authTokenURL    = "%s/v3-public/authTokens/%s"
 )
 
+var oauthProviders = map[string]bool{
+	"azureADProvider":     true,
+	"githubProvider":      true,
+	"googleOAuthProvider": true,
+}
+
 var samlProviders = map[string]bool{
 	"pingProvider":       true,
 	"adfsProvider":       true,
@@ -303,6 +309,11 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 		if err != nil {
 			return nil, err
 		}
+	} else if oauthProviders[input.authProvider] {
+		token, err = oauthAuth(input, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		customPrint(fmt.Sprintf("Enter credentials for %s \n", input.authProvider))
 		token, err = basicAuth(input, tlsConfig)
@@ -374,6 +385,10 @@ func basicAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token
 		return token, err
 	}
 	return token, nil
+}
+
+func oauthAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token, error) {
+	return samlAuth(input, tlsConfig)
 }
 
 func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token, error) {
