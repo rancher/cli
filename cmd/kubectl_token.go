@@ -1,29 +1,40 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/big"
+	"net"
 	"net/http"
+	"net/url"
 	url2 "net/url"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rancher/cli/config"
-	"github.com/rancher/norman/types/convert"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/urfave/cli"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/authhandler"
+	"golang.org/x/oauth2/microsoft"
 	"golang.org/x/term"
 )
 
@@ -46,6 +57,7 @@ type LoginInput struct {
 	authProvider string
 	caCerts      string
 	skipVerify   bool
+	prompt       bool
 }
 
 const (
@@ -61,6 +73,10 @@ var samlProviders = map[string]bool{
 	"shibbolethProvider": true,
 }
 
+var oidcProviders = map[string]bool{
+	"azureADProvider": true,
+}
+
 var supportedAuthProviders = map[string]bool{
 	"localProvider":           true,
 	"freeIpaProvider":         true,
@@ -73,6 +89,9 @@ var supportedAuthProviders = map[string]bool{
 	"keyCloakProvider":   true,
 	"oktaProvider":       true,
 	"shibbolethProvider": true,
+
+	// OIDC
+	"azureADProvider": true,
 }
 
 func CredentialCommand() cli.Command {
@@ -112,6 +131,10 @@ func CredentialCommand() cli.Command {
 			cli.BoolFlag{
 				Name:  "skip-verify",
 				Usage: "Skip verification of the CACerts presented by the Server",
+			},
+			cli.BoolFlag{
+				Name:  "prompt",
+				Usage: "prompt",
 			},
 		},
 		Subcommands: []cli.Command{
@@ -161,6 +184,7 @@ func runCredential(ctx *cli.Context) error {
 		authProvider: ctx.String("auth-provider"),
 		caCerts:      ctx.String("cacerts"),
 		skipVerify:   ctx.Bool("skip-verify"),
+		prompt:       ctx.Bool("prompt"),
 	}
 
 	newCred, err := loginAndGenerateCred(input)
@@ -295,13 +319,17 @@ func cacheCredential(ctx *cli.Context, cred *config.ExecCredential, id string) e
 }
 
 func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
-	if input.authProvider == "" {
-		provider, err := getAuthProvider(input.server)
-		if err != nil {
-			return nil, err
-		}
-		input.authProvider = provider
+	authProviders, err := getAuthProviders(input.server)
+	if err != nil {
+		return nil, err
 	}
+
+	selectedProvider, err := getAuthProvider(authProviders, input.authProvider)
+	if err != nil {
+		return nil, err
+	}
+	input.authProvider = selectedProvider.Type
+
 	tlsConfig, err := getTLSConfig(input)
 	if err != nil {
 		return nil, err
@@ -309,6 +337,11 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 	token := managementClient.Token{}
 	if samlProviders[input.authProvider] {
 		token, err = samlAuth(input, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+	} else if oidcProviders[input.authProvider] {
+		token, err = oidcAuth(selectedProvider, input.prompt)
 		if err != nil {
 			return nil, err
 		}
@@ -383,6 +416,173 @@ func basicAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token
 		return token, err
 	}
 	return token, nil
+}
+
+func newOIDCConfigFromRedirectURL(redirectURL string) (*oauth2.Config, error) {
+	u, err := url.Parse(redirectURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if u.Hostname() == "login.microsoftonline.com" {
+		// remove starting '/' and trailing path to get the tenant ID
+		path := u.EscapedPath()[1:]
+		tenantID := strings.TrimSuffix(path, "/oauth2/v2.0/authorize")
+
+		queryParams := u.Query()
+		return &oauth2.Config{
+			ClientID: queryParams.Get("client_id"),
+			Scopes:   []string{"openid", "profile", "email"},
+			Endpoint: microsoft.AzureADEndpoint(tenantID),
+		}, nil
+	}
+
+	return nil, errors.New("cannot extract OIDC config from provider redirectURL")
+}
+
+func oidcAuth(provider *AuthProvider, prompt bool) (managementClient.Token, error) {
+	token := managementClient.Token{}
+
+	// channel where send the final URL coming from the authorization flow
+	ch := make(chan *url.URL)
+	var redirectURL string
+	var err error
+
+	// if prompt is true wait for the user to input the URL
+	if prompt {
+		redirectURL = promptUser(ch)
+	} else { // else start a local server that will intecrept the URLL
+		redirectURL, err = startServer(ch)
+		if err != nil {
+			return token, err
+		}
+	}
+	authorizationHandler := oidcAuthHandler(ch, prompt)
+
+	oidcConfig, err := newOIDCConfigFromRedirectURL(provider.RedirectURL)
+	if err != nil {
+		return token, err
+	}
+	oidcConfig.RedirectURL = redirectURL
+
+	state, pkceParams, err := initPKCE()
+	if err != nil {
+		return token, err
+	}
+
+	tokenSource := authhandler.TokenSourceWithPKCE(context.Background(), oidcConfig, state, authorizationHandler, pkceParams)
+
+	azureToken, err := tokenSource.Token()
+	if err != nil {
+		return token, err
+	}
+
+	// get kubeconfig token
+	jsonBody := fmt.Sprintf(`{"responseType":"kubeconfig","token":"%s"}`, azureToken.Extra("id_token"))
+	response, err := http.Post("https://rancher-local.enrichman.it/v3-public/azureADProviders/azuread?action=login", "application/json", strings.NewReader(jsonBody))
+	b, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return token, err
+	}
+
+	err = json.Unmarshal(b, &token)
+	return token, err
+}
+
+func initPKCE() (string, *authhandler.PKCEParams, error) {
+	state, err := generateKey()
+	if err != nil {
+		return "", nil, err
+	}
+
+	codeVerifier, err := generateKey()
+	if err != nil {
+		return "", nil, err
+	}
+
+	pkceParams := &authhandler.PKCEParams{
+		Verifier:        codeVerifier,
+		Challenge:       hashKey(codeVerifier),
+		ChallengeMethod: "S256",
+	}
+
+	return state, pkceParams, nil
+}
+
+func startServer(ch chan *url.URL) (string, error) {
+	listener, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		return "", errors.Wrap(err, "creating listener")
+	}
+	localRedirectURL := fmt.Sprintf("http://localhost:%d", listener.Addr().(*net.TCPAddr).Port)
+
+	srv := &http.Server{ReadHeaderTimeout: time.Second * 30}
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Login successful! You can close this window.")
+		ch <- r.URL
+	})
+
+	go func() { _ = srv.Serve(listener) }()
+
+	return localRedirectURL, nil
+}
+
+func promptUser(ch chan *url.URL) string {
+	go func() {
+		userInput, err := readUserInput()
+		if err != nil {
+			return
+		}
+
+		url, err := url.Parse(userInput)
+		if err != nil {
+			return
+		}
+
+		ch <- url
+	}()
+
+	return "https://login.microsoftonline.com/common/oauth2/nativeclient"
+}
+
+func readUserInput() (string, error) {
+	reader := bufio.NewReader(os.Stdin)
+	s, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(s), nil
+}
+
+func oidcAuthHandler(ch chan *url.URL, prompt bool) authhandler.AuthorizationHandler {
+	return func(authCodeURL string) (string, string, error) {
+		fmt.Println("\n" + authCodeURL)
+
+		if prompt {
+			fmt.Println("\nOpen this URL in your browser, follow the directions and paste the resulting URL in the console.")
+		} else {
+			fmt.Println("\nOpen this URL in your browser and follow the directions.")
+			// if it fails to open the browser the user can still proceed manually
+			_ = open.Run(authCodeURL)
+		}
+		fmt.Println()
+
+		// wait for the code
+		url := <-ch
+
+		authCode := url.Query().Get("code")
+		if authCode == "" {
+			return "", "", errors.New("code not found")
+		}
+
+		state := url.Query().Get("state")
+		if state == "" {
+			return "", "", errors.New("state not found")
+		}
+
+		return authCode, state, nil
+	}
 }
 
 func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token, error) {
@@ -501,7 +701,13 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 	}
 }
 
-func getAuthProviders(server string) (map[string]string, error) {
+type AuthProvider struct {
+	ID          string `json:"id"`
+	Type        string `json:"type"`
+	RedirectURL string `json:"redirectUrl"`
+}
+
+func getAuthProviders(server string) ([]*AuthProvider, error) {
 	authProviders := fmt.Sprintf(authProviderURL, server)
 	customPrint(authProviders)
 
@@ -510,58 +716,69 @@ func getAuthProviders(server string) (map[string]string, error) {
 		return nil, err
 	}
 
-	data := map[string]interface{}{}
-	err = json.Unmarshal(response, &data)
+	type authProvidersResponse struct {
+		Data []*AuthProvider `json:"data"`
+	}
+	resp := authProvidersResponse{}
+
+	err = json.Unmarshal(response, &resp)
 	if err != nil {
 		return nil, err
 	}
 
-	providers := map[string]string{}
-	i := 0
-	for _, value := range convert.ToMapSlice(data["data"]) {
-		provider := convert.ToString(value["type"])
-		if provider != "" && supportedAuthProviders[provider] {
-			providers[fmt.Sprintf("%v", i)] = provider
-			i++
+	supportedProviders := []*AuthProvider{}
+	for _, provider := range resp.Data {
+		if provider.Type != "" && supportedAuthProviders[provider.Type] {
+			supportedProviders = append(supportedProviders, provider)
 		}
 	}
-	return providers, err
+	return supportedProviders, err
 }
 
-func getAuthProvider(server string) (string, error) {
-	authProviders, err := getAuthProviders(server)
-	if err != nil || authProviders == nil {
-		return "", err
-	}
+func getAuthProvider(authProviders []*AuthProvider, providerType string) (*AuthProvider, error) {
 	if len(authProviders) == 0 {
-		return "", fmt.Errorf("no auth provider configured")
+		return nil, fmt.Errorf("no auth provider configured")
 	}
+
+	// if providerType was specified, look for it
+	if providerType != "" {
+		for _, p := range authProviders {
+			if p.Type == providerType {
+				return p, nil
+			}
+		}
+		return nil, fmt.Errorf("provider %s not found", providerType)
+	}
+
+	// otherwise ask to the user (if more than one)
 	if len(authProviders) == 1 {
-		return authProviders["0"], nil
+		return authProviders[0], nil
 	}
+
 	try := 0
 	var providers []string
-	for key, val := range authProviders {
-		providers = append(providers, fmt.Sprintf("%s - %s", key, val))
+	for i, val := range authProviders {
+		providers = append(providers, fmt.Sprintf("%d - %s", i, val.Type))
 	}
 	for try < 3 {
-		provider, err := customPrompt(fmt.Sprintf("auth provider\n%v",
+		providerIndexStr, err := customPrompt(fmt.Sprintf("auth provider\n%v",
 			strings.Join(providers, "\n")), true)
 		if err != nil {
 			try++
 			continue
 		}
-		if _, ok := authProviders[provider]; !ok {
+
+		providerIndex, err := strconv.Atoi(providerIndexStr)
+		if err != nil || (providerIndex < 0 || providerIndex > len(providers)-1) {
 			customPrint("pick valid auth provider")
 			try++
 			continue
 		}
-		provider = authProviders[provider]
-		return provider, nil
+
+		return authProviders[providerIndex], nil
 	}
 
-	return "", fmt.Errorf("invalid auth provider")
-
+	return nil, fmt.Errorf("invalid auth provider")
 }
 
 func generateKey() (string, error) {
@@ -577,6 +794,14 @@ func generateKey() (string, error) {
 	}
 
 	return string(token), nil
+}
+
+func hashKey(key string) string {
+	h := sha256.New()
+	h.Write([]byte(key))
+	hash := h.Sum(nil)
+
+	return base64.RawURLEncoding.EncodeToString(hash)
 }
 
 func getTLSConfig(input *LoginInput) (*tls.Config, error) {
