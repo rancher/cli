@@ -3,7 +3,7 @@ module github.com/rancher/cli
 go 1.20
 
 replace (
-	github.com/rancher/rancher/pkg/apis => github.com/enrichman/rancher/pkg/apis v0.0.0-20240201124528-3f7af696be1c
+	github.com/rancher/rancher/pkg/apis => github.com/enrichman/rancher/pkg/apis v0.0.0-20240201161923-82ad27565722
 	k8s.io/client-go => github.com/rancher/client-go v1.27.4-rancher1
 )
 
