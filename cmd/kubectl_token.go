@@ -21,8 +21,9 @@ import (
 	"time"
 
 	"github.com/rancher/cli/config"
-	"github.com/rancher/norman/types/convert"
+	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
+	"github.com/tidwall/gjson"
 	"github.com/urfave/cli"
 	"golang.org/x/term"
 )
@@ -61,6 +62,10 @@ var samlProviders = map[string]bool{
 	"shibbolethProvider": true,
 }
 
+var oauthProviders = map[string]bool{
+	"azureADProvider": true,
+}
+
 var supportedAuthProviders = map[string]bool{
 	"localProvider":           true,
 	"freeIpaProvider":         true,
@@ -73,6 +78,9 @@ var supportedAuthProviders = map[string]bool{
 	"keyCloakProvider":   true,
 	"oktaProvider":       true,
 	"shibbolethProvider": true,
+
+	// oauth providers
+	"azureADProvider": true,
 }
 
 func CredentialCommand() cli.Command {
@@ -302,6 +310,13 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 		}
 		input.authProvider = provider
 	}
+
+	selectedProvider, err := getAuthProvider(authProviders, input.authProvider)
+	if err != nil {
+		return nil, err
+	}
+	input.authProvider = selectedProvider.GetType()
+
 	tlsConfig, err := getTLSConfig(input)
 	if err != nil {
 		return nil, err
@@ -309,6 +324,11 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 	token := managementClient.Token{}
 	if samlProviders[input.authProvider] {
 		token, err = samlAuth(input, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+	} else if oauthProviders[input.authProvider] {
+		token, err = oauthAuth(input, selectedProvider)
 		if err != nil {
 			return nil, err
 		}
@@ -501,7 +521,7 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 	}
 }
 
-func getAuthProviders(server string) (map[string]string, error) {
+func getAuthProviders(server string) ([]apiv3.TypedProvider, error) {
 	authProviders := fmt.Sprintf(authProviderURL, server)
 	customPrint(authProviders)
 
@@ -510,39 +530,56 @@ func getAuthProviders(server string) (map[string]string, error) {
 		return nil, err
 	}
 
-	data := map[string]interface{}{}
-	err = json.Unmarshal(response, &data)
-	if err != nil {
-		return nil, err
-	}
+	data := gjson.Get(string(response), "data").Array()
 
-	providers := map[string]string{}
-	i := 0
-	for _, value := range convert.ToMapSlice(data["data"]) {
-		provider := convert.ToString(value["type"])
-		if provider != "" && supportedAuthProviders[provider] {
-			providers[fmt.Sprintf("%v", i)] = provider
-			i++
+	supportedProviders := []apiv3.TypedProvider{}
+	for _, provider := range data {
+		providerType := provider.Get("type").String()
+
+		if providerType != "" && supportedAuthProviders[providerType] {
+			var typedProvider apiv3.TypedProvider
+
+			switch providerType {
+			case "azureADProvider":
+				typedProvider = &apiv3.AzureADProvider{}
+			default:
+				typedProvider = &apiv3.AuthProvider{}
+			}
+
+			err = json.Unmarshal([]byte(provider.Raw), typedProvider)
+			if err != nil {
+				return nil, err
+			}
+			supportedProviders = append(supportedProviders, typedProvider)
 		}
 	}
-	return providers, err
+
+	return supportedProviders, err
 }
 
-func getAuthProvider(server string) (string, error) {
-	authProviders, err := getAuthProviders(server)
-	if err != nil || authProviders == nil {
-		return "", err
-	}
+func getAuthProvider(authProviders []apiv3.TypedProvider, providerType string) (apiv3.TypedProvider, error) {
 	if len(authProviders) == 0 {
 		return "", fmt.Errorf("no auth provider configured")
 	}
+
+	// if providerType was specified, look for it
+	if providerType != "" {
+		for _, p := range authProviders {
+			if p.GetType() == providerType {
+				return p, nil
+			}
+		}
+		return nil, fmt.Errorf("provider %s not found", providerType)
+	}
+
+	// otherwise ask to the user (if more than one)
 	if len(authProviders) == 1 {
 		return authProviders["0"], nil
 	}
 	try := 0
 	var providers []string
-	for key, val := range authProviders {
-		providers = append(providers, fmt.Sprintf("%s - %s", key, val))
+	for i, val := range authProviders {
+		providers = append(providers, fmt.Sprintf("%d - %s", i, val.GetType()))
 	}
 	for try < 3 {
 		provider, err := customPrompt(fmt.Sprintf("auth provider\n%v",
@@ -638,7 +675,6 @@ func customPrompt(field string, show bool) (result string, err error) {
 		fmt.Fprintf(os.Stderr, "\n")
 	}
 	return result, err
-
 }
 
 func customPrint(data interface{}) {
