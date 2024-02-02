@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -626,14 +625,6 @@ func generateKey() (string, error) {
 	}
 
 	return string(token), nil
-}
-
-func hashKey(key string) string {
-	h := sha256.New()
-	h.Write([]byte(key))
-	hash := h.Sum(nil)
-
-	return base64.RawURLEncoding.EncodeToString(hash)
 }
 
 func getTLSConfig(input *LoginInput) (*tls.Config, error) {
