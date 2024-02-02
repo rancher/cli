@@ -3,12 +3,12 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -27,7 +27,7 @@ func oauthAuth(input *LoginInput, provider TypedProvider) (managementClient.Toke
 	token := managementClient.Token{}
 
 	// channel where send the final URL coming from the authorization flow
-	ch := make(chan *url.URL)
+	ch := make(chan authorizationResult)
 	authorizationHandler, redirectURL, err := newAuthorizationHandler(ch, input.prompt)
 
 	oauthConfig, err := newOauthConfig(provider, redirectURL)
@@ -35,7 +35,12 @@ func oauthAuth(input *LoginInput, provider TypedProvider) (managementClient.Toke
 		return token, err
 	}
 
-	state, pkceParams, err := initStateAndPKCE()
+	state, err := initState(provider.GetType())
+	if err != nil {
+		return token, err
+	}
+
+	pkceParams, err := initPKCE()
 	if err != nil {
 		return token, err
 	}
@@ -90,15 +95,33 @@ func newOauthConfig(provider TypedProvider, redirectURL string) (*oauth2.Config,
 	}, nil
 }
 
-func initStateAndPKCE() (string, *authhandler.PKCEParams, error) {
-	state, err := generateKey()
+func initState(provider string) (string, error) {
+	nonce, err := generateKey()
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
+	state := struct {
+		Nonce    string `json:"nonce"`
+		Provider string `json:"provider"`
+	}{
+		Nonce:    nonce,
+		Provider: provider,
+	}
+
+	b, err := json.Marshal(&state)
+	if err != nil {
+		return "", err
+	}
+
+	encodedState := base64.RawURLEncoding.EncodeToString(b)
+	return encodedState, nil
+}
+
+func initPKCE() (*authhandler.PKCEParams, error) {
 	code, err := pkce.Generate()
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	pkceParams := &authhandler.PKCEParams{
@@ -107,14 +130,21 @@ func initStateAndPKCE() (string, *authhandler.PKCEParams, error) {
 		ChallengeMethod: code.Method(),
 	}
 
-	return state, pkceParams, nil
+	return pkceParams, nil
+}
+
+type authorizationResult struct {
+	Code             string
+	State            string
+	Error            string
+	ErrorDescription string
 }
 
 // newAuthorizationHandler returns an AuthorizationHandler used to perform the authorization flow.
 // It will wait an URL from the channel where to grab the 'code' and 'state' parameters.
 // It will start a local server if prompt is false, or it will wait the URL from the console
 // if prompt is true.
-func newAuthorizationHandler(ch chan *url.URL, prompt bool) (authhandler.AuthorizationHandler, string, error) {
+func newAuthorizationHandler(ch chan authorizationResult, prompt bool) (authhandler.AuthorizationHandler, string, error) {
 	var redirectURL string
 	var err error
 
@@ -132,7 +162,8 @@ func newAuthorizationHandler(ch chan *url.URL, prompt bool) (authhandler.Authori
 		customPrint("\n" + authCodeURL)
 
 		if prompt {
-			customPrint("\nOpen this URL in your browser, follow the directions and paste the resulting URL in the console.")
+			customPrint("\nOpen the URL in your browser and follow the directions.")
+			customPrint("\nEnter Code:")
 		} else {
 			customPrint("\nOpen this URL in your browser and follow the directions.")
 			// if it fails to open the browser the user can still proceed manually
@@ -140,45 +171,53 @@ func newAuthorizationHandler(ch chan *url.URL, prompt bool) (authhandler.Authori
 		}
 
 		// wait for the code
-		url := <-ch
+		authResult := <-ch
 
 		// handle errors
-		errorCode := url.Query().Get("error")
-		errorDesc := url.Query().Get("error_description")
-		if errorCode != "" || errorDesc != "" {
-			return "", "", fmt.Errorf("%s: %s", errorCode, errorDesc)
+		if authResult.Error != "" || authResult.ErrorDescription != "" {
+			return "", "", fmt.Errorf("%s: %s", authResult.Error, authResult.ErrorDescription)
 		}
 
-		authCode := url.Query().Get("code")
-		if authCode == "" {
+		if authResult.Code == "" {
 			return "", "", errors.New("code not found")
 		}
 
-		state := url.Query().Get("state")
-		if state == "" {
+		if authResult.State == "" {
 			return "", "", errors.New("state not found")
 		}
 
-		return authCode, state, nil
+		return authResult.Code, authResult.State, nil
 	}, redirectURL, nil
 }
 
-func promptUser(ch chan *url.URL) string {
+func promptUser(ch chan authorizationResult) string {
 	go func() {
-		userInput, err := readUserInput()
+		code, err := readUserInput()
 		if err != nil {
+			ch <- authorizationResult{
+				Error:            err.Error(),
+				ErrorDescription: "error reading code",
+			}
 			return
 		}
 
-		url, err := url.Parse(userInput)
+		customPrint("\nEnter State:")
+		state, err := readUserInput()
 		if err != nil {
+			ch <- authorizationResult{
+				Error:            err.Error(),
+				ErrorDescription: "error reading state",
+			}
 			return
 		}
 
-		ch <- url
+		ch <- authorizationResult{
+			Code:  code,
+			State: state,
+		}
 	}()
 
-	return "https://login.microsoftonline.com/common/oauth2/nativeclient"
+	return "https://127.0.0.1:8005/oauth-verify-static"
 }
 
 func readUserInput() (string, error) {
@@ -190,7 +229,7 @@ func readUserInput() (string, error) {
 	return strings.TrimSpace(s), nil
 }
 
-func startServer(ch chan *url.URL) (string, error) {
+func startServer(ch chan authorizationResult) (string, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return "", errors.Wrap(err, "creating listener")
@@ -201,7 +240,15 @@ func startServer(ch chan *url.URL) (string, error) {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Login successful! You can close this window.")
-		ch <- r.URL
+
+		queryParams := r.URL.Query()
+
+		ch <- authorizationResult{
+			Code:             queryParams.Get("code"),
+			State:            queryParams.Get("state"),
+			Error:            queryParams.Get("error"),
+			ErrorDescription: queryParams.Get("error_description"),
+		}
 	})
 
 	go func() { _ = srv.Serve(listener) }()
