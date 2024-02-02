@@ -23,7 +23,7 @@ import (
 	"golang.org/x/oauth2/authhandler"
 )
 
-func oauthAuth(input *LoginInput, provider apiv3.TypedProvider) (managementClient.Token, error) {
+func oauthAuth(input *LoginInput, provider TypedProvider) (managementClient.Token, error) {
 	token := managementClient.Token{}
 
 	// channel where send the final URL coming from the authorization flow
@@ -68,14 +68,14 @@ func oauthAuth(input *LoginInput, provider apiv3.TypedProvider) (managementClien
 	return token, err
 }
 
-func newOauthConfig(provider apiv3.TypedProvider, redirectURL string) (*oauth2.Config, error) {
+func newOauthConfig(provider TypedProvider, redirectURL string) (*oauth2.Config, error) {
 	var oauthProvider apiv3.OAuthProvider
 
 	switch p := provider.(type) {
 	case *apiv3.AzureADProvider:
 		oauthProvider = p.OAuthProvider
 	default:
-		return nil, errors.New("cannot extract OIDC config from provider redirectURL")
+		return nil, errors.New("provider is not a supported OAuth provider")
 	}
 
 	return &oauth2.Config{
@@ -129,16 +129,15 @@ func newAuthorizationHandler(ch chan *url.URL, prompt bool) (authhandler.Authori
 	}
 
 	return func(authCodeURL string) (string, string, error) {
-		fmt.Println("\n" + authCodeURL)
+		customPrint("\n" + authCodeURL)
 
 		if prompt {
-			fmt.Println("\nOpen this URL in your browser, follow the directions and paste the resulting URL in the console.")
+			customPrint("\nOpen this URL in your browser, follow the directions and paste the resulting URL in the console.")
 		} else {
-			fmt.Println("\nOpen this URL in your browser and follow the directions.")
+			customPrint("\nOpen this URL in your browser and follow the directions.")
 			// if it fails to open the browser the user can still proceed manually
 			_ = open.Run(authCodeURL)
 		}
-		fmt.Println()
 
 		// wait for the code
 		url := <-ch
