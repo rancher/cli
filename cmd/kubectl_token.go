@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -120,6 +121,10 @@ func CredentialCommand() cli.Command {
 			cli.BoolFlag{
 				Name:  "skip-verify",
 				Usage: "Skip verification of the CACerts presented by the Server",
+			},
+			cli.BoolFlag{
+				Name:  "prompt",
+				Usage: "Prompt will wait for the user to input the resulting authorization URL",
 			},
 		},
 		Subcommands: []cli.Command{
@@ -311,7 +316,7 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 		input.authProvider = provider
 	}
 
-	selectedProvider, err := getAuthProvider(authProviders, input.authProvider)
+	selectedProvider, err := selectAuthProvider(authProviders, input.authProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -362,12 +367,12 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 
 func basicAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token, error) {
 	token := managementClient.Token{}
-	username, err := customPrompt("username", true)
+	username, err := customPrompt("Enter username: ", true)
 	if err != nil {
 		return token, err
 	}
 
-	password, err := customPrompt("password", false)
+	password, err := customPrompt("Enter password: ", false)
 	if err != nil {
 		return token, err
 	}
@@ -521,7 +526,11 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 	}
 }
 
-func getAuthProviders(server string) ([]apiv3.TypedProvider, error) {
+type TypedProvider interface {
+	GetType() string
+}
+
+func getAuthProviders(server string) ([]TypedProvider, error) {
 	authProviders := fmt.Sprintf(authProviderURL, server)
 	customPrint(authProviders)
 
@@ -532,12 +541,12 @@ func getAuthProviders(server string) ([]apiv3.TypedProvider, error) {
 
 	data := gjson.Get(string(response), "data").Array()
 
-	supportedProviders := []apiv3.TypedProvider{}
+	supportedProviders := []TypedProvider{}
 	for _, provider := range data {
 		providerType := provider.Get("type").String()
 
 		if providerType != "" && supportedAuthProviders[providerType] {
-			var typedProvider apiv3.TypedProvider
+			var typedProvider TypedProvider
 
 			switch providerType {
 			case "azureADProvider":
@@ -557,7 +566,7 @@ func getAuthProviders(server string) ([]apiv3.TypedProvider, error) {
 	return supportedProviders, err
 }
 
-func getAuthProvider(authProviders []apiv3.TypedProvider, providerType string) (apiv3.TypedProvider, error) {
+func selectAuthProvider(authProviders []TypedProvider, providerType string) (TypedProvider, error) {
 	if len(authProviders) == 0 {
 		return "", fmt.Errorf("no auth provider configured")
 	}
@@ -576,20 +585,23 @@ func getAuthProvider(authProviders []apiv3.TypedProvider, providerType string) (
 	if len(authProviders) == 1 {
 		return authProviders["0"], nil
 	}
-	try := 0
 	var providers []string
 	for i, val := range authProviders {
 		providers = append(providers, fmt.Sprintf("%d - %s", i, val.GetType()))
 	}
+
+	try := 0
 	for try < 3 {
-		provider, err := customPrompt(fmt.Sprintf("auth provider\n%v",
-			strings.Join(providers, "\n")), true)
+		customPrint(fmt.Sprintf("Auth providers:\n%v", strings.Join(providers, "\n")))
+		providerIndexStr, err := customPrompt("Select auth provider: ", true)
 		if err != nil {
 			try++
 			continue
 		}
-		if _, ok := authProviders[provider]; !ok {
-			customPrint("pick valid auth provider")
+
+		providerIndex, err := strconv.Atoi(providerIndexStr)
+		if err != nil || (providerIndex < 0 || providerIndex > len(providers)-1) {
+			customPrint("Pick a valid auth provider")
 			try++
 			continue
 		}
@@ -664,8 +676,8 @@ func request(method, url string, body io.Reader) ([]byte, error) {
 	return response, nil
 }
 
-func customPrompt(field string, show bool) (result string, err error) {
-	fmt.Fprintf(os.Stderr, "Enter %s: ", field)
+func customPrompt(msg string, show bool) (result string, err error) {
+	fmt.Fprint(os.Stderr, msg)
 	if show {
 		_, err = fmt.Fscan(os.Stdin, &result)
 	} else {
