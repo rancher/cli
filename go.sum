@@ -154,8 +154,8 @@ github.com/emicklei/go-restful/v3 v3.8.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry
 github.com/emicklei/go-restful/v3 v3.9.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
 github.com/emicklei/go-restful/v3 v3.10.2 h1:hIovbnmBTLjHXkqEBUz3HGpXZdM7ZrE9fJIZIqlJLqE=
 github.com/emicklei/go-restful/v3 v3.10.2/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
-github.com/enrichman/rancher/pkg/apis v0.0.0-20240201161923-82ad27565722 h1:lH/MmZCdJ4O4JXowOKcGGT1iRrpLvan7WiXp5UtL6Mc=
-github.com/enrichman/rancher/pkg/apis v0.0.0-20240201161923-82ad27565722/go.mod h1:mICP2oVXAVO2z0Pfzvj7P0MTLpUtM9cQIeh6CAjD4K0=
+github.com/enrichman/rancher/pkg/apis v0.0.0-20240202153154-a4c8776fea5b h1:jmXt5azzQm3UnJpJYYVGx1QWJZN7a2MiNsfb8Ns8+E8=
+github.com/enrichman/rancher/pkg/apis v0.0.0-20240202153154-a4c8776fea5b/go.mod h1:mICP2oVXAVO2z0Pfzvj7P0MTLpUtM9cQIeh6CAjD4K0=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
