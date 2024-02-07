@@ -30,12 +30,7 @@ func ServerCommand(cfg *config.Config) cli.Command {
 		Usage: "Operations for the server",
 		Description: `Switch or view the server currently in focus.
 `,
-		Before: func(ctx *cli.Context) error {
-			if len(cfg.Servers) == 0 {
-				return errors.New("no servers are currently configured")
-			}
-			return nil
-		},
+		Before: validateServersConfig(cfg),
 		Subcommands: []cli.Command{
 			{
 				Name:  "current",
@@ -239,4 +234,13 @@ func getServers(cfg *config.Config) []*serverData {
 	}
 
 	return servers
+}
+
+func validateServersConfig(cfg *config.Config) cli.BeforeFunc {
+	return func(ctx *cli.Context) error {
+		if len(cfg.Servers) == 0 {
+			return errors.New("no servers are currently configured")
+		}
+		return nil
+	}
 }
