@@ -43,8 +43,9 @@ func TestServerCurrentCommand(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			tc := tc
+			t.Parallel()
 			out := &bytes.Buffer{}
 
 			err := cmd.ServerCurrent(out, tc.config)
@@ -95,8 +96,9 @@ func TestServerSwitch(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			tc := tc
+			t.Parallel()
 
 			tmpConfig, err := os.CreateTemp("", "*-rancher-config.json")
 			assert.NoError(t, err)
