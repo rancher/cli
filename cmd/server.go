@@ -71,8 +71,12 @@ func serverCurrent(ctx *cli.Context) error {
 	}
 
 	serverName := cf.CurrentServer
-	URL := cf.Servers[serverName].URL
-	fmt.Printf("Name: %s URL: %s\n", serverName, URL)
+	currentServer, found := cf.Servers[serverName]
+	if !found {
+		return errors.New("Current server not set")
+	}
+
+	fmt.Printf("Name: %s URL: %s\n", serverName, currentServer.URL)
 	return nil
 }
 
