@@ -15,6 +15,7 @@ func TestServerCurrentCommand(t *testing.T) {
 		name           string
 		config         *config.Config
 		expectedOutput string
+		expectedErr    string
 	}{
 		{
 			name:           "existing current server set",
@@ -28,7 +29,7 @@ func TestServerCurrentCommand(t *testing.T) {
 				cfg.CurrentServer = ""
 				return cfg
 			}(),
-			expectedOutput: "Current server not set\n",
+			expectedErr: "Current server not set",
 		},
 		{
 			name: "non existing current server set",
@@ -38,16 +39,21 @@ func TestServerCurrentCommand(t *testing.T) {
 					"my-server": {URL: "https://myserver.com"},
 				},
 			},
-			expectedOutput: "Current server not set\n",
+			expectedErr: "Current server not set",
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			tc := tc
-
 			out := &bytes.Buffer{}
+
 			err := cmd.ServerCurrent(out, tc.config)
-			assert.NoError(t, err)
+			if tc.expectedErr != "" {
+				assert.EqualError(t, err, tc.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
 			assert.Equal(t, tc.expectedOutput, out.String())
 		})
 	}
