@@ -287,6 +287,9 @@ func cacheCredential(ctx *cli.Context, cred *config.ExecCredential, id string) e
 		return err
 	}
 
+	if sc.KubeCredentials[id] == nil {
+		sc.KubeCredentials = make(map[string]*config.ExecCredential)
+	}
 	sc.KubeCredentials[id] = cred
 	cf.Servers[server] = sc
 	return cf.Write()
