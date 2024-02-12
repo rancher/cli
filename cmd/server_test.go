@@ -59,6 +59,62 @@ func TestServerCurrentCommand(t *testing.T) {
 	}
 }
 
+func TestServerDelete(t *testing.T) {
+	tt := []struct {
+		name                  string
+		actualCurrentServer   string
+		serverToDelete        string
+		expectedCurrentServer string
+		expectedErr           string
+	}{
+		{
+			name:                  "delete a different server will delete it",
+			actualCurrentServer:   "server1",
+			serverToDelete:        "server3",
+			expectedCurrentServer: "server1",
+		},
+		{
+			name:                  "delete the same server will blank the current",
+			actualCurrentServer:   "server1",
+			serverToDelete:        "server1",
+			expectedCurrentServer: "",
+		},
+		{
+			name:                  "delete a non existing server",
+			actualCurrentServer:   "server1",
+			serverToDelete:        "server-nope",
+			expectedCurrentServer: "server1",
+			expectedErr:           "Server not found",
+		},
+	}
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpConfig, err := os.CreateTemp("", "*-rancher-config.json")
+			assert.NoError(t, err)
+			defer os.Remove(tmpConfig.Name())
+
+			// setup test config
+			cfg := newTestConfig()
+			cfg.Path = tmpConfig.Name()
+			cfg.CurrentServer = tc.actualCurrentServer
+
+			// do test and check resulting config
+			err = serverDelete(cfg, tc.serverToDelete)
+			if err != nil {
+				assert.EqualError(t, err, tc.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tc.expectedCurrentServer, cfg.CurrentServer)
+			assert.Empty(t, cfg.Servers[tc.serverToDelete])
+		})
+	}
+}
+
 func TestServerSwitch(t *testing.T) {
 	tt := []struct {
 		name                  string

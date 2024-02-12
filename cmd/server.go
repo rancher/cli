@@ -105,6 +105,10 @@ func serverDelete(cfg *config.Config, serverName string) error {
 	}
 	delete(cfg.Servers, serverName)
 
+	if cfg.CurrentServer == serverName {
+		cfg.CurrentServer = ""
+	}
+
 	err := cfg.Write()
 	if err != nil {
 		return err
