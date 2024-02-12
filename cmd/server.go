@@ -61,7 +61,8 @@ be displayed and one can be selected.
 				Name:  "ls",
 				Usage: "List all servers",
 				Action: func(ctx *cli.Context) error {
-					return serverLs(ctx, cfg)
+					format := ctx.String("format")
+					return serverLs(ctx.App.Writer, cfg, format)
 				},
 			},
 			{
@@ -118,12 +119,17 @@ func serverDelete(cfg *config.Config, serverName string) error {
 }
 
 // serverLs command to list rancher servers from the local config
-func serverLs(ctx *cli.Context, cfg *config.Config) error {
-	writer := NewTableWriter([][]string{
+func serverLs(out io.Writer, cfg *config.Config, format string) error {
+	writerConfig := &TableWriterConfig{
+		Writer: out,
+		Format: format,
+	}
+
+	writer := NewTableWriterWithConfig([][]string{
 		{"CURRENT", "Current"},
 		{"NAME", "Name"},
 		{"URL", "URL"},
-	}, ctx)
+	}, writerConfig)
 
 	defer writer.Close()
 

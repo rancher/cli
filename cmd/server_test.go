@@ -177,6 +177,93 @@ func TestServerSwitch(t *testing.T) {
 	}
 }
 
+func TestServerLs(t *testing.T) {
+	tt := []struct {
+		name           string
+		config         *config.Config
+		format         string
+		expectedOutput string
+		expectedErr    bool
+	}{
+		{
+			name: "list servers",
+			expectedOutput: `CURRENT   NAME      URL
+*         server1   https://myserver-1.com
+          server2   https://myserver-2.com
+          server3   https://myserver-3.com
+`,
+		},
+		{
+			name:           "list empty config",
+			config:         &config.Config{},
+			format:         "",
+			expectedOutput: "CURRENT   NAME      URL\n",
+		},
+		{
+			name:   "list servers with json format",
+			format: "json",
+			expectedOutput: `{"Index":1,"Current":"*","Name":"server1","URL":"https://myserver-1.com"}
+{"Index":2,"Current":"","Name":"server2","URL":"https://myserver-2.com"}
+{"Index":3,"Current":"","Name":"server3","URL":"https://myserver-3.com"}
+`,
+		},
+		{
+			name:   "list servers with yaml format",
+			format: "yaml",
+			expectedOutput: `Current: '*'
+Index: 1
+Name: server1
+URL: https://myserver-1.com
+
+Current: ""
+Index: 2
+Name: server2
+URL: https://myserver-2.com
+
+Current: ""
+Index: 3
+Name: server3
+URL: https://myserver-3.com
+
+`,
+		},
+		{
+			name:   "list servers with custom format",
+			format: "{{.URL}}",
+			expectedOutput: `https://myserver-1.com
+https://myserver-2.com
+https://myserver-3.com
+`,
+		},
+		{
+			name:        "list servers with custom format",
+			format:      "{{.err}}",
+			expectedErr: true,
+		},
+	}
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			out := &bytes.Buffer{}
+
+			if tc.config == nil {
+				tc.config = newTestConfig()
+			}
+
+			// do test and check resulting config
+			err := serverLs(out, tc.config, tc.format)
+			if tc.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tc.expectedOutput, out.String())
+		})
+	}
+}
+
 func newTestConfig() *config.Config {
 	return &config.Config{
 		CurrentServer: "server1",
