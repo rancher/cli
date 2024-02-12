@@ -1,11 +1,10 @@
-package cmd_test
+package cmd
 
 import (
 	"bytes"
 	"os"
 	"testing"
 
-	"github.com/rancher/cli/cmd"
 	"github.com/rancher/cli/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +47,7 @@ func TestServerCurrentCommand(t *testing.T) {
 			t.Parallel()
 			out := &bytes.Buffer{}
 
-			err := cmd.ServerCurrent(out, tc.config)
+			err := serverCurrent(out, tc.config)
 			if tc.expectedErr != "" {
 				assert.EqualError(t, err, tc.expectedErr)
 			} else {
@@ -110,7 +109,7 @@ func TestServerSwitch(t *testing.T) {
 			cfg.CurrentServer = tc.actualCurrentServer
 
 			// do test and check resulting config
-			err = cmd.ServerSwitch(cfg, tc.serverName)
+			err = serverSwitch(cfg, tc.serverName)
 			if err != nil {
 				assert.EqualError(t, err, tc.expectedErr)
 			} else {

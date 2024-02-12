@@ -38,7 +38,7 @@ func ServerCommand() cli.Command {
 				Name:  "current",
 				Usage: "Display the current server",
 				Action: func(ctx *cli.Context) error {
-					return ServerCurrent(ctx.App.Writer, cfg)
+					return serverCurrent(ctx.App.Writer, cfg)
 				},
 			},
 			{
@@ -54,14 +54,14 @@ be displayed and one can be selected.
 					if err != nil {
 						return err
 					}
-					return ServerDelete(cfg, serverName)
+					return serverDelete(cfg, serverName)
 				},
 			},
 			{
 				Name:  "ls",
 				Usage: "List all servers",
 				Action: func(ctx *cli.Context) error {
-					return ServerLs(ctx, cfg)
+					return serverLs(ctx, cfg)
 				},
 			},
 			{
@@ -77,7 +77,7 @@ be displayed and one can be selected.
 					if err != nil {
 						return err
 					}
-					return ServerSwitch(cfg, serverName)
+					return serverSwitch(cfg, serverName)
 				},
 			},
 		},
@@ -85,7 +85,7 @@ be displayed and one can be selected.
 }
 
 // serverCurrent command to display the name of the current server in the local config
-func ServerCurrent(out io.Writer, cfg *config.Config) error {
+func serverCurrent(out io.Writer, cfg *config.Config) error {
 	serverName := cfg.CurrentServer
 
 	currentServer, found := cfg.Servers[serverName]
@@ -98,7 +98,7 @@ func ServerCurrent(out io.Writer, cfg *config.Config) error {
 }
 
 // serverDelete command to delete a server from the local config
-func ServerDelete(cfg *config.Config, serverName string) error {
+func serverDelete(cfg *config.Config, serverName string) error {
 	_, ok := cfg.Servers[serverName]
 	if !ok {
 		return errors.New("Server not found")
@@ -114,7 +114,7 @@ func ServerDelete(cfg *config.Config, serverName string) error {
 }
 
 // serverLs command to list rancher servers from the local config
-func ServerLs(ctx *cli.Context, cfg *config.Config) error {
+func serverLs(ctx *cli.Context, cfg *config.Config) error {
 	writer := NewTableWriter([][]string{
 		{"CURRENT", "Current"},
 		{"NAME", "Name"},
@@ -131,8 +131,8 @@ func ServerLs(ctx *cli.Context, cfg *config.Config) error {
 	return writer.Err()
 }
 
-// ServerSwitch will alter and write the config to switch rancher server.
-func ServerSwitch(cf *config.Config, serverName string) error {
+// serverSwitch will alter and write the config to switch rancher server.
+func serverSwitch(cf *config.Config, serverName string) error {
 	_, ok := cf.Servers[serverName]
 	if !ok {
 		return errors.New("Server not found")
