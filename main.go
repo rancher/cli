@@ -60,8 +60,6 @@ func main() {
 }
 
 func mainErr() error {
-	cfg := &config.Config{}
-
 	cli.AppHelpTemplate = AppHelpTemplate
 	cli.CommandHelpTemplate = CommandHelpTemplate
 	cli.SubcommandHelpTemplate = SubcommandHelpTemplate
@@ -83,12 +81,6 @@ func mainErr() error {
 		for _, warning := range warnings {
 			logrus.Warning(warning)
 		}
-
-		conf, err := config.LoadFromPath(path)
-		if err != nil {
-			return err
-		}
-		*cfg = conf
 
 		return nil
 	}
@@ -122,7 +114,7 @@ func mainErr() error {
 		cmd.NodeCommand(),
 		cmd.ProjectCommand(),
 		cmd.PsCommand(),
-		cmd.ServerCommand(cfg),
+		cmd.ServerCommand(),
 		cmd.SettingsCommand(),
 		cmd.SSHCommand(),
 		cmd.UpCommand(),

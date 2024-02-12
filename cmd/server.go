@@ -24,13 +24,15 @@ type serverData struct {
 }
 
 // ServerCommand defines the 'rancher server' sub-commands
-func ServerCommand(cfg *config.Config) cli.Command {
+func ServerCommand() cli.Command {
+	cfg := &config.Config{}
+
 	return cli.Command{
 		Name:  "server",
 		Usage: "Operations for the server",
 		Description: `Switch or view the server currently in focus.
 `,
-		Before: validateServersConfig(cfg),
+		Before: loadAndValidateConfig(cfg),
 		Subcommands: []cli.Command{
 			{
 				Name:  "current",
@@ -236,8 +238,14 @@ func getServers(cfg *config.Config) []*serverData {
 	return servers
 }
 
-func validateServersConfig(cfg *config.Config) cli.BeforeFunc {
+func loadAndValidateConfig(cfg *config.Config) cli.BeforeFunc {
 	return func(ctx *cli.Context) error {
+		conf, err := loadConfig(ctx)
+		if err != nil {
+			return err
+		}
+		*cfg = conf
+
 		if len(cfg.Servers) == 0 {
 			return errors.New("no servers are currently configured")
 		}
