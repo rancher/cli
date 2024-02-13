@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"text/tabwriter"
 
@@ -18,27 +19,52 @@ type TableWriter struct {
 	Writer        *tabwriter.Writer
 }
 
+type TableWriterConfig struct {
+	Quiet  bool
+	Format string
+	Writer io.Writer
+}
+
 func NewTableWriter(values [][]string, ctx *cli.Context) *TableWriter {
+	cfg := &TableWriterConfig{
+		Writer: os.Stdout,
+		Quiet:  ctx.Bool("quiet"),
+		Format: ctx.String("format"),
+	}
+
+	return NewTableWriterWithConfig(values, cfg)
+}
+
+func NewTableWriterWithConfig(values [][]string, config *TableWriterConfig) *TableWriter {
+	writer := config.Writer
+	if writer == nil {
+		writer = os.Stdout
+	}
+
 	t := &TableWriter{
-		Writer: tabwriter.NewWriter(os.Stdout, 10, 1, 3, ' ', 0),
+		Writer: tabwriter.NewWriter(writer, 10, 1, 3, ' ', 0),
 	}
 	t.HeaderFormat, t.ValueFormat = SimpleFormat(values)
 
-	if ctx.Bool("quiet") {
+	// remove headers if quiet or with a different format
+	if config.Quiet || config.Format != "" {
 		t.HeaderFormat = ""
+	}
+
+	// when quiet show only the ID
+	if config.Quiet {
 		t.ValueFormat = "{{.ID}}\n"
 	}
 
-	customFormat := ctx.String("format")
-	if customFormat == "json" {
-		t.HeaderFormat = ""
-		t.ValueFormat = "json"
-	} else if customFormat == "yaml" {
-		t.HeaderFormat = ""
-		t.ValueFormat = "yaml"
-	} else if customFormat != "" {
-		t.ValueFormat = customFormat + "\n"
-		t.HeaderFormat = ""
+	// check for custom formatting
+	if config.Format != "" {
+		customFormat := config.Format
+
+		// add a newline for other custom formats
+		if customFormat != "json" && customFormat != "yaml" {
+			customFormat += "\n"
+		}
+		t.ValueFormat = customFormat
 	}
 
 	return t

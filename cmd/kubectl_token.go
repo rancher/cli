@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net/http"
 	url2 "net/url"
@@ -25,7 +24,7 @@ import (
 	"github.com/rancher/norman/types/convert"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/urfave/cli"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const deleteExample = `
@@ -116,7 +115,7 @@ func CredentialCommand() cli.Command {
 			},
 		},
 		Subcommands: []cli.Command{
-			cli.Command{
+			{
 				Name:   "delete",
 				Usage:  fmt.Sprintf("Delete cached token used for kubectl login at [%s] \n %s", configDir, deleteExample),
 				Action: deleteCachedCredential,
@@ -447,7 +446,7 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 			if err != nil {
 				return token, err
 			}
-			content, err := ioutil.ReadAll(res.Body)
+			content, err := io.ReadAll(res.Body)
 			if err != nil {
 				res.Body.Close()
 				return token, err
@@ -613,7 +612,7 @@ func request(method, url string, body io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
-	response, err = ioutil.ReadAll(res.Body)
+	response, err = io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -626,7 +625,7 @@ func customPrompt(field string, show bool) (result string, err error) {
 		_, err = fmt.Fscan(os.Stdin, &result)
 	} else {
 		var data []byte
-		data, err = terminal.ReadPassword(int(os.Stdin.Fd()))
+		data, err = term.ReadPassword(int(os.Stdin.Fd()))
 		result = string(data)
 		fmt.Fprintf(os.Stderr, "\n")
 	}

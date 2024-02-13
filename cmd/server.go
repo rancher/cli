@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/rancher/cli/config"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"golang.org/x/exp/maps"
 )
 
 type serverData struct {
@@ -23,16 +25,21 @@ type serverData struct {
 
 // ServerCommand defines the 'rancher server' sub-commands
 func ServerCommand() cli.Command {
+	cfg := &config.Config{}
+
 	return cli.Command{
 		Name:  "server",
 		Usage: "Operations for the server",
 		Description: `Switch or view the server currently in focus.
 `,
+		Before: loadAndValidateConfig(cfg),
 		Subcommands: []cli.Command{
 			{
-				Name:   "current",
-				Usage:  "Display the current server",
-				Action: serverCurrent,
+				Name:  "current",
+				Usage: "Display the current server",
+				Action: func(ctx *cli.Context) error {
+					return serverCurrent(ctx.App.Writer, cfg)
+				},
 			},
 			{
 				Name:      "delete",
@@ -42,72 +49,68 @@ func ServerCommand() cli.Command {
 The server arg is optional, if not passed in a list of available servers will
 be displayed and one can be selected.
 `,
-				Action: serverDelete,
+				Action: func(ctx *cli.Context) error {
+					serverName, err := getSelectedServer(ctx, cfg)
+					if err != nil {
+						return err
+					}
+					return serverDelete(cfg, serverName)
+				},
 			},
 			{
-				Name:   "ls",
-				Usage:  "List all servers",
-				Action: serverLs,
+				Name:  "ls",
+				Usage: "List all servers",
+				Action: func(ctx *cli.Context) error {
+					format := ctx.String("format")
+					return serverLs(ctx.App.Writer, cfg, format)
+				},
 			},
 			{
 				Name:      "switch",
 				Usage:     "Switch to a new server",
 				ArgsUsage: "[SERVER_NAME]",
 				Description: `
-The server arg is optional, if not passed in a list of available servers will
-be displayed and one can be selected.
-`,
-				Action: serverSwitch,
+		The server arg is optional, if not passed in a list of available servers will
+		be displayed and one can be selected.
+		`,
+				Action: func(ctx *cli.Context) error {
+					serverName, err := getSelectedServer(ctx, cfg)
+					if err != nil {
+						return err
+					}
+					return serverSwitch(cfg, serverName)
+				},
 			},
 		},
 	}
 }
 
 // serverCurrent command to display the name of the current server in the local config
-func serverCurrent(ctx *cli.Context) error {
-	cf, err := loadConfig(ctx)
-	if err != nil {
-		return err
-	}
+func serverCurrent(out io.Writer, cfg *config.Config) error {
+	serverName := cfg.CurrentServer
 
-	serverName := cf.CurrentServer
-	currentServer, found := cf.Servers[serverName]
+	currentServer, found := cfg.Servers[serverName]
 	if !found {
 		return errors.New("Current server not set")
 	}
 
-	fmt.Printf("Name: %s URL: %s\n", serverName, currentServer.URL)
+	fmt.Fprintf(out, "Name: %s URL: %s\n", serverName, currentServer.URL)
 	return nil
 }
 
 // serverDelete command to delete a server from the local config
-func serverDelete(ctx *cli.Context) error {
-	cf, err := loadConfig(ctx)
-	if err != nil {
-		return err
-	}
-
-	if err := validateServersConfig(cf); err != nil {
-		return err
-	}
-
-	var serverName string
-	if ctx.NArg() == 1 {
-		serverName = ctx.Args().First()
-	} else {
-		serverName, err = serverFromInput(ctx, cf)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, ok := cf.Servers[serverName]
+func serverDelete(cfg *config.Config, serverName string) error {
+	_, ok := cfg.Servers[serverName]
 	if !ok {
 		return errors.New("Server not found")
 	}
+	delete(cfg.Servers, serverName)
 
-	delete(cf.Servers, serverName)
-	err = cf.Write()
+	if cfg.CurrentServer == serverName {
+		cfg.CurrentServer = ""
+	}
+
+	err := cfg.Write()
 	if err != nil {
 		return err
 	}
@@ -116,59 +119,30 @@ func serverDelete(ctx *cli.Context) error {
 }
 
 // serverLs command to list rancher servers from the local config
-func serverLs(ctx *cli.Context) error {
-	cf, err := loadConfig(ctx)
-	if err != nil {
-		return err
+func serverLs(out io.Writer, cfg *config.Config, format string) error {
+	writerConfig := &TableWriterConfig{
+		Writer: out,
+		Format: format,
 	}
 
-	if err := validateServersConfig(cf); err != nil {
-		return err
-	}
-
-	writer := NewTableWriter([][]string{
+	writer := NewTableWriterWithConfig([][]string{
 		{"CURRENT", "Current"},
 		{"NAME", "Name"},
 		{"URL", "URL"},
-	}, ctx)
+	}, writerConfig)
 
 	defer writer.Close()
 
-	for name, server := range cf.Servers {
-		var current string
-		if name == cf.CurrentServer {
-			current = "*"
-		}
-		writer.Write(&serverData{
-			Current: current,
-			Name:    name,
-			URL:     server.URL,
-		})
+	servers := getServers(cfg)
+	for _, server := range servers {
+		writer.Write(server)
 	}
 
 	return writer.Err()
 }
 
-// serverSwitch command to switch rancher server.
-func serverSwitch(ctx *cli.Context) error {
-	cf, err := loadConfig(ctx)
-	if err != nil {
-		return err
-	}
-
-	if err := validateServersConfig(cf); err != nil {
-		return err
-	}
-
-	var serverName string
-	if ctx.NArg() == 1 {
-		serverName = ctx.Args().First()
-	} else {
-		serverName, err = serverFromInput(ctx, cf)
-		if err != nil {
-			return err
-		}
-	}
+// serverSwitch will alter and write the config to switch rancher server.
+func serverSwitch(cf *config.Config, serverName string) error {
 	_, ok := cf.Servers[serverName]
 	if !ok {
 		return errors.New("Server not found")
@@ -179,25 +153,34 @@ func serverSwitch(ctx *cli.Context) error {
 	}
 
 	cf.CurrentServer = serverName
-	err = cf.Write()
+
+	err := cf.Write()
 	if err != nil {
 		return err
 	}
-
 	return nil
+}
+
+// getSelectedServer will get the selected server if provided as argument,
+// or it will prompt the user to select one.
+func getSelectedServer(ctx *cli.Context, cfg *config.Config) (string, error) {
+	serverName := ctx.Args().First()
+	if serverName != "" {
+		return serverName, nil
+	}
+	return serverFromInput(ctx, cfg)
 }
 
 // serverFromInput displays the list of servers from the local config and
 // prompt the user to select one.
-func serverFromInput(ctx *cli.Context, cf config.Config) (string, error) {
-	serverNames := getServerNames(cf)
-
-	displayListServers(ctx, cf)
+func serverFromInput(ctx *cli.Context, cf *config.Config) (string, error) {
+	servers := getServers(cf)
+	displayListServers(ctx, servers)
 
 	fmt.Print("Select a Server:")
 	reader := bufio.NewReader(os.Stdin)
 
-	errMessage := fmt.Sprintf("Invalid input, enter a number between 1 and %v: ", len(serverNames))
+	errMessage := fmt.Sprintf("Invalid input, enter a number between 1 and %v: ", len(servers))
 	var selection int
 
 	for {
@@ -213,7 +196,7 @@ func serverFromInput(ctx *cli.Context, cf config.Config) (string, error) {
 				fmt.Print(errMessage)
 				continue
 			}
-			if i <= len(serverNames) && i != 0 {
+			if i <= len(servers) && i != 0 {
 				selection = i - 1
 				break
 			}
@@ -222,11 +205,11 @@ func serverFromInput(ctx *cli.Context, cf config.Config) (string, error) {
 		}
 	}
 
-	return serverNames[selection], nil
+	return servers[selection].Name, nil
 }
 
 // displayListServers displays the list of rancher servers
-func displayListServers(ctx *cli.Context, cf config.Config) error {
+func displayListServers(ctx *cli.Context, servers []*serverData) error {
 	writer := NewTableWriter([][]string{
 		{"INDEX", "Index"},
 		{"NAME", "Name"},
@@ -235,29 +218,47 @@ func displayListServers(ctx *cli.Context, cf config.Config) error {
 
 	defer writer.Close()
 
-	for idx, server := range getServerNames(cf) {
-		writer.Write(&serverData{
-			Index: idx + 1,
-			Name:  server,
-			URL:   cf.Servers[server].URL,
-		})
+	for _, server := range servers {
+		writer.Write(server)
 	}
 	return writer.Err()
 }
 
-// getServerNames returns an order slice of existing server names
-func getServerNames(cf config.Config) []string {
-	var serverNames []string
-	for server := range cf.Servers {
-		serverNames = append(serverNames, server)
-	}
+// getServers returns an ordered slice (by name) of serverData
+func getServers(cfg *config.Config) []*serverData {
+	serverNames := maps.Keys(cfg.Servers)
 	sort.Strings(serverNames)
-	return serverNames
+
+	servers := []*serverData{}
+
+	for i, server := range serverNames {
+		var current string
+		if server == cfg.CurrentServer {
+			current = "*"
+		}
+
+		servers = append(servers, &serverData{
+			Index:   i + 1,
+			Name:    server,
+			Current: current,
+			URL:     cfg.Servers[server].URL,
+		})
+	}
+
+	return servers
 }
 
-func validateServersConfig(cnf config.Config) error {
-	if len(cnf.Servers) == 0 {
-		return errors.New("no servers are currently configured")
+func loadAndValidateConfig(cfg *config.Config) cli.BeforeFunc {
+	return func(ctx *cli.Context) error {
+		conf, err := loadConfig(ctx)
+		if err != nil {
+			return err
+		}
+		*cfg = conf
+
+		if len(cfg.Servers) == 0 {
+			return errors.New("no servers are currently configured")
+		}
+		return nil
 	}
-	return nil
 }
