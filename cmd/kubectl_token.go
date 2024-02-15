@@ -122,10 +122,6 @@ func CredentialCommand() cli.Command {
 				Name:  "skip-verify",
 				Usage: "Skip verification of the CACerts presented by the Server",
 			},
-			cli.BoolFlag{
-				Name:  "prompt",
-				Usage: "Prompt will wait for the user to input the resulting authorization URL",
-			},
 		},
 		Subcommands: []cli.Command{
 			{
@@ -333,10 +329,11 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 			return nil, err
 		}
 	} else if oauthProviders[input.authProvider] {
-		token, err = oauthAuth(input, selectedProvider)
+		tokenPtr, err := oauthAuth(input, selectedProvider)
 		if err != nil {
 			return nil, err
 		}
+		token = *tokenPtr
 	} else {
 		customPrint(fmt.Sprintf("Enter credentials for %s \n", input.authProvider))
 		token, err = basicAuth(input, tlsConfig)
@@ -344,6 +341,7 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 			return nil, err
 		}
 	}
+
 	cred := &config.ExecCredential{
 		TypeMeta: config.TypeMeta{
 			Kind:       "ExecCredential",
