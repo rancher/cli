@@ -3,7 +3,7 @@ module github.com/rancher/cli
 go 1.20
 
 replace (
-	github.com/rancher/rancher/pkg/apis => github.com/enrichman/rancher/pkg/apis v0.0.0-20240205133235-c012edbcb300
+	github.com/rancher/rancher/pkg/apis => github.com/enrichman/rancher/pkg/apis v0.0.0-20240215123131-6eb5ebe82812
 	k8s.io/client-go => github.com/rancher/client-go v1.27.4-rancher1
 )
 
@@ -20,11 +20,9 @@ require (
 	github.com/rancher/rancher/pkg/apis v0.0.0-20240131223321-ef68ee9643ea
 	github.com/rancher/rancher/pkg/client v0.0.0-20211110212758-cc2b8beb1473
 	github.com/sirupsen/logrus v1.9.3
-	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.5
-	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 	golang.org/x/oauth2 v0.15.0
 	golang.org/x/sync v0.5.0

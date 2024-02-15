@@ -26,10 +26,6 @@ import (
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/tidwall/gjson"
 	"github.com/urfave/cli"
-	"golang.org/x/crypto/ssh/terminal"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/authhandler"
-	"golang.org/x/oauth2/microsoft"
 	"golang.org/x/term"
 )
 
@@ -52,7 +48,6 @@ type LoginInput struct {
 	authProvider string
 	caCerts      string
 	skipVerify   bool
-	prompt       bool
 }
 
 const (
@@ -127,10 +122,6 @@ func CredentialCommand() cli.Command {
 				Name:  "skip-verify",
 				Usage: "Skip verification of the CACerts presented by the Server",
 			},
-			cli.BoolFlag{
-				Name:  "prompt",
-				Usage: "Prompt will wait for the user to input the resulting authorization URL",
-			},
 		},
 		Subcommands: []cli.Command{
 			{
@@ -179,7 +170,6 @@ func runCredential(ctx *cli.Context) error {
 		authProvider: ctx.String("auth-provider"),
 		caCerts:      ctx.String("cacerts"),
 		skipVerify:   ctx.Bool("skip-verify"),
-		prompt:       ctx.Bool("prompt"),
 	}
 
 	newCred, err := loginAndGenerateCred(input)
@@ -336,10 +326,11 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 			return nil, err
 		}
 	} else if oauthProviders[input.authProvider] {
-		token, err = oauthAuth(input, selectedProvider)
+		tokenPtr, err := oauthAuth(input, selectedProvider)
 		if err != nil {
 			return nil, err
 		}
+		token = *tokenPtr
 	} else {
 		customPrint(fmt.Sprintf("Enter credentials for %s \n", input.authProvider))
 		token, err = basicAuth(input, tlsConfig)
@@ -347,6 +338,7 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 			return nil, err
 		}
 	}
+
 	cred := &config.ExecCredential{
 		TypeMeta: config.TypeMeta{
 			Kind:       "ExecCredential",
