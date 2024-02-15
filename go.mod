@@ -13,7 +13,6 @@ require (
 	github.com/rancher/rancher/pkg/apis v0.0.0-20240412123131-3b35c3b5da1f
 	github.com/rancher/rancher/pkg/client v0.0.0-20211110212758-cc2b8beb1473
 	github.com/sirupsen/logrus v1.9.3
-	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.5
