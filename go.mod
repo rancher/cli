@@ -3,7 +3,7 @@ module github.com/rancher/cli
 go 1.20
 
 replace (
-	github.com/rancher/rancher/pkg/apis => github.com/enrichman/rancher/pkg/apis v0.0.0-20240215123131-6eb5ebe82812
+	github.com/rancher/rancher/pkg/apis => github.com/enrichman/rancher/pkg/apis v0.0.0-20240221110914-99a2be43ed8f
 	k8s.io/client-go => github.com/rancher/client-go v1.27.4-rancher1
 )
 
@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/norman v0.0.0-20230831160711-5de27f66385d
+	github.com/rancher/norman v0.0.0-20240205154641-a6a6cf569608
 	github.com/rancher/rancher/pkg/apis v0.0.0-20240131223321-ef68ee9643ea
 	github.com/rancher/rancher/pkg/client v0.0.0-20211110212758-cc2b8beb1473
 	github.com/sirupsen/logrus v1.9.3
@@ -74,7 +74,7 @@ require (
 	github.com/rancher/fleet/pkg/apis v0.0.0-20231017140638-93432f288e79 // indirect
 	github.com/rancher/gke-operator v1.3.0-rc2 // indirect
 	github.com/rancher/lasso v0.0.0-20230830164424-d684fdeb6f29 // indirect
-	github.com/rancher/rke v1.5.0 // indirect
+	github.com/rancher/rke v1.5.3 // indirect
 	github.com/rancher/wrangler v1.1.1 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
