@@ -67,8 +67,13 @@ func rancherLogin(input *LoginInput, provider TypedProvider, oauthToken *oauth2.
 	providerName := strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider"))
 	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, provider.GetType(), providerName)
 
+	responseType := "kubeconfig"
+	if input.clusterID != "" {
+		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
+	}
+
 	jsonBody, err := json.Marshal(map[string]interface{}{
-		"responseType": "kubeconfig",
+		"responseType": responseType,
 		"id_token":     oauthToken.Extra("id_token"),
 	})
 	if err != nil {
