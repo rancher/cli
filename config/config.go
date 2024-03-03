@@ -31,6 +31,7 @@ type ServerConfig struct {
 	CACerts         string                     `json:"cacert"`
 	KubeCredentials map[string]*ExecCredential `json:"kubeCredentials"`
 	KubeConfigs     map[string]*api.Config     `json:"kubeConfigs"`
+	Insecure        bool                       `json:"insecure"`
 }
 
 // LoadFromPath attempts to load a config from the given file path. If the file
