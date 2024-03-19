@@ -17,6 +17,7 @@ import (
 	url2 "net/url"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"time"
 
@@ -38,8 +39,6 @@ Example:
 	# Delete all credentials
 	$ rancher token delete all
 `
-
-var deleteCommandUsage = fmt.Sprintf("Delete cached token used for kubectl login at [%s] \n %s", os.ExpandEnv("${HOME}/.rancher"), deleteExample)
 
 type LoginInput struct {
 	server       string
@@ -78,6 +77,14 @@ var supportedAuthProviders = map[string]bool{
 }
 
 func CredentialCommand() cli.Command {
+	configDir, err := ConfigDir()
+	if err != nil {
+		if runtime.GOOS == "windows" {
+			configDir = "%HOME%\\.rancher"
+		} else {
+			configDir = "${HOME}/.rancher"
+		}
+	}
 	return cli.Command{
 		Name:   "token",
 		Usage:  "Authenticate and generate new kubeconfig token",
@@ -111,7 +118,7 @@ func CredentialCommand() cli.Command {
 		Subcommands: []cli.Command{
 			cli.Command{
 				Name:   "delete",
-				Usage:  deleteCommandUsage,
+				Usage:  fmt.Sprintf("Delete cached token used for kubectl login at [%s] \n %s", configDir, deleteExample),
 				Action: deleteCachedCredential,
 			},
 		},
