@@ -1,6 +1,6 @@
 module github.com/rancher/cli
 
-go 1.20
+go 1.22
 
 replace (
 	github.com/rancher/rancher/pkg/apis => github.com/enrichman/rancher/pkg/apis v0.0.0-20240221110914-99a2be43ed8f
