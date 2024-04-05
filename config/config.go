@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -84,11 +84,10 @@ func GetFilePermissionWarnings(path string) ([]string, error) {
 }
 
 func (c Config) Write() error {
-	err := os.MkdirAll(path.Dir(c.Path), 0700)
+	err := os.MkdirAll(filepath.Dir(c.Path), 0700)
 	if err != nil {
 		return err
 	}
-
 	logrus.Infof("Saving config to %s", c.Path)
 	p := c.Path
 	c.Path = ""
