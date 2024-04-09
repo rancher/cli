@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -43,7 +42,6 @@ const (
 )
 
 var (
-	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
 	// ManagementResourceTypes lists the types we use the management client for
 	ManagementResourceTypes = []string{"cluster", "node", "project"}
 	// ProjectResourceTypes lists the types we use the cluster client for
@@ -519,14 +517,6 @@ func SplitOnColon(s string) []string {
 	return strings.Split(s, ":")
 }
 
-func parseClusterAndProjectName(name string) (string, string, error) {
-	parts := strings.SplitN(name, "/", 2)
-	if len(parts) == 2 {
-		return parts[0], parts[1], nil
-	}
-	return "", "", fmt.Errorf("Unable to extract clustername and projectname from [%s]", name)
-}
-
 func parseClusterAndProjectID(id string) (string, string, error) {
 	// Validate id
 	// Examples:
@@ -575,21 +565,6 @@ func convertSnakeCaseKeysToCamelCase(input map[string]interface{}) {
 func hasPrefix(buf []byte, prefix []byte) bool {
 	trim := bytes.TrimLeftFunc(buf, unicode.IsSpace)
 	return bytes.HasPrefix(trim, prefix)
-}
-
-func settingsToMap(client *cliclient.MasterClient) (map[string]string, error) {
-	configMap := make(map[string]string)
-
-	settings, err := client.ManagementClient.Setting.List(baseListOpts())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, setting := range settings.Data {
-		configMap[setting.Name] = setting.Value
-	}
-
-	return configMap, nil
 }
 
 // getClusterNames maps cluster ID to name and defaults to ID if name is blank
@@ -697,15 +672,6 @@ func deleteMembersByNames(ctx *cli.Context, c *cliclient.MasterClient, members [
 		members = toKeepMembers
 	}
 	return members, nil
-}
-
-func tickerContext(ctx context.Context, duration time.Duration) <-chan time.Time {
-	ticker := time.NewTicker(duration)
-	go func() {
-		<-ctx.Done()
-		ticker.Stop()
-	}()
-	return ticker.C
 }
 
 func ConfigDir() (string, error) {
