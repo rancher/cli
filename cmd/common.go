@@ -150,7 +150,7 @@ func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
 	}
 
 	focusedServer := cf.FocusedServer()
-	kubeConfig, _ := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
+	kubeConfig := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
 	return kubeConfig, nil
 }
 

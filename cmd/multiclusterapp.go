@@ -345,6 +345,10 @@ func multiClusterAppLs(ctx *cli.Context) error {
 	}
 
 	collection, err := c.ManagementClient.MultiClusterApp.List(defaultListOpts(ctx))
+	if err != nil {
+		return err
+	}
+
 	writer := NewTableWriter([][]string{
 		{"ID", "ID"},
 		{"NAME", "App.Name"},
