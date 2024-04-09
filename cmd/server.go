@@ -175,8 +175,8 @@ func getSelectedServer(ctx *cli.Context, cfg *config.Config) (string, error) {
 // prompt the user to select one.
 func serverFromInput(ctx *cli.Context, cf *config.Config) (string, error) {
 	servers := getServers(cf)
-	err := displayListServers(ctx, servers)
-	if err != nil {
+
+	if err := displayListServers(ctx, servers); err != nil {
 		return "", err
 	}
 
