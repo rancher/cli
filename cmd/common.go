@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/url"
 	"os"
@@ -32,6 +31,8 @@ import (
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -228,7 +229,7 @@ func getRancherServerVersion(c *cliclient.MasterClient) (string, error) {
 }
 
 func loadAndVerifyCert(path string) (string, error) {
-	caCert, err := ioutil.ReadFile(path)
+	caCert, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
@@ -421,7 +422,6 @@ func RandomName() string {
 
 // RandomLetters returns a string with random letters of length n
 func RandomLetters(n int) string {
-	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
@@ -533,7 +533,7 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 
 // Return a JSON blob of the file at path
 func readFileReturnJSON(path string) ([]byte, error) {
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -627,9 +627,11 @@ func outputMembers(ctx *cli.Context, c *cliclient.MasterClient, members []manage
 		if err != nil {
 			return err
 		}
+
+		memberType := fmt.Sprintf("%s %s", principal.Provider, principal.PrincipalType)
 		writer.Write(&MemberData{
 			Name:       principal.Name,
-			MemberType: strings.Title(fmt.Sprintf("%s %s", principal.Provider, principal.PrincipalType)),
+			MemberType: cases.Title(language.Und).String(memberType),
 			AccessType: m.AccessType,
 		})
 	}
