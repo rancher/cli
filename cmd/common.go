@@ -301,21 +301,21 @@ func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
 func GetResourceType(c *cliclient.MasterClient, resource string) (string, error) {
 	if c.ManagementClient != nil {
 		for key := range c.ManagementClient.APIBaseClient.Types {
-			if strings.ToLower(key) == strings.ToLower(resource) {
+			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.ProjectClient != nil {
 		for key := range c.ProjectClient.APIBaseClient.Types {
-			if strings.ToLower(key) == strings.ToLower(resource) {
+			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.ClusterClient != nil {
 		for key := range c.ClusterClient.APIBaseClient.Types {
-			if strings.ToLower(key) == strings.ToLower(resource) {
+			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
