@@ -459,8 +459,7 @@ func SimpleFormat(values [][]string) (string, string) {
 func defaultAction(fn func(ctx *cli.Context) error) func(ctx *cli.Context) error {
 	return func(ctx *cli.Context) error {
 		if ctx.Bool("help") {
-			cli.ShowAppHelp(ctx)
-			return nil
+			return cli.ShowAppHelp(ctx)
 		}
 		return fn(ctx)
 	}

@@ -747,7 +747,7 @@ func getClusterK8sOptions(c *cliclient.MasterClient) []string {
 	setting, _ := c.ManagementClient.Setting.ByID("k8s-version-to-images")
 	var objmap map[string]*json.RawMessage
 
-	json.Unmarshal([]byte(setting.Value), &objmap)
+	_ = json.Unmarshal([]byte(setting.Value), &objmap)
 	for key := range objmap {
 		options = append(options, key)
 	}
