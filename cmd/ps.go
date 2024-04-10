@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/rancher/cli/cliclient"
 	"github.com/urfave/cli"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type PSHolder struct {
@@ -85,6 +86,8 @@ func psLs(ctx *cli.Context) error {
 
 	defer wlWriter.Close()
 
+	titleCaser := cases.Title(language.Und)
+
 	for _, item := range workLoads.Data {
 		var scale string
 
@@ -94,7 +97,7 @@ func psLs(ctx *cli.Context) error {
 			scale = strconv.Itoa(int(*item.Scale))
 		}
 
-		item.Type = strings.Title(item.Type)
+		item.Type = titleCaser.String(item.Type)
 
 		wlWriter.Write(&PSHolder{
 			NameSpace: item.NamespaceId,
@@ -116,7 +119,7 @@ func psLs(ctx *cli.Context) error {
 
 	if len(orphanPods.Data) > 0 {
 		for _, item := range orphanPods.Data {
-			item.Type = strings.Title(item.Type)
+			item.Type = titleCaser.String(item.Type)
 			wlWriter.Write(&PSHolder{
 				NameSpace: item.NamespaceId,
 				Name:      item.Name,

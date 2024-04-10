@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cmd"
 	"github.com/rancher/cli/config"
-	rancherprompt "github.com/rancher/cli/rancher_prompt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -128,11 +127,6 @@ func mainErr() error {
 		cmd.CredentialCommand(),
 	}
 
-	for _, com := range app.Commands {
-		rancherprompt.Commands[com.Name] = com
-		rancherprompt.Commands[com.ShortName] = com
-	}
-	rancherprompt.Flags = app.Flags
 	parsed, err := parseArgs(os.Args)
 	if err != nil {
 		logrus.Error(err)

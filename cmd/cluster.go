@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -255,9 +256,14 @@ func clusterCreate(ctx *cli.Context) error {
 		return err
 	}
 
-	if ctx.String("k8s-version") != "" {
-		k8sVersions := getClusterK8sOptions(c)
-		if ok := findStringInArray(ctx.String("k8s-version"), k8sVersions); !ok {
+	k8sVersion := ctx.String("k8s-version")
+	if k8sVersion != "" {
+		k8sVersions, err := getClusterK8sOptions(c)
+		if err != nil {
+			return err
+		}
+
+		if slices.Contains(k8sVersions, k8sVersion) {
 			fmt.Println("Available Kubernetes versions:")
 			for _, val := range k8sVersions {
 				fmt.Println(val)
@@ -742,16 +748,24 @@ func getClusterPods(cluster managementClient.Cluster) string {
 	return cluster.Requested["pods"] + "/" + cluster.Allocatable["pods"]
 }
 
-func getClusterK8sOptions(c *cliclient.MasterClient) []string {
+func getClusterK8sOptions(c *cliclient.MasterClient) ([]string, error) {
 	var options []string
-	setting, _ := c.ManagementClient.Setting.ByID("k8s-version-to-images")
-	var objmap map[string]*json.RawMessage
 
-	json.Unmarshal([]byte(setting.Value), &objmap)
+	setting, err := c.ManagementClient.Setting.ByID("k8s-version-to-images")
+	if err != nil {
+		return nil, err
+	}
+
+	var objmap map[string]*json.RawMessage
+	err = json.Unmarshal([]byte(setting.Value), &objmap)
+	if err != nil {
+		return nil, err
+	}
+
 	for key := range objmap {
 		options = append(options, key)
 	}
-	return options
+	return options, nil
 }
 
 func getClusterConfig(ctx *cli.Context) (*managementClient.Cluster, error) {

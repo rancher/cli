@@ -485,6 +485,8 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 				// log error and use the token if login succeeds
 				customPrint(fmt.Errorf("DeleteToken: %v", err))
 			}
+			defer res.Body.Close()
+
 			return token, nil
 
 		case <-timeout.C:
@@ -502,12 +504,18 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 func getAuthProviders(server string) (map[string]string, error) {
 	authProviders := fmt.Sprintf(authProviderURL, server)
 	customPrint(authProviders)
+
 	response, err := request(http.MethodGet, authProviders, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	data := map[string]interface{}{}
 	err = json.Unmarshal(response, &data)
 	if err != nil {
 		return nil, err
 	}
+
 	providers := map[string]string{}
 	i := 0
 	for _, value := range convert.ToMapSlice(data["data"]) {
