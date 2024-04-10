@@ -5,7 +5,6 @@ go 1.22
 replace k8s.io/client-go => k8s.io/client-go v0.20.1
 
 require (
-	github.com/docker/docker v1.6.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/hashicorp/go-version v1.2.1
