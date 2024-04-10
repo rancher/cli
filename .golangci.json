@@ -1,12 +1,4 @@
 {
-    "linters": {
-        "disable-all": true,
-        "enable": [
-            "govet",
-            "golint",
-            "goimports"
-        ]
-    },
     "run": {
         "timeout": "10m"
     }

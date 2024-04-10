@@ -10,7 +10,6 @@ import (
 )
 
 type TableWriter struct {
-	quite         bool
 	HeaderFormat  string
 	ValueFormat   string
 	err           error

@@ -3,12 +3,10 @@ package cmd
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/url"
 	"os"
@@ -22,7 +20,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
@@ -33,6 +30,8 @@ import (
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -43,7 +42,6 @@ const (
 )
 
 var (
-	errNoURL = errors.New("RANCHER_URL environment or --Url is not set, run `login`")
 	// ManagementResourceTypes lists the types we use the management client for
 	ManagementResourceTypes = []string{"cluster", "node", "project"}
 	// ProjectResourceTypes lists the types we use the cluster client for
@@ -151,7 +149,7 @@ func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
 	}
 
 	focusedServer := cf.FocusedServer()
-	kubeConfig, _ := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
+	kubeConfig := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
 	return kubeConfig, nil
 }
 
@@ -230,7 +228,7 @@ func getRancherServerVersion(c *cliclient.MasterClient) (string, error) {
 }
 
 func loadAndVerifyCert(path string) (string, error) {
-	caCert, err := ioutil.ReadFile(path)
+	caCert, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
@@ -301,21 +299,21 @@ func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
 func GetResourceType(c *cliclient.MasterClient, resource string) (string, error) {
 	if c.ManagementClient != nil {
 		for key := range c.ManagementClient.APIBaseClient.Types {
-			if strings.ToLower(key) == strings.ToLower(resource) {
+			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.ProjectClient != nil {
 		for key := range c.ProjectClient.APIBaseClient.Types {
-			if strings.ToLower(key) == strings.ToLower(resource) {
+			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.ClusterClient != nil {
 		for key := range c.ClusterClient.APIBaseClient.Types {
-			if strings.ToLower(key) == strings.ToLower(resource) {
+			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
@@ -417,13 +415,8 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 	return byName, nil
 }
 
-func RandomName() string {
-	return strings.Replace(namesgenerator.GetRandomName(0), "_", "-", -1)
-}
-
 // RandomLetters returns a string with random letters of length n
 func RandomLetters(n int) string {
-	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
@@ -461,8 +454,7 @@ func SimpleFormat(values [][]string) (string, string) {
 func defaultAction(fn func(ctx *cli.Context) error) func(ctx *cli.Context) error {
 	return func(ctx *cli.Context) error {
 		if ctx.Bool("help") {
-			cli.ShowAppHelp(ctx)
-			return nil
+			return cli.ShowAppHelp(ctx)
 		}
 		return fn(ctx)
 	}
@@ -519,14 +511,6 @@ func SplitOnColon(s string) []string {
 	return strings.Split(s, ":")
 }
 
-func parseClusterAndProjectName(name string) (string, string, error) {
-	parts := strings.SplitN(name, "/", 2)
-	if len(parts) == 2 {
-		return parts[0], parts[1], nil
-	}
-	return "", "", fmt.Errorf("Unable to extract clustername and projectname from [%s]", name)
-}
-
 func parseClusterAndProjectID(id string) (string, string, error) {
 	// Validate id
 	// Examples:
@@ -543,7 +527,7 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 
 // Return a JSON blob of the file at path
 func readFileReturnJSON(path string) ([]byte, error) {
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -577,21 +561,6 @@ func hasPrefix(buf []byte, prefix []byte) bool {
 	return bytes.HasPrefix(trim, prefix)
 }
 
-func settingsToMap(client *cliclient.MasterClient) (map[string]string, error) {
-	configMap := make(map[string]string)
-
-	settings, err := client.ManagementClient.Setting.List(baseListOpts())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, setting := range settings.Data {
-		configMap[setting.Name] = setting.Value
-	}
-
-	return configMap, nil
-}
-
 // getClusterNames maps cluster ID to name and defaults to ID if name is blank
 func getClusterNames(ctx *cli.Context, c *cliclient.MasterClient) (map[string]string, error) {
 	clusterNames := make(map[string]string)
@@ -615,15 +584,6 @@ func getClusterName(cluster *managementClient.Cluster) string {
 		return cluster.Name
 	}
 	return cluster.ID
-}
-
-func findStringInArray(s string, a []string) bool {
-	for _, val := range a {
-		if s == val {
-			return true
-		}
-	}
-	return false
 }
 
 func createdTimetoHuman(t string) (string, error) {
@@ -652,9 +612,11 @@ func outputMembers(ctx *cli.Context, c *cliclient.MasterClient, members []manage
 		if err != nil {
 			return err
 		}
+
+		memberType := fmt.Sprintf("%s %s", principal.Provider, principal.PrincipalType)
 		writer.Write(&MemberData{
 			Name:       principal.Name,
-			MemberType: strings.Title(fmt.Sprintf("%s %s", principal.Provider, principal.PrincipalType)),
+			MemberType: cases.Title(language.Und).String(memberType),
 			AccessType: m.AccessType,
 		})
 	}
@@ -697,15 +659,6 @@ func deleteMembersByNames(ctx *cli.Context, c *cliclient.MasterClient, members [
 		members = toKeepMembers
 	}
 	return members, nil
-}
-
-func tickerContext(ctx context.Context, duration time.Duration) <-chan time.Time {
-	ticker := time.NewTicker(duration)
-	go func() {
-		<-ctx.Done()
-		ticker.Stop()
-	}()
-	return ticker.C
 }
 
 func ConfigDir() (string, error) {

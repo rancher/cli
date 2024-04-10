@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/rancher/cli/cliclient"
 	client "github.com/rancher/rancher/pkg/client/generated/management/v3"
@@ -33,7 +33,7 @@ func apply(ctx *cli.Context) error {
 	}
 
 	filePath := ctx.String("file")
-	compose, err := ioutil.ReadFile(filePath)
+	compose, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}

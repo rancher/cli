@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -98,7 +97,7 @@ func runKubectl(ctx *cli.Context) error {
 		}
 	}
 
-	tmpfile, err := ioutil.TempFile("", "rancher-")
+	tmpfile, err := os.CreateTemp("", "rancher-")
 	if err != nil {
 		return err
 	}
