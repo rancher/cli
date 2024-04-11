@@ -62,13 +62,13 @@ func wait(ctx *cli.Context) error {
 	}
 
 	timeout := time.After(time.Duration(ctx.Int("timeout")) * time.Second)
-	every := time.Tick(1 * time.Second)
+	ticker := time.NewTicker(time.Second)
 
 	for {
 		select {
 		case <-timeout:
 			return fmt.Errorf("Timeout reached %v:%v transitioningMessage: %v", resource.Type, resource.ID, mapResource["transitioningMessage"])
-		case <-every:
+		case <-ticker.C:
 			err = c.ByID(resource, &mapResource)
 			if err != nil {
 				return err

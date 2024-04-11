@@ -190,13 +190,14 @@ func serverSwitch(ctx *cli.Context) error {
 // serverFromInput displays the list of servers from the local config and
 // prompt the user to select one.
 func serverFromInput(ctx *cli.Context, cf config.Config) (string, error) {
-	serverNames := getServerNames(cf)
-
-	displayListServers(ctx, cf)
+	if err := displayListServers(ctx, cf); err != nil {
+		return "", err
+	}
 
 	fmt.Print("Select a Server:")
 	reader := bufio.NewReader(os.Stdin)
 
+	serverNames := getServerNames(cf)
 	errMessage := fmt.Sprintf("Invalid input, enter a number between 1 and %v: ", len(serverNames))
 	var selection int
 

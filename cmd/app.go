@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -799,7 +798,7 @@ func walkTemplateDirectory(templatePath string) (string, map[string]string, erro
 			return nil
 		}
 		version := &chartVersion{}
-		content, err := ioutil.ReadFile(path)
+		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -816,7 +815,7 @@ func walkTemplateDirectory(templatePath string) (string, map[string]string, erro
 			if info.IsDir() {
 				return nil
 			}
-			content, err := ioutil.ReadFile(path)
+			content, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
@@ -1254,7 +1253,7 @@ func parseAnswersFile(location string, answers map[string]string) error {
 }
 
 func parseFile(location string) (map[string]interface{}, error) {
-	bytes, err := ioutil.ReadFile(location)
+	bytes, err := os.ReadFile(location)
 	if err != nil {
 		return nil, err
 	}

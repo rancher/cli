@@ -5,20 +5,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-func listAllFlag() cli.BoolFlag {
-	return cli.BoolFlag{
-		Name:  "all,a",
-		Usage: "Show stop/inactive and recently removed resources",
-	}
-}
-
-func listSystemFlag() cli.BoolFlag {
-	return cli.BoolFlag{
-		Name:  "system,s",
-		Usage: "Show system resources",
-	}
-}
-
 func baseListOpts() *types.ListOpts {
 	return &types.ListOpts{
 		Filters: map[string]interface{}{
