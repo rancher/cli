@@ -22,7 +22,8 @@ func oauthAuth(input *LoginInput, provider TypedProvider) (*managementClient.Tok
 		return nil, err
 	}
 
-	deviceAuthResp, err := oauthConfig.DeviceAuth(context.Background())
+	ctx := context.Background()
+	deviceAuthResp, err := oauthConfig.DeviceAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -33,12 +34,16 @@ func oauthAuth(input *LoginInput, provider TypedProvider) (*managementClient.Tok
 		deviceAuthResp.UserCode,
 	))
 
-	oauthToken, err := oauthConfig.DeviceAccessToken(context.Background(), deviceAuthResp)
+	oauthToken, err := oauthConfig.DeviceAccessToken(ctx, deviceAuthResp)
 	if err != nil {
 		return nil, err
 	}
 
-	return rancherLogin(input, provider, oauthToken)
+	token, err := rancherLogin(input, provider, oauthToken)
+	if err != nil {
+		return nil, fmt.Errorf("error during rancher login: %w", err)
+	}
+	return token, nil
 }
 
 func newOauthConfig(provider TypedProvider) (*oauth2.Config, error) {
@@ -81,6 +86,11 @@ func rancherLogin(input *LoginInput, provider TypedProvider, oauthToken *oauth2.
 	}
 
 	response, err := http.Post(url, "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
 	b, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
