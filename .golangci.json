@@ -1,4 +1,9 @@
 {
+    "linters": {
+        "enable": [
+            "gofmt"
+        ]
+    },
     "run": {
         "timeout": "10m"
     }
