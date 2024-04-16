@@ -67,7 +67,7 @@ func CatalogCommand() cli.Command {
 		Action: defaultAction(catalogLs),
 		Flags:  catalogLsFlags,
 		Subcommands: []cli.Command{
-			cli.Command{
+			{
 				Name:        "ls",
 				Usage:       "List catalogs",
 				Description: "\nList all catalogs in the current Rancher server",
@@ -75,7 +75,7 @@ func CatalogCommand() cli.Command {
 				Action:      catalogLs,
 				Flags:       catalogLsFlags,
 			},
-			cli.Command{
+			{
 				Name:        "add",
 				Usage:       "Add a catalog",
 				Description: addCatalogDescription,
@@ -94,14 +94,14 @@ func CatalogCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:        "delete",
 				Usage:       "Delete a catalog",
 				Description: "\nDelete a catalog from the Rancher server",
 				ArgsUsage:   "[CATALOG_NAME/CATALOG_ID]",
 				Action:      catalogDelete,
 			},
-			cli.Command{
+			{
 				Name:        "refresh",
 				Usage:       "Refresh catalog templates",
 				Description: refreshCatalogDescription,
