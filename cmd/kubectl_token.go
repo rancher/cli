@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -304,12 +305,15 @@ func cacheCredential(ctx *cli.Context, cred *config.ExecCredential, id string) e
 }
 
 func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
-	if input.authProvider == "" {
-		provider, err := getAuthProvider(input.server)
-		if err != nil {
-			return nil, err
-		}
-		input.authProvider = provider
+	// setup a client with the provided TLS configuration
+	client, err := getClient(input.skipVerify, input.caCerts)
+	if err != nil {
+		return nil, err
+	}
+
+	authProviders, err := getAuthProviders(client, input.server)
+	if err != nil {
+		return nil, err
 	}
 
 	selectedProvider, err := selectAuthProvider(authProviders, input.authProvider)
@@ -318,25 +322,21 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 	}
 	input.authProvider = selectedProvider.GetType()
 
-	tlsConfig, err := getTLSConfig(input)
-	if err != nil {
-		return nil, err
-	}
 	token := managementClient.Token{}
 	if samlProviders[input.authProvider] {
-		token, err = samlAuth(input, tlsConfig)
+		token, err = samlAuth(input, client)
 		if err != nil {
 			return nil, err
 		}
 	} else if oauthProviders[input.authProvider] {
-		tokenPtr, err := oauthAuth(input, selectedProvider)
+		tokenPtr, err := oauthAuth(input, client, selectedProvider)
 		if err != nil {
 			return nil, err
 		}
 		token = *tokenPtr
 	} else {
 		customPrint(fmt.Sprintf("Enter credentials for %s \n", input.authProvider))
-		token, err = basicAuth(input, tlsConfig)
+		token, err = basicAuth(input, client)
 		if err != nil {
 			return nil, err
 		}
@@ -363,7 +363,7 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 
 }
 
-func basicAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token, error) {
+func basicAuth(input *LoginInput, client *http.Client) (managementClient.Token, error) {
 	token := managementClient.Token{}
 	username, err := customPrompt("Enter username: ", true)
 	if err != nil {
@@ -385,7 +385,7 @@ func basicAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token
 	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, input.authProvider,
 		strings.ToLower(strings.Replace(input.authProvider, "Provider", "", 1)))
 
-	response, err := request(http.MethodPost, url, bytes.NewBufferString(body))
+	response, err := request(client, http.MethodPost, url, bytes.NewBufferString(body))
 	if err != nil {
 		return token, nil
 	}
@@ -408,7 +408,7 @@ func basicAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token
 	return token, nil
 }
 
-func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token, error) {
+func samlAuth(input *LoginInput, client *http.Client) (managementClient.Token, error) {
 	token := managementClient.Token{}
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -441,11 +441,7 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("accept", "application/json")
 
-	tr := &http.Transport{
-		TLSClientConfig: tlsConfig,
-	}
-
-	client := &http.Client{Transport: tr, Timeout: 300 * time.Second}
+	client.Timeout = 300 * time.Second
 
 	loginRequest := fmt.Sprintf("%s/dashboard/auth/login?requestId=%s&publicKey=%s&responseType=%s",
 		input.server, id, encodedKey, responseType)
@@ -499,10 +495,9 @@ func samlAuth(input *LoginInput, tlsConfig *tls.Config) (managementClient.Token,
 			}
 			req.Header.Set("content-type", "application/json")
 			req.Header.Set("accept", "application/json")
-			tr := &http.Transport{
-				TLSClientConfig: tlsConfig,
-			}
-			client = &http.Client{Transport: tr, Timeout: 150 * time.Second}
+
+			client.Timeout = 150 * time.Second
+
 			res, err = client.Do(req)
 			if err != nil {
 				// log error and use the token if login succeeds
@@ -528,16 +523,20 @@ type TypedProvider interface {
 	GetType() string
 }
 
-func getAuthProviders(server string) ([]TypedProvider, error) {
+func getAuthProviders(client *http.Client, server string) ([]TypedProvider, error) {
 	authProviders := fmt.Sprintf(authProviderURL, server)
 	customPrint(authProviders)
 
-	response, err := request(http.MethodGet, authProviders, nil)
+	response, err := request(client, http.MethodGet, authProviders, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	data := gjson.Get(string(response), "data").Array()
+	if !gjson.ValidBytes(response) {
+		return nil, errors.New("invalid JSON input")
+	}
+
+	data := gjson.GetBytes(response, "data").Array()
 
 	supportedProviders := []TypedProvider{}
 	for _, provider := range data {
@@ -549,6 +548,8 @@ func getAuthProviders(server string) ([]TypedProvider, error) {
 			switch providerType {
 			case "azureADProvider":
 				typedProvider = &apiv3.AzureADProvider{}
+			case "localProvider":
+				typedProvider = &apiv3.LocalProvider{}
 			default:
 				typedProvider = &apiv3.AuthProvider{}
 			}
@@ -626,47 +627,59 @@ func generateKey() (string, error) {
 	return string(token), nil
 }
 
-func getTLSConfig(input *LoginInput) (*tls.Config, error) {
-	config := &tls.Config{}
-	if input.skipVerify || input.caCerts == "" {
-		config = &tls.Config{
-			InsecureSkipVerify: true,
-		}
+// getClient return a client with the provided TLS configuration
+func getClient(skipVerify bool, caCerts string) (*http.Client, error) {
+	tlsConfig, err := getTLSConfig(skipVerify, caCerts)
+	if err != nil {
+		return nil, err
+	}
+
+	// clone the DefaultTransport to get the default values
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = tlsConfig
+	return &http.Client{Transport: transport}, nil
+}
+
+func getTLSConfig(skipVerify bool, caCerts string) (*tls.Config, error) {
+	config := &tls.Config{
+		InsecureSkipVerify: skipVerify,
+	}
+
+	if caCerts == "" {
 		return config, nil
 	}
 
-	if input.caCerts != "" {
-		cert, err := loadAndVerifyCert(input.caCerts)
-		if err != nil {
-			return nil, err
-		}
-		roots := x509.NewCertPool()
-		ok := roots.AppendCertsFromPEM([]byte(cert))
-		if !ok {
-			return nil, err
-		}
-		config.RootCAs = roots
+	// load custom certs
+	cert, err := loadAndVerifyCert(caCerts)
+	if err != nil {
+		return nil, err
 	}
+
+	// enrichman: should we load the system CertPool instead of creating a new one?
+	roots := x509.NewCertPool()
+	ok := roots.AppendCertsFromPEM([]byte(cert))
+	if !ok {
+		return nil, err
+	}
+	config.RootCAs = roots
 
 	return config, nil
 }
 
-func request(method, url string, body io.Reader) ([]byte, error) {
+func request(client *http.Client, method, url string, body io.Reader) ([]byte, error) {
 	var response []byte
-	var client *http.Client
+
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return response, err
 	}
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client = &http.Client{Transport: tr}
+
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
+
 	response, err = io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
