@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -16,7 +15,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func oauthAuth(input *LoginInput, client *http.Client, provider TypedProvider) (*managementClient.Token, error) {
+func oauthAuth(input *LoginInput, provider TypedProvider) (*managementClient.Token, error) {
 	oauthConfig, err := newOauthConfig(provider)
 	if err != nil {
 		return nil, err
@@ -39,7 +38,7 @@ func oauthAuth(input *LoginInput, client *http.Client, provider TypedProvider) (
 		return nil, err
 	}
 
-	token, err := rancherLogin(input, client, provider, oauthToken)
+	token, err := rancherLogin(input, provider, oauthToken)
 	if err != nil {
 		return nil, fmt.Errorf("error during rancher login: %w", err)
 	}
@@ -67,7 +66,7 @@ func newOauthConfig(provider TypedProvider) (*oauth2.Config, error) {
 	}, nil
 }
 
-func rancherLogin(input *LoginInput, client *http.Client, provider TypedProvider, oauthToken *oauth2.Token) (*managementClient.Token, error) {
+func rancherLogin(input *LoginInput, provider TypedProvider, oauthToken *oauth2.Token) (*managementClient.Token, error) {
 	// login with id_token
 	providerName := strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider"))
 	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, provider.GetType(), providerName)
@@ -85,13 +84,7 @@ func rancherLogin(input *LoginInput, client *http.Client, provider TypedProvider
 		return nil, err
 	}
 
-	response, err := client.Post(url, "application/json", bytes.NewBuffer(jsonBody))
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	b, err := io.ReadAll(response.Body)
+	b, err := insecureRequest(http.MethodPost, url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err
 	}

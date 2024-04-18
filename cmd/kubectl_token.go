@@ -311,7 +311,7 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 		return nil, err
 	}
 
-	authProviders, err := getAuthProviders(client, input.server)
+	authProviders, err := getAuthProviders(input.server)
 	if err != nil {
 		return nil, err
 	}
@@ -329,14 +329,14 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 			return nil, err
 		}
 	} else if oauthProviders[input.authProvider] {
-		tokenPtr, err := oauthAuth(input, client, selectedProvider)
+		tokenPtr, err := oauthAuth(input, selectedProvider)
 		if err != nil {
 			return nil, err
 		}
 		token = *tokenPtr
 	} else {
 		customPrint(fmt.Sprintf("Enter credentials for %s \n", input.authProvider))
-		token, err = basicAuth(input, client)
+		token, err = basicAuth(input)
 		if err != nil {
 			return nil, err
 		}
@@ -363,7 +363,7 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 
 }
 
-func basicAuth(input *LoginInput, client *http.Client) (managementClient.Token, error) {
+func basicAuth(input *LoginInput) (managementClient.Token, error) {
 	token := managementClient.Token{}
 	username, err := customPrompt("Enter username: ", true)
 	if err != nil {
@@ -385,7 +385,7 @@ func basicAuth(input *LoginInput, client *http.Client) (managementClient.Token, 
 	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, input.authProvider,
 		strings.ToLower(strings.Replace(input.authProvider, "Provider", "", 1)))
 
-	response, err := request(client, http.MethodPost, url, bytes.NewBufferString(body))
+	response, err := insecureRequest(http.MethodPost, url, bytes.NewBufferString(body))
 	if err != nil {
 		return token, nil
 	}
@@ -523,11 +523,11 @@ type TypedProvider interface {
 	GetType() string
 }
 
-func getAuthProviders(client *http.Client, server string) ([]TypedProvider, error) {
+func getAuthProviders(server string) ([]TypedProvider, error) {
 	authProviders := fmt.Sprintf(authProviderURL, server)
 	customPrint(authProviders)
 
-	response, err := request(client, http.MethodGet, authProviders, nil)
+	response, err := insecureRequest(http.MethodGet, authProviders, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -666,12 +666,17 @@ func getTLSConfig(skipVerify bool, caCerts string) (*tls.Config, error) {
 	return config, nil
 }
 
-func request(client *http.Client, method, url string, body io.Reader) ([]byte, error) {
+func insecureRequest(method, url string, body io.Reader) ([]byte, error) {
 	var response []byte
 
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return response, err
+		return nil, err
+	}
+
+	client, err := getClient(true, "")
+	if err != nil {
+		return nil, err
 	}
 
 	res, err := client.Do(req)

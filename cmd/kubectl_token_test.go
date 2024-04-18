@@ -60,7 +60,7 @@ func Test_getAuthProviders(t *testing.T) {
 	for _, tc := range tt {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := getAuthProviders(http.DefaultClient, tc.server.URL)
+			got, err := getAuthProviders(tc.server.URL)
 
 			if tc.expectedErr != "" {
 				assert.EqualError(t, err, tc.expectedErr)
