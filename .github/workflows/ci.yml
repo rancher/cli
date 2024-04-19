@@ -31,3 +31,25 @@ jobs:
       env:
         CROSS: 1
       run: ./scripts/build
+
+    - name: Package
+      run: |
+        ./scripts/package
+        ls -lR dist/artifacts
+        # Stage binary for packaging step
+        cp -r ./bin/* ./package/
+  
+    - name: Docker Build
+      uses: docker/build-push-action@v5
+      with:
+        push: false
+        context: package
+        tags: rancher/cli2:$GITHUB_REF_NAME
+
+  fossa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: fossas/fossa-action@main
+        with:
+          api-key: ${{ secrets.fossaApiKey }}
