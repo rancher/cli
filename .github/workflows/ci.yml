@@ -26,3 +26,8 @@ jobs:
 
     - name: Test
       run: ./scripts/test
+
+    - name: Build
+      env:
+        CROSS: 1
+      run: ./scripts/build
