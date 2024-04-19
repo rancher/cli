@@ -27,10 +27,26 @@ jobs:
       run: ./scripts/validate
 
     - name: Build
-      run: make build
+      env:
+        CROSS: 1
+      run: ./scripts/build
 
     - name: Test
       run: ./scripts/test
+
+    - name: Package
+      run: |
+        ./scripts/package
+        ls -lR dist/artifacts
+        # Stage binary for packaging step
+        cp -r ./bin/* ./package/
+  
+    - name: Docker Build
+      uses: docker/build-push-action@v5
+      with:
+        push: false
+        context: package
+        tags: rancher/cli2:$GITHUB_REF_NAME
 
   fossa:
     runs-on: ubuntu-latest
@@ -52,3 +68,4 @@ jobs:
         uses: fossas/fossa-action@main
         with:
           api-key: ${{ env.FOSSA }}
+
