@@ -53,9 +53,20 @@ jobs:
         source ./scripts/version
         echo "VERSION=$VERSION"
         echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Upload Release assets
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        cd dist/artifacts/$VERSION
+        ls -lR
+        # generate sha256sum file
+        find . -type f -printf '%P\0' | xargs -0 sha256sum > sha256sum.txt
+        gh release upload $VERSION .
   
     - name: Docker Build
       uses: docker/build-push-action@v5
       with:
+        push: true
         context: package
         tags: enrichman/cli2:${{ env.VERSION }}
