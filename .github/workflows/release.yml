@@ -62,7 +62,7 @@ jobs:
         ls -lR
         # generate sha256sum file
         find . -type f -printf '%P\0' | xargs -0 sha256sum > sha256sum.txt
-        gh release upload $VERSION *
+        gh release upload $VERSION *.txt *.xz *.gz *.zip
   
     - name: Docker Build
       uses: docker/build-push-action@v5
