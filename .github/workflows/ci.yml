@@ -42,15 +42,17 @@ jobs:
         ls -lR dist/artifacts
         # Stage binary for packaging step
         cp -r ./bin/* ./package/
+
         # Export the tag for the next step
-        echo "TAG=$TAG" >> $GITHUB_ENV 
+        echo "TAG=$TAG"
+        echo "TAG=$TAG" >> $GITHUB_ENV
   
     - name: Docker Build
       uses: docker/build-push-action@v5
       with:
         push: false
         context: package
-        tags: rancher/cli2:$TAG
+        tags: rancher/cli2:${{ env.TAG }}
 
   fossa:
     runs-on: ubuntu-latest
