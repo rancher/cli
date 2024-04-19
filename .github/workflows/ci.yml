@@ -45,15 +45,15 @@ jobs:
 
         # Export the tag for the next step
         source ./scripts/version
-        echo "TAG=$TAG"
-        echo "TAG=$TAG" >> $GITHUB_ENV
+        echo "VERSION=$VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
   
     - name: Docker Build
       uses: docker/build-push-action@v5
       with:
         push: false
         context: package
-        tags: rancher/cli2:${{ env.TAG }}
+        tags: rancher/cli2:${{ env.VERSION }}
 
   fossa:
     runs-on: ubuntu-latest
