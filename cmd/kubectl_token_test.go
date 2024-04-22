@@ -32,7 +32,7 @@ func Test_getAuthProviders(t *testing.T) {
 					AuthProvider: apiv3.AuthProvider{
 						Type: "azureADProvider",
 					},
-					RedirectURL: "https://login.microsoftonline.com/258928db-3ed6-49fb-9a7e-52e492ffb066/oauth2/v2.0/authorize?client_id=56168f69-a732-48e2-aa21-8aa0909d0976&redirect_uri=https://rancher-local.enrichman.it/verify-auth-azure&response_type=code&scope=openid",
+					RedirectURL: "https://login.microsoftonline.com/258928db-3ed6-49fb-9a7e-52e492ffb066/oauth2/v2.0/authorize?client_id=56168f69-a732-48e2-aa21-8aa0909d0976&redirect_uri=https://rancher.mydomain.com/verify-auth-azure&response_type=code&scope=openid",
 					TenantID:    "258928db-3ed6-49fb-9a7e-52e492ffb066",
 					OAuthProvider: apiv3.OAuthProvider{
 						ClientID: "56168f69-a732-48e2-aa21-8aa0909d0976",
@@ -88,7 +88,7 @@ var responseOK = `{
             "links": {
                 "self": "…/v3-public/azureADProviders/azuread"
             },
-            "redirectUrl": "https://login.microsoftonline.com/258928db-3ed6-49fb-9a7e-52e492ffb066/oauth2/v2.0/authorize?client_id=56168f69-a732-48e2-aa21-8aa0909d0976&redirect_uri=https://rancher-local.enrichman.it/verify-auth-azure&response_type=code&scope=openid",
+            "redirectUrl": "https://login.microsoftonline.com/258928db-3ed6-49fb-9a7e-52e492ffb066/oauth2/v2.0/authorize?client_id=56168f69-a732-48e2-aa21-8aa0909d0976&redirect_uri=https://rancher.mydomain.com/verify-auth-azure&response_type=code&scope=openid",
             "scopes": [
                 "openid",
                 "profile",

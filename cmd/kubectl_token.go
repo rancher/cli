@@ -655,7 +655,6 @@ func getTLSConfig(skipVerify bool, caCerts string) (*tls.Config, error) {
 		return nil, err
 	}
 
-	// enrichman: should we load the system CertPool instead of creating a new one?
 	roots := x509.NewCertPool()
 	ok := roots.AppendCertsFromPEM([]byte(cert))
 	if !ok {
