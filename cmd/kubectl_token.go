@@ -385,7 +385,7 @@ func basicAuth(input *LoginInput) (managementClient.Token, error) {
 	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, input.authProvider,
 		strings.ToLower(strings.Replace(input.authProvider, "Provider", "", 1)))
 
-	response, err := insecureRequest(http.MethodPost, url, bytes.NewBufferString(body))
+	response, err := request(http.MethodPost, url, bytes.NewBufferString(body))
 	if err != nil {
 		return token, nil
 	}
@@ -527,7 +527,7 @@ func getAuthProviders(server string) ([]TypedProvider, error) {
 	authProviders := fmt.Sprintf(authProviderURL, server)
 	customPrint(authProviders)
 
-	response, err := insecureRequest(http.MethodGet, authProviders, nil)
+	response, err := request(http.MethodGet, authProviders, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -665,7 +665,7 @@ func getTLSConfig(skipVerify bool, caCerts string) (*tls.Config, error) {
 	return config, nil
 }
 
-func insecureRequest(method, url string, body io.Reader) ([]byte, error) {
+func request(method, url string, body io.Reader) ([]byte, error) {
 	var response []byte
 
 	req, err := http.NewRequest(method, url, body)
