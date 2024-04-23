@@ -1,18 +1,19 @@
 module github.com/rancher/cli
 
-go 1.22
+go 1.21
 
-toolchain go1.22.0
-
-replace k8s.io/client-go => k8s.io/client-go v0.28.8
+replace (
+	github.com/rancher/rancher/pkg/apis => github.com/enrichman/rancher/pkg/apis v0.0.0-20240422142138-5c9faa2b7a3a
+	k8s.io/client-go => k8s.io/client-go v0.28.8
+)
 
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/norman v0.0.0-20240410185903-a9e04c653a51
-	github.com/rancher/rancher/pkg/apis v0.0.0-20240412123131-3b35c3b5da1f
+	github.com/rancher/norman v0.0.0-20240410145219-820741f8efd3
+	github.com/rancher/rancher/pkg/apis v0.0.0-20240422202758-d2244ae036b6
 	github.com/rancher/rancher/pkg/client v0.0.0-20211110212758-cc2b8beb1473
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
@@ -61,11 +62,10 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rancher/aks-operator v1.3.0-rc5 // indirect
 	github.com/rancher/eks-operator v1.4.0-rc5 // indirect
-	github.com/rancher/fleet/pkg/apis v0.0.0-20231017140638-93432f288e79 // indirect
+	github.com/rancher/fleet/pkg/apis v0.9.1-rc.2.0.20240213164401-2c6b1019687c // indirect
 	github.com/rancher/gke-operator v1.3.0-rc6 // indirect
 	github.com/rancher/lasso v0.0.0-20240325194215-0064abcb8aee // indirect
-	github.com/rancher/rke v1.5.3 // indirect
-	github.com/rancher/wrangler v1.1.1 // indirect
+	github.com/rancher/rke v1.5.9-rc1 // indirect
 	github.com/rancher/wrangler/v2 v2.2.0-rc3 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
@@ -85,7 +85,7 @@ require (
 	k8s.io/component-base v0.28.6 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
-	k8s.io/kubernetes v1.27.9 // indirect
+	k8s.io/kubernetes v1.28.6 // indirect
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
 	sigs.k8s.io/cli-utils v0.35.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
