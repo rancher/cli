@@ -567,7 +567,7 @@ func getAuthProviders(server string) ([]TypedProvider, error) {
 
 func selectAuthProvider(authProviders []TypedProvider, providerType string) (TypedProvider, error) {
 	if len(authProviders) == 0 {
-		return "", fmt.Errorf("no auth provider configured")
+		return nil, fmt.Errorf("no auth provider configured")
 	}
 
 	// if providerType was specified, look for it
@@ -582,8 +582,9 @@ func selectAuthProvider(authProviders []TypedProvider, providerType string) (Typ
 
 	// otherwise ask to the user (if more than one)
 	if len(authProviders) == 1 {
-		return authProviders["0"], nil
+		return authProviders[0], nil
 	}
+
 	var providers []string
 	for i, val := range authProviders {
 		providers = append(providers, fmt.Sprintf("%d - %s", i, val.GetType()))
@@ -604,12 +605,11 @@ func selectAuthProvider(authProviders []TypedProvider, providerType string) (Typ
 			try++
 			continue
 		}
-		provider = authProviders[provider]
-		return provider, nil
+
+		return authProviders[providerIndex], nil
 	}
 
-	return "", fmt.Errorf("invalid auth provider")
-
+	return nil, fmt.Errorf("invalid auth provider")
 }
 
 func generateKey() (string, error) {
