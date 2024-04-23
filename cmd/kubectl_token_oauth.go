@@ -84,7 +84,7 @@ func rancherLogin(input *LoginInput, provider TypedProvider, oauthToken *oauth2.
 		return nil, err
 	}
 
-	b, err := insecureRequest(http.MethodPost, url, bytes.NewBuffer(jsonBody))
+	b, err := request(http.MethodPost, url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err
 	}
