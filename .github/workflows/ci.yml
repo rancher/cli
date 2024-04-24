@@ -10,7 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout Repo
+      uses: actions/checkout@v3
 
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -34,13 +35,16 @@ jobs:
       id-token: write # needed for the Vault authentication
 
     steps:
-      - name: "Load Secrets from Vault"
+      - name: Load Secrets from Vault
         uses: rancher-eio/read-vault-secrets@main
         with:
           secrets: |
             secret/data/github/repo/${{ github.repository }}/fossa/credentials token | FOSSA
-      - uses: actions/checkout@v3
 
-      - uses: fossas/fossa-action@main
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Check FOSSA compliance
+        uses: fossas/fossa-action@main
         with:
           api-key: ${{ env.FOSSA }}
