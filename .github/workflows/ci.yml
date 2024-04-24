@@ -5,11 +5,20 @@ on:
   pull_request:
 
 jobs:
-
   build:
+    permissions:
+      contents: read
+      id-token: write # needed for the Vault authentication
     runs-on: ubuntu-latest
 
     steps:
+    - name: "Load Secrets from Vault"
+      uses: rancher-eio/read-vault-secrets@main
+      with:
+        secrets: |
+          secret/data/github/repo/${{ github.repository }}/dockerhub/rancher/credentials username | DOCKER_USERNAME ;
+          secret/data/github/repo/${{ github.repository }}/dockerhub/rancher/credentials password | DOCKER_PASSWORD ;
+
     - uses: actions/checkout@v3
 
     - name: Set up Go
@@ -57,8 +66,19 @@ jobs:
 
   fossa:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # needed for the Vault authentication
+
     steps:
+      - name: "Load Secrets from Vault"
+        uses: rancher-eio/read-vault-secrets@main
+        with:
+          secrets: |
+            secret/data/github/repo/${{ github.repository }}/fossa/credentials token | FOSSA
+
       - uses: actions/checkout@v3
+
       - uses: fossas/fossa-action@main
         with:
-          api-key: ${{ secrets.fossaApiKey }}
+          api-key: ${{ env.FOSSA }}
