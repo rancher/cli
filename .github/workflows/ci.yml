@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
   pull_request:
 
@@ -25,3 +26,21 @@ jobs:
 
     - name: Build
       run: make build
+
+  fossa:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # needed for the Vault authentication
+
+    steps:
+      - name: "Load Secrets from Vault"
+        uses: rancher-eio/read-vault-secrets@main
+        with:
+          secrets: |
+            secret/data/github/repo/${{ github.repository }}/fossa/credentials token | FOSSA
+      - uses: actions/checkout@v3
+
+      - uses: fossas/fossa-action@main
+        with:
+          api-key: ${{ env.FOSSA }}
