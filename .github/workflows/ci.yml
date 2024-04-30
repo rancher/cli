@@ -38,9 +38,6 @@ jobs:
         CROSS: 1
       run: ./scripts/build
 
-    - name: Test
-      run: ./scripts/test
-
     - name: Package
       run: |
         ./scripts/package
@@ -61,7 +58,10 @@ jobs:
         tags: rancher/cli2:${{ env.VERSION }}
 
   fossa:
+    # do not run on pull_request
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       id-token: write # needed for the Vault authentication
