@@ -1,7 +1,6 @@
 name: Release
 
 on:
-  workflow_dispatch:
   push:
     tags:        
       - v*
@@ -29,10 +28,6 @@ jobs:
       with:
         username: ${{ env.DOCKER_USERNAME }}
         password: ${{ env.DOCKER_PASSWORD }}
-
-    # Fail for non-tagged commits
-    - name: Tag Check
-      run: git describe --exact-match --tags
 
     - name: Set up Go
       uses: actions/setup-go@v5
