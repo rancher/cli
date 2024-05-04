@@ -97,26 +97,6 @@ func getMachineByNodeName(
 		"`rancher machines` to see available nodes", nodeName)
 }
 
-func getMachineByID(
-	ctx *cli.Context,
-	c *cliclient.MasterClient,
-	machineID string,
-) (capiClient.Machine, error) {
-	machineCollection, err := getMachinesList(ctx, c)
-	if err != nil {
-		return capiClient.Machine{}, err
-	}
-
-	for _, machine := range machineCollection.Data {
-		if machine.ID == machineID {
-			return machine, nil
-		}
-	}
-
-	return capiClient.Machine{}, fmt.Errorf("no machine found with the ID [%s], run "+
-		"`rancher machines` to see available nodes", machineID)
-}
-
 func getMachineName(machine capiClient.Machine) string {
 	if machine.Name != "" {
 		return machine.Name

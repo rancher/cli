@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -132,7 +132,7 @@ func getNodeAndKey(ctx *cli.Context, c *cliclient.MasterClient, nodeName string)
 func callSSH(content []byte, ip string, user string, args []string) error {
 	dest := fmt.Sprintf("%s@%s", user, ip)
 
-	tmpfile, err := ioutil.TempFile("", "ssh")
+	tmpfile, err := os.CreateTemp("", "ssh")
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func getSSHKey(c *cliclient.MasterClient, link, nodeName string) ([]byte, string
 	}
 	defer resp.Body.Close()
 
-	zipFiles, err := ioutil.ReadAll(resp.Body)
+	zipFiles, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, "", err
 	}
@@ -240,5 +240,5 @@ func readFile(file *zip.File) ([]byte, error) {
 		return nil, err
 	}
 	defer r.Close()
-	return ioutil.ReadAll(r)
+	return io.ReadAll(r)
 }

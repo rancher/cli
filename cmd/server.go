@@ -175,7 +175,10 @@ func getSelectedServer(ctx *cli.Context, cfg *config.Config) (string, error) {
 // prompt the user to select one.
 func serverFromInput(ctx *cli.Context, cf *config.Config) (string, error) {
 	servers := getServers(cf)
-	displayListServers(ctx, servers)
+
+	if err := displayListServers(ctx, servers); err != nil {
+		return "", err
+	}
 
 	fmt.Print("Select a Server:")
 	reader := bufio.NewReader(os.Stdin)
