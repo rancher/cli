@@ -133,7 +133,7 @@ func AppCommand() cli.Command {
 		Action:  defaultAction(appLs),
 		Flags:   appLsFlags,
 		Subcommands: []cli.Command{
-			cli.Command{
+			{
 				Name:        "ls",
 				Usage:       "List apps",
 				Description: "\nList all apps in the current Rancher server",
@@ -141,13 +141,13 @@ func AppCommand() cli.Command {
 				Action:      appLs,
 				Flags:       appLsFlags,
 			},
-			cli.Command{
+			{
 				Name:      "delete",
 				Usage:     "Delete an app",
 				Action:    appDelete,
 				ArgsUsage: "[APP_NAME/APP_ID]",
 			},
-			cli.Command{
+			{
 				Name:        "install",
 				Usage:       "Install an app template",
 				Description: installAppDescription,
@@ -193,7 +193,7 @@ func AppCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:      "rollback",
 				Usage:     "Rollback an app to a previous version",
 				Action:    appRollback,
@@ -209,7 +209,7 @@ func AppCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:        "upgrade",
 				Usage:       "Upgrade an existing app to a newer version",
 				Description: upgradeAppDescription,
@@ -246,7 +246,7 @@ func AppCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:        "list-templates",
 				Aliases:     []string{"lt"},
 				Usage:       "List templates available for installation",
@@ -261,7 +261,7 @@ func AppCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:        "show-template",
 				Aliases:     []string{"st"},
 				Usage:       "Show versions available to install for an app template",
@@ -269,7 +269,7 @@ func AppCommand() cli.Command {
 				ArgsUsage:   "[TEMPLATE_ID]",
 				Action:      templateShow,
 			},
-			cli.Command{
+			{
 				Name:      "show-app",
 				Aliases:   []string{"sa"},
 				Usage:     "Show an app's available versions and revisions",
@@ -279,7 +279,7 @@ func AppCommand() cli.Command {
 					formatFlag,
 				},
 			},
-			cli.Command{
+			{
 				Name:      "show-notes",
 				Usage:     "Show contents of apps notes.txt",
 				Action:    appNotes,
