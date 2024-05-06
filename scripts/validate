@@ -3,9 +3,6 @@ set -e
 
 cd $(dirname $0)/..
 
-echo Running: golangci-lint
-golangci-lint run
-
 echo Tidying up modules
 go mod tidy
 

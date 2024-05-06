@@ -71,8 +71,8 @@ if echo $TAG | grep -q dirty; then
     TAG=dev
 fi
 
-if [ -n "$DRONE_TAG" ]; then
-    TAG=$DRONE_TAG
+if [ -n "$GITHUB_TAG" ]; then
+    TAG=$GITHUB_TAG
 fi
 
 cp ../bin/rancher .
