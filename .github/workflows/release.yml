@@ -8,7 +8,7 @@ on:
 jobs:
   release:
     permissions:
-      contents: read
+      contents: write
       id-token: write # needed for the Vault authentication
     runs-on: ubuntu-latest
 
