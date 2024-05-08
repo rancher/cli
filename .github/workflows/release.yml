@@ -72,7 +72,7 @@ jobs:
         cd dist/artifacts/$VERSION
         ls -lR
         # generate sha256sum file
-        find . -type f -printf '%P\0' | xargs -0 sha256sum > sha256sum.txt
+        find . -maxdepth 1 -type f ! -name sha256sum.txt -printf '%P\0' | xargs -0 sha256sum > sha256sum.txt
         gh release upload $VERSION *.txt *.xz *.gz *.zip
 
     - name: Docker Build
