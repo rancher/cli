@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags:        
+      - v*
+
+jobs:
+  release:
+    permissions:
+      contents: write # needed to create/update the release with the assets
+      id-token: write # needed for the Vault authentication
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: Load Secrets from Vault
+      uses: rancher-eio/read-vault-secrets@main
+      with:
+        secrets: |
+          secret/data/github/repo/${{ github.repository }}/dockerhub/rancher/credentials username | DOCKER_USERNAME ;
+          secret/data/github/repo/${{ github.repository }}/dockerhub/rancher/credentials password | DOCKER_PASSWORD ;
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ env.DOCKER_USERNAME }}
+        password: ${{ env.DOCKER_PASSWORD }}
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+        cache: false
+
+    - name: Lint
+      uses: golangci/golangci-lint-action@v4
+
+    - name: Validate Go modules
+      run: ./scripts/validate
+
+    - name: Test
+      run: ./scripts/test
+
+    - name: Get Tag
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: echo "GITHUB_TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
+
+    - name: Build
+      env:
+        CROSS: 1
+      run: ./scripts/build
+
+    - name: Package
+      run: |
+        ./scripts/package
+        ls -lR dist/artifacts
+        # Stage binary for packaging step
+        cp -r ./bin/* ./package/
+
+        # Export the tag for the next step
+        source ./scripts/version
+        echo "VERSION=$VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Upload Release assets
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        cd dist/artifacts/$VERSION
+        ls -lR
+        # generate sha256sum file
+        find . -maxdepth 1 -type f ! -name sha256sum.txt -printf '%P\0' | xargs -0 sha256sum > sha256sum.txt
+        gh release upload $VERSION *.txt *.xz *.gz *.zip
+
+    - name: Docker Build
+      uses: docker/build-push-action@v5
+      with:
+        push: true
+        context: package
+        tags: rancher/cli2:${{ env.VERSION }}

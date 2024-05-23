@@ -76,7 +76,7 @@ func MultiClusterAppCommand() cli.Command {
 		Action:  defaultAction(multiClusterAppLs),
 		Flags:   appLsFlags,
 		Subcommands: []cli.Command{
-			cli.Command{
+			{
 				Name:        "ls",
 				Usage:       "List multi-cluster apps",
 				Description: "\nList all multi-cluster apps in the current Rancher server",
@@ -84,13 +84,13 @@ func MultiClusterAppCommand() cli.Command {
 				Action:      multiClusterAppLs,
 				Flags:       appLsFlags,
 			},
-			cli.Command{
+			{
 				Name:      "delete",
 				Usage:     "Delete a multi-cluster app",
 				Action:    multiClusterAppDelete,
 				ArgsUsage: "[APP_NAME]",
 			},
-			cli.Command{
+			{
 				Name:        "install",
 				Usage:       "Install a multi-cluster app",
 				Description: installMultiClusterAppDescription,
@@ -168,7 +168,7 @@ func MultiClusterAppCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:      "rollback",
 				Usage:     "Rollback a multi-cluster app to a previous version",
 				Action:    multiClusterAppRollback,
@@ -180,7 +180,7 @@ func MultiClusterAppCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:      "upgrade",
 				Usage:     "Upgrade an app to a newer version",
 				Action:    multiClusterAppUpgrade,
@@ -231,7 +231,7 @@ func MultiClusterAppCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:        "add-project",
 				Usage:       "Add target projects to a multi-cluster app",
 				Action:      addMcappTargetProject,
@@ -256,28 +256,28 @@ func MultiClusterAppCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:        "delete-project",
 				Usage:       "Delete target projects from a multi-cluster app",
 				Action:      deleteMcappTargetProject,
 				Description: "Examples:\n #Delete 'p1' project in cluster 'mycluster' from target projects of a multi-cluster app named 'myapp'\n rancher multiclusterapp delete-project myapp mycluster:p1\n",
 				ArgsUsage:   "[APP_NAME/APP_ID, CLUSTER_NAME:PROJECT_NAME/PROJECT_ID...]",
 			},
-			cli.Command{
+			{
 				Name:        "add-member",
 				Usage:       "Add members to a multi-cluster app",
 				Action:      addMcappMember,
 				Description: "Examples:\n #Add 'user1' and 'user2' as the owners of a multi-cluster app named 'myapp'\n rancher multiclusterapp add-member myapp owner user1 user2\n",
 				ArgsUsage:   "[APP_NAME/APP_ID, ACCESS_TYPE, USER_NAME/USER_ID...]",
 			},
-			cli.Command{
+			{
 				Name:        "delete-member",
 				Usage:       "Delete members from a multi-cluster app",
 				Action:      deleteMcappMember,
 				Description: "Examples:\n #Delete the membership of a user named 'user1' from a multi-cluster app named 'myapp'\n rancher multiclusterapp delete-member myapp user1\n",
 				ArgsUsage:   "[APP_NAME/APP_ID, USER_NAME/USER_ID...]",
 			},
-			cli.Command{
+			{
 				Name:      "list-members",
 				Aliases:   []string{"lm"},
 				Usage:     "List current members of a multi-cluster app",
@@ -287,7 +287,7 @@ func MultiClusterAppCommand() cli.Command {
 					formatFlag,
 				},
 			},
-			cli.Command{
+			{
 				Name:      "list-answers",
 				Aliases:   []string{"la"},
 				Usage:     "List current answers of a multi-cluster app",
@@ -297,7 +297,7 @@ func MultiClusterAppCommand() cli.Command {
 					formatFlag,
 				},
 			},
-			cli.Command{
+			{
 				Name:        "list-templates",
 				Aliases:     []string{"lt"},
 				Usage:       "List templates available for installation",
@@ -312,7 +312,7 @@ func MultiClusterAppCommand() cli.Command {
 					},
 				},
 			},
-			cli.Command{
+			{
 				Name:        "show-template",
 				Aliases:     []string{"st"},
 				Usage:       "Show versions available to install for an app template",
@@ -320,7 +320,7 @@ func MultiClusterAppCommand() cli.Command {
 				ArgsUsage:   "[TEMPLATE_ID]",
 				Action:      templateShow,
 			},
-			cli.Command{
+			{
 				Name:      "show-app",
 				Aliases:   []string{"sa"},
 				Usage:     "Show an app's available versions and revisions",

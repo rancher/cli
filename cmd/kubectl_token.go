@@ -115,7 +115,7 @@ func CredentialCommand() cli.Command {
 			},
 		},
 		Subcommands: []cli.Command{
-			cli.Command{
+			{
 				Name:   "delete",
 				Usage:  fmt.Sprintf("Delete cached token used for kubectl login at [%s] \n %s", configDir, deleteExample),
 				Action: deleteCachedCredential,
