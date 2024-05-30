@@ -24,7 +24,7 @@ jobs:
         uses: rancher-eio/read-vault-secrets@main
         with:
           secrets: |
-            secret/data/github/repo/${{ github.repository }}/fossa/credentials token | FOSSA
+            secret/data/github/org/rancher/fossa/push token | FOSSA
 
       - name: Check FOSSA compliance
         uses: fossas/fossa-action@main
