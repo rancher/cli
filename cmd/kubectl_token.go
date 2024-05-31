@@ -556,7 +556,7 @@ func getAuthProviders(server string) ([]TypedProvider, error) {
 
 			err = json.Unmarshal([]byte(provider.Raw), typedProvider)
 			if err != nil {
-				return nil, fmt.Errorf("attempting to decode the auth provider of type %s", providerType)
+				return nil, fmt.Errorf("attempting to decode the auth provider of type %s: %w", providerType, err)
 			}
 			supportedProviders = append(supportedProviders, typedProvider)
 		}
