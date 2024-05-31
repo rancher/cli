@@ -140,7 +140,7 @@ func runCredential(ctx *cli.Context) error {
 	}
 	server := ctx.String("server")
 	if server == "" {
-		return fmt.Errorf("name of rancher server is required")
+		return errors.New("name of rancher server is required")
 	}
 	url, err := url2.Parse(server)
 	if err != nil {
@@ -151,7 +151,7 @@ func runCredential(ctx *cli.Context) error {
 	}
 	userID := ctx.String("user")
 	if userID == "" {
-		return fmt.Errorf("user-id is required")
+		return errors.New("user-id is required")
 	}
 	clusterID := ctx.String("cluster")
 
@@ -254,7 +254,7 @@ func loadCachedCredential(ctx *cli.Context, key string) (*config.ExecCredential,
 func lookupServerConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 	server := ctx.String("server")
 	if server == "" {
-		return nil, fmt.Errorf("name of rancher server is required")
+		return nil, errors.New("name of rancher server is required")
 	}
 
 	cf, err := loadConfig(ctx)
@@ -283,7 +283,7 @@ func cacheCredential(ctx *cli.Context, cred *config.ExecCredential, id string) e
 
 	server := ctx.String("server")
 	if server == "" {
-		return fmt.Errorf("name of rancher server is required")
+		return errors.New("name of rancher server is required")
 	}
 
 	cf, err := loadConfig(ctx)
@@ -524,21 +524,21 @@ type TypedProvider interface {
 }
 
 func getAuthProviders(server string) ([]TypedProvider, error) {
-	authProviders := fmt.Sprintf(authProviderURL, server)
-	customPrint(authProviders)
+	authProvidersURL := fmt.Sprintf(authProviderURL, server)
+	customPrint(authProvidersURL)
 
-	response, err := request(http.MethodGet, authProviders, nil)
+	response, err := request(http.MethodGet, authProvidersURL, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	if !gjson.ValidBytes(response) {
-		return nil, errors.New("invalid JSON input")
+		return nil, fmt.Errorf("invalid JSON response from %s", authProvidersURL)
 	}
 
 	data := gjson.GetBytes(response, "data").Array()
 
-	supportedProviders := []TypedProvider{}
+	var supportedProviders []TypedProvider
 	for _, provider := range data {
 		providerType := provider.Get("type").String()
 
@@ -556,7 +556,7 @@ func getAuthProviders(server string) ([]TypedProvider, error) {
 
 			err = json.Unmarshal([]byte(provider.Raw), typedProvider)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("attempting to decode the auth provider of type %s: %w", providerType, err)
 			}
 			supportedProviders = append(supportedProviders, typedProvider)
 		}
@@ -567,7 +567,7 @@ func getAuthProviders(server string) ([]TypedProvider, error) {
 
 func selectAuthProvider(authProviders []TypedProvider, providerType string) (TypedProvider, error) {
 	if len(authProviders) == 0 {
-		return nil, fmt.Errorf("no auth provider configured")
+		return nil, errors.New("no auth provider configured")
 	}
 
 	// if providerType was specified, look for it
@@ -609,7 +609,7 @@ func selectAuthProvider(authProviders []TypedProvider, providerType string) (Typ
 		return authProviders[providerIndex], nil
 	}
 
-	return nil, fmt.Errorf("invalid auth provider")
+	return nil, errors.New("invalid auth provider")
 }
 
 func generateKey() (string, error) {
