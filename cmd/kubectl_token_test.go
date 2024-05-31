@@ -54,16 +54,18 @@ func Test_getAuthProviders(t *testing.T) {
 		{
 			name:        "json error",
 			server:      setupServer(`hnjskjnksnj`),
-			expectedErr: "invalid JSON input",
+			expectedErr: "invalid JSON response from",
 		},
 	}
 	for _, tc := range tt {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Cleanup(tc.server.Close)
+
 			got, err := getAuthProviders(tc.server.URL)
 
 			if tc.expectedErr != "" {
-				assert.EqualError(t, err, tc.expectedErr)
+				assert.Contains(t, err.Error(), tc.expectedErr)
 				assert.Nil(t, got)
 			} else {
 				assert.Equal(t, tc.expectedProviders, got)
