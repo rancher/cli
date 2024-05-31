@@ -65,7 +65,7 @@ func Test_getAuthProviders(t *testing.T) {
 			got, err := getAuthProviders(tc.server.URL)
 
 			if tc.expectedErr != "" {
-				assert.Contains(t, err.Error(), tc.expectedErr)
+				assert.ErrorContains(t, err, tc.expectedErr)
 				assert.Nil(t, got)
 			} else {
 				assert.Equal(t, tc.expectedProviders, got)
