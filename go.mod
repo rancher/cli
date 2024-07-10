@@ -9,7 +9,7 @@ require (
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/norman v0.0.0-20240410145219-820741f8efd3
+	github.com/rancher/norman v0.0.0-20240522191341-a0c752c7fa37
 	github.com/rancher/rancher/pkg/apis v0.0.0-20240527134706-14d30b8bbcd5
 	github.com/rancher/rancher/pkg/client v0.0.0-20211110212758-cc2b8beb1473
 	github.com/sirupsen/logrus v1.9.3

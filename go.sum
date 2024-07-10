@@ -445,8 +445,8 @@ github.com/rancher/lasso v0.0.0-20200820172840-0e4cc0ef5cb0/go.mod h1:OhBBBO1pBw
 github.com/rancher/lasso v0.0.0-20240325194215-0064abcb8aee h1:3BgZZIJQABqFxfgjAPchBm9afHQ1Vj7QDywZnKyWlQw=
 github.com/rancher/lasso v0.0.0-20240325194215-0064abcb8aee/go.mod h1:AroEHDeG/fAXtUyrk4W03kyizvh5hNHFf2n+DtwZP7s=
 github.com/rancher/norman v0.0.0-20200820172041-261460ee9088/go.mod h1:W9LfZ96OfjkWSGTy2DUqYPt47Jpzrs7eM0i3AAx6fOI=
-github.com/rancher/norman v0.0.0-20240410145219-820741f8efd3 h1:o2qaVY5u4tPbCBhIX6FpE0MtqlyqPq7WRGSQuEcvADA=
-github.com/rancher/norman v0.0.0-20240410145219-820741f8efd3/go.mod h1:WbNpu/HwChwKk54W0rWBdioxYVVZwVVz//UX84m/NvY=
+github.com/rancher/norman v0.0.0-20240522191341-a0c752c7fa37 h1:FxHX++xx41j7JeZooANmHIkYVh6AwZYDHqq7d6/iovs=
+github.com/rancher/norman v0.0.0-20240522191341-a0c752c7fa37/go.mod h1:WbNpu/HwChwKk54W0rWBdioxYVVZwVVz//UX84m/NvY=
 github.com/rancher/rancher/pkg/apis v0.0.0-20240527134706-14d30b8bbcd5 h1:ViCXVv2PJYsCLH1dhmspRlZqULzGRAZq4UnsTVpf2No=
 github.com/rancher/rancher/pkg/apis v0.0.0-20240527134706-14d30b8bbcd5/go.mod h1:9+jnVAGcU6qD0ScWAxBav2yNmtAYXNDKJ+kHJrTja4A=
 github.com/rancher/rancher/pkg/client v0.0.0-20211110212758-cc2b8beb1473 h1:ApjHsieVqHAZB8NZAt1/ggKu91QCpUo0Wp/DiWHYSkc=
