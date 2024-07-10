@@ -2,7 +2,10 @@ module github.com/rancher/cli
 
 go 1.21
 
-replace k8s.io/client-go => k8s.io/client-go v0.28.8
+replace (
+	k8s.io/client-go => k8s.io/client-go v0.28.9
+	k8s.io/kubernetes => k8s.io/kubernetes v1.28.9
+)
 
 require (
 	github.com/ghodss/yaml v1.0.0
