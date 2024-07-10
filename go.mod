@@ -11,7 +11,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.0.0-20240522191341-a0c752c7fa37
 	github.com/rancher/rancher/pkg/apis v0.0.0-20240527134706-14d30b8bbcd5
-	github.com/rancher/rancher/pkg/client v0.0.0-20211110212758-cc2b8beb1473
+	github.com/rancher/rancher/pkg/client v0.0.0-20240709213639-d72c5157164a
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.17.0
