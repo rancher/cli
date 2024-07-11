@@ -86,10 +86,6 @@ func ClusterCommand() cli.Command {
 						Value: "canal",
 					},
 					cli.StringFlag{
-						Name:  "psp-default-policy",
-						Usage: "Default pod security policy to apply",
-					},
-					cli.StringFlag{
 						Name:  "rke-config",
 						Usage: "Location of an rke config file to import. Can be JSON or YAML format",
 					},
@@ -811,18 +807,6 @@ func getClusterConfig(ctx *cli.Context) (*managementClient.Cluster, error) {
 			}
 			if err = json.Unmarshal(marshalled, &config); err != nil {
 				return nil, err
-			}
-		}
-	}
-
-	if ctx.String("psp-default-policy") != "" {
-		config.DefaultPodSecurityPolicyTemplateID = ctx.String("psp-default-policy")
-
-		if config.RancherKubernetesEngineConfig != nil {
-			config.RancherKubernetesEngineConfig.Services = &managementClient.RKEConfigServices{
-				KubeAPI: &managementClient.KubeAPIService{
-					PodSecurityPolicy: true,
-				},
 			}
 		}
 	}
