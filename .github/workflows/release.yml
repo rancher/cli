@@ -86,6 +86,9 @@ jobs:
       with:
         path: dist/artifacts/${{ env.VERSION }}
         destination: releases.rancher.com/cli2/${{ env.VERSION }}
+        glob: '*.*' # copy only the files in the path folder
+        parent: false
+        process_gcloudignore: false
         headers: |-
           cache-control: public,max-age=3600
 
