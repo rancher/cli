@@ -12,8 +12,8 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.0.0-20240708202514-a0127673d1b9
-	github.com/rancher/rancher/pkg/apis v0.0.0-20240710174529-3c4ccdc5bc9f
-	github.com/rancher/rancher/pkg/client v0.0.0-20240710174529-3c4ccdc5bc9f
+	github.com/rancher/rancher/pkg/apis v0.0.0-20240717211851-7df10c297f33
+	github.com/rancher/rancher/pkg/client v0.0.0-20240717211851-7df10c297f33
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.17.0
@@ -21,7 +21,7 @@ require (
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/sync v0.7.0
-	golang.org/x/term v0.21.0
+	golang.org/x/term v0.22.0
 	golang.org/x/text v0.16.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v2 v2.4.0
@@ -61,8 +61,8 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rancher/aks-operator v1.9.0-rc.9 // indirect
-	github.com/rancher/eks-operator v1.9.0-rc.9 // indirect
-	github.com/rancher/fleet/pkg/apis v0.10.0-rc.19 // indirect
+	github.com/rancher/eks-operator v1.9.0-rc.11 // indirect
+	github.com/rancher/fleet/pkg/apis v0.10.0 // indirect
 	github.com/rancher/gke-operator v1.9.0-rc.8 // indirect
 	github.com/rancher/lasso v0.0.0-20240705194423-b2a060d103c1 // indirect
 	github.com/rancher/rke v1.6.0-rc9 // indirect
@@ -72,8 +72,8 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/net v0.27.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
