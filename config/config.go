@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -74,11 +75,13 @@ func GetFilePermissionWarnings(path string) ([]string, error) {
 	}
 
 	var warnings []string
-	if info.Mode()&0040 > 0 {
-		warnings = append(warnings, fmt.Sprintf("Rancher configuration file %s is group-readable. This is insecure.", path))
-	}
-	if info.Mode()&0004 > 0 {
-		warnings = append(warnings, fmt.Sprintf("Rancher configuration file %s is world-readable. This is insecure.", path))
+	if runtime.GOOS != "windows" {
+		if info.Mode()&0040 > 0 {
+			warnings = append(warnings, fmt.Sprintf("Rancher configuration file %s is group-readable. This is insecure.", path))
+		}
+		if info.Mode()&0004 > 0 {
+			warnings = append(warnings, fmt.Sprintf("Rancher configuration file %s is world-readable. This is insecure.", path))
+		}
 	}
 	return warnings, nil
 }
