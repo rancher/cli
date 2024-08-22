@@ -148,9 +148,9 @@ func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
 		return nil, err
 	}
 
-	focusedServer, found := cf.FocusedServer()
-	if !found {
-		return nil, errors.New("no focused server")
+	focusedServer, err := cf.FocusedServer()
+	if err != nil {
+		return nil, err
 	}
 
 	kubeConfig := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
@@ -163,9 +163,9 @@ func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config)
 		return err
 	}
 
-	focusedServer, found := cf.FocusedServer()
-	if !found {
-		return errors.New("no focused server")
+	focusedServer, err := cf.FocusedServer()
+	if err != nil {
+		return err
 	}
 
 	if focusedServer.KubeConfigs == nil {
@@ -282,9 +282,9 @@ func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 		return nil, err
 	}
 
-	cs, found := cf.FocusedServer()
-	if !found {
-		return nil, errors.New("no configuration found, run `login`")
+	cs, err := cf.FocusedServer()
+	if err != nil {
+		return nil, err
 	}
 
 	return cs, nil

@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+var ErrNoServerSelected = errors.New("no server selected")
 
 // Config holds the main config for the user
 type Config struct {
@@ -100,9 +103,12 @@ func (c Config) Write() error {
 	return json.NewEncoder(output).Encode(c)
 }
 
-func (c Config) FocusedServer() (*ServerConfig, bool) {
+func (c Config) FocusedServer() (*ServerConfig, error) {
 	currentServer, found := c.Servers[c.CurrentServer]
-	return currentServer, found
+	if !found || currentServer == nil {
+		return nil, ErrNoServerSelected
+	}
+	return currentServer, nil
 }
 
 func (c ServerConfig) FocusedCluster() string {
