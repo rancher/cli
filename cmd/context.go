@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"errors"
+
 	"github.com/rancher/cli/cliclient"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -39,7 +41,11 @@ func contextSwitch(ctx *cli.Context) error {
 		return err
 	}
 
-	server := cf.FocusedServer()
+	server, found := cf.FocusedServer()
+	if !found {
+		return errors.New("no focused server")
+	}
+
 	c, err := cliclient.NewManagementClient(server)
 	if err != nil {
 		return err

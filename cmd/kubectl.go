@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -46,9 +47,9 @@ func runKubectl(ctx *cli.Context) error {
 		return err
 	}
 
-	currentRancherServer := config.FocusedServer()
-	if currentRancherServer == nil {
-		return fmt.Errorf("no focused server")
+	currentRancherServer, found := config.FocusedServer()
+	if !found {
+		return errors.New("no focused server")
 	}
 
 	currentToken := currentRancherServer.AccessKey

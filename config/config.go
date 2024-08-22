@@ -100,8 +100,9 @@ func (c Config) Write() error {
 	return json.NewEncoder(output).Encode(c)
 }
 
-func (c Config) FocusedServer() *ServerConfig {
-	return c.Servers[c.CurrentServer]
+func (c Config) FocusedServer() (*ServerConfig, bool) {
+	currentServer, found := c.Servers[c.CurrentServer]
+	return currentServer, found
 }
 
 func (c ServerConfig) FocusedCluster() string {
