@@ -31,7 +31,7 @@ The binaries will be located in `/bin`.
 
 ### Linux Binary
 
-Run `make`.
+Run `make build`.
 
 ### Mac Binary
 
