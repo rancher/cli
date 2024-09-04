@@ -39,7 +39,11 @@ func contextSwitch(ctx *cli.Context) error {
 		return err
 	}
 
-	server := cf.FocusedServer()
+	server, err := cf.FocusedServer()
+	if err != nil {
+		return err
+	}
+
 	c, err := cliclient.NewManagementClient(server)
 	if err != nil {
 		return err
