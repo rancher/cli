@@ -46,9 +46,9 @@ func runKubectl(ctx *cli.Context) error {
 		return err
 	}
 
-	currentRancherServer := config.FocusedServer()
-	if currentRancherServer == nil {
-		return fmt.Errorf("no focused server")
+	currentRancherServer, err := config.FocusedServer()
+	if err != nil {
+		return err
 	}
 
 	currentToken := currentRancherServer.AccessKey
