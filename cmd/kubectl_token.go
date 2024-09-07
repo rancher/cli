@@ -558,7 +558,12 @@ func getAuthProviders(server string) ([]TypedProvider, error) {
 			if err != nil {
 				return nil, fmt.Errorf("attempting to decode the auth provider of type %s: %w", providerType, err)
 			}
-			supportedProviders = append(supportedProviders, typedProvider)
+
+			if typedProvider.GetType() == "localProvider" {
+				supportedProviders = append([]TypedProvider{typedProvider}, supportedProviders...)
+			} else {
+				supportedProviders = append(supportedProviders, typedProvider)
+			}
 		}
 	}
 

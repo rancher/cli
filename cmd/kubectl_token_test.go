@@ -28,6 +28,11 @@ func Test_getAuthProviders(t *testing.T) {
 			name:   "response ok",
 			server: setupServer(responseOK),
 			expectedProviders: []TypedProvider{
+				&apiv3.LocalProvider{
+					AuthProvider: apiv3.AuthProvider{
+						Type: "localProvider",
+					},
+				},
 				&apiv3.AzureADProvider{
 					AuthProvider: apiv3.AuthProvider{
 						Type: "azureADProvider",
@@ -42,11 +47,6 @@ func Test_getAuthProviders(t *testing.T) {
 							DeviceAuthURL: "https://login.microsoftonline.com/258928db-3ed6-49fb-9a7e-52e492ffb066/oauth2/v2.0/devicecode",
 							TokenURL:      "https://login.microsoftonline.com/258928db-3ed6-49fb-9a7e-52e492ffb066/oauth2/v2.0/token",
 						},
-					},
-				},
-				&apiv3.LocalProvider{
-					AuthProvider: apiv3.AuthProvider{
-						Type: "localProvider",
 					},
 				},
 			},
