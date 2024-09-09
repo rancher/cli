@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-var ErrNoServerSelected = errors.New("no server selected")
+var ErrNoConfigurationFound = errors.New("no configuration found, run `login`")
 
 // Config holds the main config for the user
 type Config struct {
@@ -106,7 +106,7 @@ func (c Config) Write() error {
 func (c Config) FocusedServer() (*ServerConfig, error) {
 	currentServer, found := c.Servers[c.CurrentServer]
 	if !found || currentServer == nil {
-		return nil, ErrNoServerSelected
+		return nil, ErrNoConfigurationFound
 	}
 	return currentServer, nil
 }
