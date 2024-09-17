@@ -1,9 +1,13 @@
 package cliclient
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"strings"
+	"time"
 
 	errorsPkg "github.com/pkg/errors"
 	"github.com/rancher/cli/config"
@@ -23,6 +27,29 @@ type MasterClient struct {
 	ProjectClient    *projectClient.Client
 	UserConfig       *config.ServerConfig
 	CAPIClient       *capiClient.Client
+}
+
+// HTTPClienter is a http.Client factory interface
+type HTTPClienter interface {
+	New() *http.Client
+}
+
+// DefaultHTTPClient stores the default http.Client factory
+var DefaultHTTPClient HTTPClienter = &HTTPClient{}
+
+/*
+TestingReplaceDefaultHTTPClient replaces DefaultHTTPClient for unit tests.
+Not thread-safe.
+Call the returned function by defer keyword, for example:
+
+	defer cliclient.TestingReplaceDefaultHTTPClient(mockClient)()
+*/
+func TestingReplaceDefaultHTTPClient(mockClient HTTPClienter) func() {
+	origHttpClient := DefaultHTTPClient
+	DefaultHTTPClient = mockClient
+	return func() {
+		DefaultHTTPClient = origHttpClient
+	}
 }
 
 // NewMasterClient returns a new MasterClient with Cluster, Management and Project
@@ -99,8 +126,31 @@ func NewProjectClient(config *config.ServerConfig) (*MasterClient, error) {
 	return mc, nil
 }
 
+var testingForceClientInsecure = false
+
+/*
+TestingForceClientInsecure sets testForceClientInsecure to true for unit tests.
+It's a workaround to github.com/rancher/norman/clientbase.NewAPIClient,
+which replaces net/http.Client.Transport (including proxy and TLS config),
+so the client TLS config of net/http/httptest.Server will be lost.
+Not thread-safe.
+Call the returned function by defer keyword, for example:
+
+	defer cliclient.TestingForceClientInsecure()()
+*/
+func TestingForceClientInsecure() func() {
+	origTestForceClientInsecure := testingForceClientInsecure
+	testingForceClientInsecure = true
+	return func() {
+		testingForceClientInsecure = origTestForceClientInsecure
+	}
+}
+
 func (mc *MasterClient) newManagementClient() error {
 	options := createClientOpts(mc.UserConfig)
+	if testingForceClientInsecure {
+		options.Insecure = true
+	}
 
 	// Setup the management client
 	mClient, err := managementClient.NewClient(options)
@@ -181,10 +231,11 @@ func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
 	}
 
 	options := &clientbase.ClientOpts{
-		URL:       serverURL,
-		AccessKey: config.AccessKey,
-		SecretKey: config.SecretKey,
-		CACerts:   config.CACerts,
+		HTTPClient: DefaultHTTPClient.New(),
+		URL:        serverURL,
+		AccessKey:  config.AccessKey,
+		SecretKey:  config.SecretKey,
+		CACerts:    config.CACerts,
 	}
 	return options
 }
@@ -202,4 +253,28 @@ func CheckProject(s string) []string {
 	}
 
 	return clustProj
+}
+
+type HTTPClient struct{}
+
+/*
+HTTPClient.New makes http.Client including http.Transport,
+with default values (for example: proxy) and custom timeouts.
+See: https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+*/
+func (c *HTTPClient) New() *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dialer := &net.Dialer{
+			Timeout:   5 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}
+		return dialer.DialContext(ctx, network, addr)
+	}
+	transport.ResponseHeaderTimeout = 10 * time.Second
+
+	return &http.Client{
+		Transport: transport,
+		Timeout:   time.Minute, // from github.com/rancher/norman/clientbase.NewAPIClient
+	}
 }

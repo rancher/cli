@@ -260,10 +260,8 @@ func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.Ma
 
 	req.SetBasicAuth(cf.AccessKey, cf.SecretKey)
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	client := cliclient.DefaultHTTPClient.New()
+	client.Transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	res, err := client.Do(req)
 	if err != nil {
