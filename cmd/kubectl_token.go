@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/config"
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
@@ -640,10 +641,9 @@ func getClient(skipVerify bool, caCerts string) (*http.Client, error) {
 		return nil, err
 	}
 
-	// clone the DefaultTransport to get the default values
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = tlsConfig
-	return &http.Client{Transport: transport}, nil
+	client := cliclient.DefaultHTTPClient.New()
+	client.Transport.(*http.Transport).TLSClientConfig = tlsConfig
+	return client, nil
 }
 
 func getTLSConfig(skipVerify bool, caCerts string) (*tls.Config, error) {
