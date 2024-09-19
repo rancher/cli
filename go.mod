@@ -62,13 +62,13 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
-	github.com/rancher/aks-operator v1.3.0-rc5 // indirect
-	github.com/rancher/eks-operator v1.4.0-rc5 // indirect
+	github.com/rancher/aks-operator v1.2.5 // indirect
+	github.com/rancher/eks-operator v1.3.5 // indirect
 	github.com/rancher/fleet/pkg/apis v0.9.6 // indirect
-	github.com/rancher/gke-operator v1.3.0-rc6 // indirect
+	github.com/rancher/gke-operator v1.2.5 // indirect
 	github.com/rancher/lasso v0.0.0-20240325194215-0064abcb8aee // indirect
 	github.com/rancher/rke v1.5.13 // indirect
-	github.com/rancher/wrangler/v2 v2.2.0-rc3 // indirect
+	github.com/rancher/wrangler/v2 v2.1.4 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
