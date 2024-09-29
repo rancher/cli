@@ -23,6 +23,9 @@ Version: {{.Version}}
 Options:
   {{range .Flags}}{{if .Hidden}}{{else}}{{.}}
   {{end}}{{end}}{{end}}
+Environment variables:
+  HTTP_PROXY, HTTPS_PROXY and NO_PROXY: Proxy settings (or the lowercase versions thereof)
+
 Commands:
   {{range .Commands}}{{.Name}}{{with .Aliases}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
   {{end}}
@@ -50,6 +53,8 @@ Commands:{{range .VisibleCategories}}{{if .Name}}
 Options:
    {{range .VisibleFlags}}{{.}}
    {{end}}{{end}}
+Environment variables:
+  HTTP_PROXY, HTTPS_PROXY and NO_PROXY: Proxy settings (or the lowercase versions thereof)
 `
 
 func main() {

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+cd $(dirname $0)/..
+
+echo Mocking interfaces
+
+go install github.com/vektra/mockery/v2@v2.46.1
+mockery

@@ -1,0 +1,12 @@
+with-expecter: true
+dir: "{{.InterfaceDir}}/mocks"
+outpkg: "mocks"
+packages:
+    github.com/rancher/cli/cliclient:
+        # place your package-specific config here
+        config:
+        interfaces:
+            # select the interfaces you want mocked
+            HTTPClienter:
+                # Modify package-level config for this specific interface (if applicable)
+                config:
