@@ -1,17 +1,20 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/rancher/cli/config"
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli"
 )
 
 func Test_getAuthProviders(t *testing.T) {
-
 	setupServer := func(response string) *httptest.Server {
 		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, response)
@@ -114,3 +117,59 @@ var responseOK = `{
         }
     ]
 }`
+
+func Test_cacheCredential(t *testing.T) {
+	tempDir := t.TempDir()
+
+	cred := &config.ExecCredential{Status: &config.ExecCredentialStatus{Token: "test-token"}}
+	flagSet := flag.NewFlagSet("test", 0)
+	flagSet.String("server", "rancher.example.com", "doc")
+	flagSet.String("config", tempDir, "doc")
+	cliCtx := cli.NewContext(nil, flagSet, nil)
+
+	err := cacheCredential(cliCtx, cred, "dev-server")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := loadConfig(cliCtx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expires := &config.Time{time.Now().Add(time.Hour * 2)}
+	cfg.CurrentServer = "rancher.example.com"
+	cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ClientKeyData = "this-is-not-real"
+	cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ExpirationTimestamp = expires
+	if err := cfg.Write(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = cfg.FocusedServer()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	flagSet = flag.NewFlagSet("test", 0)
+	flagSet.String("server", "rancher.example.com", "doc")
+	flagSet.String("config", tempDir, "doc")
+	cliCtx = cli.NewContext(nil, flagSet, nil)
+
+	cred = &config.ExecCredential{Status: &config.ExecCredentialStatus{Token: "new-token"}}
+	err = cacheCredential(cliCtx, cred, "local")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err = loadConfig(cliCtx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if v := cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ClientKeyData; v != "this-is-not-real" {
+		t.Errorf("got ClientKeyData %q, want \"this-is-not-real\"", v)
+	}
+	if v := cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ExpirationTimestamp; !v.Time.Equal(expires.Time) {
+		t.Errorf("got ExpirationTimestamp %v, want %v", v, expires)
+	}
+
+}
