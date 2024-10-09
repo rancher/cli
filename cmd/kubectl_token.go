@@ -301,6 +301,7 @@ func cacheCredential(ctx *cli.Context, cred *config.ExecCredential, id string) e
 	}
 	sc.KubeCredentials[id] = cred
 	cf.Servers[server] = sc
+
 	return cf.Write()
 }
 
