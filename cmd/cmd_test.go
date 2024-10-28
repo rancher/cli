@@ -1,6 +1,10 @@
 package cmd
 
 import (
+	"bufio"
+	"io"
+	"strings"
+
 	"github.com/rancher/norman/types"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 )
@@ -55,4 +59,20 @@ func (f *fakePRTBLister) List(opts *types.ListOpts) (*managementClient.ProjectRo
 		return f.ListFunc(opts)
 	}
 	return nil, nil
+}
+
+func parseTabWriterOutput(r io.Reader) [][]string {
+	var parsed [][]string
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		var fields []string
+		for _, field := range strings.Split(scanner.Text(), "  ") {
+			if field == "" {
+				continue
+			}
+			fields = append(fields, strings.TrimSpace(field))
+		}
+		parsed = append(parsed, fields)
+	}
+	return parsed
 }

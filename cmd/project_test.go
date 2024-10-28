@@ -24,6 +24,7 @@ func TestListProjectMembers(t *testing.T) {
 		},
 	}
 
+	created := now.Format(time.RFC3339)
 	prtbs := &fakePRTBLister{
 		ListFunc: func(opts *types.ListOpts) (*managementClient.ProjectRoleTemplateBindingCollection, error) {
 			return &managementClient.ProjectRoleTemplateBindingCollection{
@@ -32,15 +33,15 @@ func TestListProjectMembers(t *testing.T) {
 						Resource: types.Resource{
 							ID: "p-9mdxl:creator-project-owner",
 						},
-						Created:         now.Format(time.RFC3339),
+						Created:         created,
 						RoleTemplateID:  "project-owner",
 						UserPrincipalID: "local://user-2p7w6",
 					},
 					{
 						Resource: types.Resource{
-							ID: "p-9mdxl:prtb-qd49d",
+							ID: "p-9mdxl:prtb-mqcvk",
 						},
-						Created:          now.Format(time.RFC3339),
+						Created:          created,
 						RoleTemplateID:   "project-member",
 						GroupPrincipalID: "okta_group://b4qkhsnliz",
 					},
@@ -84,8 +85,13 @@ func TestListProjectMembers(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, out)
 
-	output := out.String()
-	assert.Contains(t, output, "p-9mdxl:creator-project-owner")
-	assert.Contains(t, output, "Default Admin (Local User)")
-	assert.Contains(t, output, "DevOps (Okta Group)")
+	humanCreated := now.Format(humanTimeFormat)
+	want := [][]string{
+		{"BINDING-ID", "MEMBER", "ROLE", "CREATED"},
+		{"p-9mdxl:creator-project-owner", "Default Admin (Local User)", "project-owner", humanCreated},
+		{"p-9mdxl:prtb-mqcvk", "DevOps (Okta Group)", "project-member", humanCreated},
+	}
+
+	got := parseTabWriterOutput(&out)
+	assert.Equal(t, want, got)
 }

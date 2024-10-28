@@ -615,12 +615,14 @@ func getClusterName(cluster *managementClient.Cluster) string {
 	return cluster.ID
 }
 
+const humanTimeFormat = "02 Jan 2006 15:04:05 MST"
+
 func createdTimetoHuman(t string) (string, error) {
 	parsedTime, err := time.Parse(time.RFC3339, t)
 	if err != nil {
 		return "", err
 	}
-	return parsedTime.Format("02 Jan 2006 15:04:05 MST"), nil
+	return parsedTime.Format(humanTimeFormat), nil
 }
 
 func outputMembers(ctx *cli.Context, c *cliclient.MasterClient, members []managementClient.Member) error {

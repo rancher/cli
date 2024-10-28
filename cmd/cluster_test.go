@@ -24,6 +24,7 @@ func TestListClusterMembers(t *testing.T) {
 		},
 	}
 
+	created := now.Format(time.RFC3339)
 	crtbs := &fakeCRTBLister{
 		ListFunc: func(opts *types.ListOpts) (*managementClient.ClusterRoleTemplateBindingCollection, error) {
 			return &managementClient.ClusterRoleTemplateBindingCollection{
@@ -32,7 +33,7 @@ func TestListClusterMembers(t *testing.T) {
 						Resource: types.Resource{
 							ID: "c-fn7lc:creator-cluster-owner",
 						},
-						Created:         now.Format(time.RFC3339),
+						Created:         created,
 						RoleTemplateID:  "cluster-owner",
 						UserPrincipalID: "local://user-2p7w6",
 					},
@@ -40,7 +41,7 @@ func TestListClusterMembers(t *testing.T) {
 						Resource: types.Resource{
 							ID: "c-fn7lc:crtb-qd49d",
 						},
-						Created:          now.Format(time.RFC3339),
+						Created:          created,
 						RoleTemplateID:   "cluster-member",
 						GroupPrincipalID: "okta_group://b4qkhsnliz",
 					},
@@ -84,8 +85,13 @@ func TestListClusterMembers(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, out)
 
-	output := out.String()
-	assert.Contains(t, output, "c-fn7lc:creator-cluster-owner")
-	assert.Contains(t, output, "Default Admin (Local User)")
-	assert.Contains(t, output, "DevOps (Okta Group)")
+	humanCreated := now.Format(humanTimeFormat)
+	want := [][]string{
+		{"BINDING-ID", "MEMBER", "ROLE", "CREATED"},
+		{"c-fn7lc:creator-cluster-owner", "Default Admin (Local User)", "cluster-owner", humanCreated},
+		{"c-fn7lc:crtb-qd49d", "DevOps (Okta Group)", "cluster-member", humanCreated},
+	}
+
+	got := parseTabWriterOutput(&out)
+	assert.Equal(t, want, got)
 }
