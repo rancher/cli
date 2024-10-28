@@ -1,71 +1,201 @@
 package cmd
 
 import (
+	"fmt"
+	"net/url"
 	"testing"
 
-	"gopkg.in/check.v1"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) {
-	check.TestingT(t)
-}
+func TestParseClusterAndProjectID(t *testing.T) {
+	t.Parallel()
 
-type CommonTestSuite struct {
-}
-
-var _ = check.Suite(&CommonTestSuite{})
-
-func (s *CommonTestSuite) SetUpSuite(c *check.C) {
-
-}
-
-func (s *CommonTestSuite) TestParseClusterAndProjectID(c *check.C) {
-	testParse(c, "local:p-12345", "local", "p-12345", false)
-	testParse(c, "c-12345:p-12345", "c-12345", "p-12345", false)
-	testParse(c, "cocal:p-12345", "", "", true)
-	testParse(c, "c-123:p-123", "", "", true)
-	testParse(c, "", "", "", true)
-	testParse(c, "c-m-12345678:p-12345", "c-m-12345678", "p-12345", false)
-	testParse(c, "c-m-123:p-12345", "", "", true)
-}
-
-func (s *CommonTestSuite) TestConvertSnakeCaseKeysToCamelCase(c *check.C) {
-	cases := []struct {
-		input   map[string]interface{}
-		renamed map[string]interface{}
+	tests := []struct {
+		id,
+		cluster string
+		project   string
+		shouldErr bool
 	}{
 		{
-			map[string]interface{}{"foo_bar": "hello"},
-			map[string]interface{}{"fooBar": "hello"},
+			id:      "local:p-12345",
+			cluster: "local",
+			project: "p-12345",
 		},
 		{
-			map[string]interface{}{"fooBar": "hello"},
-			map[string]interface{}{"fooBar": "hello"},
+			id:      "c-12345:p-12345",
+			cluster: "c-12345",
+			project: "p-12345",
 		},
 		{
-			map[string]interface{}{"foobar": "hello", "some_key": "valueUnmodified", "bar-baz": "bar-baz"},
-			map[string]interface{}{"foobar": "hello", "someKey": "valueUnmodified", "bar-baz": "bar-baz"},
+			id:        "cocal:p-12345",
+			shouldErr: true,
 		},
 		{
-			map[string]interface{}{"foo_bar": "hello", "backup_config": map[string]interface{}{"hello_world": true}, "config_id": 123},
-			map[string]interface{}{"fooBar": "hello", "backupConfig": map[string]interface{}{"helloWorld": true}, "configId": 123},
+			id:        "c-123:p-123",
+			shouldErr: true,
+		},
+		{
+			shouldErr: true,
+		},
+		{
+			id:      "c-m-12345678:p-12345",
+			cluster: "c-m-12345678",
+			project: "p-12345",
+		},
+		{
+			id:        "c-m-123:p-12345",
+			shouldErr: true,
 		},
 	}
 
-	for _, tc := range cases {
-		convertSnakeCaseKeysToCamelCase(tc.input)
-		c.Assert(tc.input, check.DeepEquals, tc.renamed)
+	for _, test := range tests {
+		test := test
+		t.Run(test.id, func(t *testing.T) {
+			t.Parallel()
+
+			cluster, project, err := parseClusterAndProjectID(test.id)
+			if test.shouldErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, test.cluster, cluster)
+			assert.Equal(t, test.project, project)
+		})
 	}
 }
 
-func testParse(c *check.C, testID, expectedCluster, expectedProject string, errorExpected bool) {
-	actualCluster, actualProject, actualErr := parseClusterAndProjectID(testID)
-	c.Assert(actualCluster, check.Equals, expectedCluster)
-	c.Assert(actualProject, check.Equals, expectedProject)
-	if errorExpected {
-		c.Assert(actualErr, check.NotNil)
-	} else {
-		c.Assert(actualErr, check.IsNil)
+func TestConvertSnakeCaseKeysToCamelCase(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input map[string]any
+		want  map[string]any
+	}{
+		{
+			map[string]any{"foo_bar": "hello"},
+			map[string]any{"fooBar": "hello"},
+		},
+		{
+			map[string]any{"fooBar": "hello"},
+			map[string]any{"fooBar": "hello"},
+		},
+		{
+			map[string]any{"foobar": "hello", "some_key": "valueUnmodified", "bar-baz": "bar-baz"},
+			map[string]any{"foobar": "hello", "someKey": "valueUnmodified", "bar-baz": "bar-baz"},
+		},
+		{
+			map[string]any{"foo_bar": "hello", "backup_config": map[string]any{"hello_world": true}, "config_id": 123},
+			map[string]any{"fooBar": "hello", "backupConfig": map[string]any{"helloWorld": true}, "configId": 123},
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run("", func(t *testing.T) {
+			t.Parallel()
+
+			convertSnakeCaseKeysToCamelCase(test.input)
+			assert.Equal(t, test.input, test.want)
+		})
+	}
+}
+
+func TestParsePrincipalID(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		id   string
+		want *managementClient.Principal
+	}{
+		{
+			id: "local://user-2p7w6",
+			want: &managementClient.Principal{
+				Name:          "user-2p7w6",
+				LoginName:     "user-2p7w6",
+				Provider:      "local",
+				PrincipalType: "user",
+			},
+		},
+		{
+			id: "okta_group://b4qkhsnliz",
+			want: &managementClient.Principal{
+				Name:          "b4qkhsnliz",
+				LoginName:     "b4qkhsnliz",
+				Provider:      "okta",
+				PrincipalType: "group",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run("", func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, test.want, parsePrincipalID(test.id))
+		})
+	}
+}
+
+func TestGetMemberNameFromPrincipal(t *testing.T) {
+	t.Parallel()
+
+	principals := &fakePrincipalGetter{
+		ByIDFunc: func(id string) (*managementClient.Principal, error) {
+			id, err := url.PathUnescape(id)
+			require.NoError(t, err)
+
+			switch id {
+			case "local://user-2p7w6":
+				return &managementClient.Principal{
+					Name:          "Default Admin",
+					LoginName:     "admin",
+					Provider:      "local",
+					PrincipalType: "user",
+				}, nil
+			case "okta_group://b4qkhsnliz":
+				return &managementClient.Principal{
+					Name:          "DevOps",
+					LoginName:     "devops",
+					Provider:      "okta",
+					PrincipalType: "group",
+				}, nil
+			default:
+				return nil, fmt.Errorf("not found")
+			}
+		},
+	}
+
+	tests := []struct {
+		id   string
+		want string
+	}{
+		{
+			id:   "local://user-2p7w6",
+			want: "Default Admin (Local User)",
+		},
+		{
+			id:   "okta_group://b4qkhsnliz",
+			want: "DevOps (Okta Group)",
+		},
+		{
+			id:   "okta_user://lfql6h5tmh",
+			want: "lfql6h5tmh (Okta User)",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.id, func(t *testing.T) {
+			t.Parallel()
+
+			got := getMemberNameFromPrincipal(principals, test.id)
+			assert.Equal(t, test.want, got)
+		})
 	}
 }

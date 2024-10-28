@@ -112,7 +112,15 @@ func (c Config) FocusedServer() (*ServerConfig, error) {
 }
 
 func (c ServerConfig) FocusedCluster() string {
-	return strings.Split(c.Project, ":")[0]
+	cluster, _, ok := strings.Cut(c.Project, ":")
+	if !ok {
+		return ""
+	}
+	return cluster
+}
+
+func (c ServerConfig) FocusedProject() string {
+	return c.Project
 }
 
 func (c ServerConfig) KubeToken(key string) *ExecCredential {

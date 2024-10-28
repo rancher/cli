@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/rancher/cli/cliclient"
+	"github.com/rancher/norman/types"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/urfave/cli"
 )
@@ -90,9 +92,22 @@ func ProjectCommand() cli.Command {
 				Action: listProjectRoles,
 			},
 			{
-				Name:   "list-members",
-				Usage:  "List current members of the project",
-				Action: listProjectMembers,
+				Name:  "list-members",
+				Usage: "List current members of the project",
+				Action: func(cctx *cli.Context) error {
+					client, err := GetClient(cctx)
+					if err != nil {
+						return err
+					}
+
+					return listProjectMembers(
+						cctx,
+						cctx.App.Writer,
+						client.UserConfig,
+						client.ManagementClient.ProjectRoleTemplateBinding,
+						client.ManagementClient.Principal,
+					)
+				},
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "project-id",
@@ -292,33 +307,25 @@ func listProjectRoles(ctx *cli.Context) error {
 	return listRoles(ctx, "project")
 }
 
-func listProjectMembers(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
-	if err != nil {
-		return err
-	}
+type prtbLister interface {
+	List(opts *types.ListOpts) (*managementClient.ProjectRoleTemplateBindingCollection, error)
+}
 
-	projectID := c.UserConfig.Project
+func listProjectMembers(ctx *cli.Context, out io.Writer, config userConfig, prtbs prtbLister, principals principalGetter) error {
+	projectID := config.FocusedProject()
 	if ctx.String("project-id") != "" {
 		projectID = ctx.String("project-id")
 	}
 
 	filter := defaultListOpts(ctx)
 	filter.Filters["projectId"] = projectID
-	bindings, err := c.ManagementClient.ProjectRoleTemplateBinding.List(filter)
+
+	bindings, err := prtbs.List(filter)
 	if err != nil {
 		return err
 	}
 
-	userFilter := defaultListOpts(ctx)
-	users, err := c.ManagementClient.User.List(userFilter)
-	if err != nil {
-		return err
-	}
-
-	userMap := usersToNameMapping(users.Data)
-
-	var b []RoleTemplateBinding
+	rtbs := make([]RoleTemplateBinding, 0, len(bindings.Data))
 
 	for _, binding := range bindings.Data {
 		parsedTime, err := createdTimetoHuman(binding.Created)
@@ -326,15 +333,24 @@ func listProjectMembers(ctx *cli.Context) error {
 			return err
 		}
 
-		b = append(b, RoleTemplateBinding{
+		principalID := binding.UserPrincipalID
+		if binding.GroupPrincipalID != "" {
+			principalID = binding.GroupPrincipalID
+		}
+
+		rtbs = append(rtbs, RoleTemplateBinding{
 			ID:      binding.ID,
-			User:    userMap[binding.UserID],
+			Member:  getMemberNameFromPrincipal(principals, principalID),
 			Role:    binding.RoleTemplateID,
 			Created: parsedTime,
 		})
 	}
 
-	return listRoleTemplateBindings(ctx, b)
+	writerConfig := &TableWriterConfig{
+		Writer: out,
+	}
+
+	return listRoleTemplateBindings(ctx, writerConfig, rtbs)
 }
 
 func getProjectList(

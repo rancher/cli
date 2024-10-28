@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/rancher/cli/cliclient"
+	"github.com/rancher/norman/types"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -182,9 +184,22 @@ func ClusterCommand() cli.Command {
 				Action: listClusterRoles,
 			},
 			{
-				Name:   "list-members",
-				Usage:  "List current members of the cluster",
-				Action: listClusterMembers,
+				Name:  "list-members",
+				Usage: "List current members of the cluster",
+				Action: func(cctx *cli.Context) error {
+					client, err := GetClient(cctx)
+					if err != nil {
+						return err
+					}
+
+					return listClusterMembers(
+						cctx,
+						cctx.App.Writer,
+						client.UserConfig,
+						client.ManagementClient.ClusterRoleTemplateBinding,
+						client.ManagementClient.Principal,
+					)
+				},
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "cluster-id",
@@ -587,33 +602,30 @@ func listClusterRoles(ctx *cli.Context) error {
 	return listRoles(ctx, "cluster")
 }
 
-func listClusterMembers(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
-	if err != nil {
-		return err
-	}
+type crtbLister interface {
+	List(opts *types.ListOpts) (*managementClient.ClusterRoleTemplateBindingCollection, error)
+}
 
-	clusterID := c.UserConfig.FocusedCluster()
+type userConfig interface {
+	FocusedCluster() string
+	FocusedProject() string
+}
+
+func listClusterMembers(ctx *cli.Context, out io.Writer, config userConfig, crtbs crtbLister, principals principalGetter) error {
+	clusterID := config.FocusedCluster()
 	if ctx.String("cluster-id") != "" {
 		clusterID = ctx.String("cluster-id")
 	}
 
 	filter := defaultListOpts(ctx)
 	filter.Filters["clusterId"] = clusterID
-	bindings, err := c.ManagementClient.ClusterRoleTemplateBinding.List(filter)
+
+	bindings, err := crtbs.List(filter)
 	if err != nil {
 		return err
 	}
 
-	userFilter := defaultListOpts(ctx)
-	users, err := c.ManagementClient.User.List(userFilter)
-	if err != nil {
-		return err
-	}
-
-	userMap := usersToNameMapping(users.Data)
-
-	var b []RoleTemplateBinding
+	rtbs := make([]RoleTemplateBinding, 0, len(bindings.Data))
 
 	for _, binding := range bindings.Data {
 		parsedTime, err := createdTimetoHuman(binding.Created)
@@ -621,15 +633,24 @@ func listClusterMembers(ctx *cli.Context) error {
 			return err
 		}
 
-		b = append(b, RoleTemplateBinding{
+		principalID := binding.UserPrincipalID
+		if binding.GroupPrincipalID != "" {
+			principalID = binding.GroupPrincipalID
+		}
+
+		rtbs = append(rtbs, RoleTemplateBinding{
 			ID:      binding.ID,
-			User:    userMap[binding.UserID],
+			Member:  getMemberNameFromPrincipal(principals, principalID),
 			Role:    binding.RoleTemplateID,
 			Created: parsedTime,
 		})
 	}
 
-	return listRoleTemplateBindings(ctx, b)
+	writerConfig := &TableWriterConfig{
+		Writer: out,
+	}
+
+	return listRoleTemplateBindings(ctx, writerConfig, rtbs)
 }
 
 // getClusterRegToken will return an existing token or create one if none exist
