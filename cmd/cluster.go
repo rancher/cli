@@ -205,6 +205,11 @@ func ClusterCommand() cli.Command {
 						Name:  "cluster-id",
 						Usage: "Optional cluster ID to list members for, defaults to the current context",
 					},
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json', 'yaml' or Custom format: '{{.ID }} {{.Member }}'",
+					},
+					quietFlag,
 				},
 			},
 		},
@@ -647,6 +652,8 @@ func listClusterMembers(ctx *cli.Context, out io.Writer, config userConfig, crtb
 	}
 
 	writerConfig := &TableWriterConfig{
+		Format: ctx.String("format"),
+		Quiet:  ctx.Bool("quiet"),
 		Writer: out,
 	}
 

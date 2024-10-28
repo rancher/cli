@@ -113,6 +113,11 @@ func ProjectCommand() cli.Command {
 						Name:  "project-id",
 						Usage: "Optional project ID to list members for, defaults to the current context",
 					},
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json', 'yaml' or Custom format: '{{.ID }} {{.Member }}'",
+					},
+					quietFlag,
 				},
 			},
 		},
@@ -347,6 +352,8 @@ func listProjectMembers(ctx *cli.Context, out io.Writer, config userConfig, prtb
 	}
 
 	writerConfig := &TableWriterConfig{
+		Format: ctx.String("format"),
+		Quiet:  ctx.Bool("quiet"),
 		Writer: out,
 	}
 
