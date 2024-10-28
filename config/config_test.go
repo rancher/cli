@@ -209,7 +209,3 @@ func TestLoadFromPath(t *testing.T) {
 		})
 	}
 }
-
-func TestFocusedCluster(t *testing.T) {
-
-}

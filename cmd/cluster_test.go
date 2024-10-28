@@ -16,6 +16,8 @@ import (
 )
 
 func TestListClusterMembers(t *testing.T) {
+	t.Parallel()
+
 	now := time.Now()
 
 	userConfig := &fakeUserConfig{

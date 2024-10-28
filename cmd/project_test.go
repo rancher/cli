@@ -16,6 +16,8 @@ import (
 )
 
 func TestListProjectMembers(t *testing.T) {
+	t.Parallel()
+
 	now := time.Now()
 
 	userConfig := &fakeUserConfig{
