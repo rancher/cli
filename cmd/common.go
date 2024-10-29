@@ -121,7 +121,7 @@ func listRoles(ctx *cli.Context, context string) error {
 	return writer.Err()
 }
 
-func listRoleTemplateBindings(ctx *cli.Context, writerConfig *TableWriterConfig, rtbs []RoleTemplateBinding) error {
+func listRoleTemplateBindings(writerConfig *TableWriterConfig, rtbs []RoleTemplateBinding) error {
 	writer := NewTableWriterWithConfig([][]string{
 		{"BINDING-ID", "ID"},
 		{"MEMBER", "Member"},

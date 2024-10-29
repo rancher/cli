@@ -357,7 +357,7 @@ func listProjectMembers(ctx *cli.Context, out io.Writer, config userConfig, prtb
 		Writer: out,
 	}
 
-	return listRoleTemplateBindings(ctx, writerConfig, rtbs)
+	return listRoleTemplateBindings(writerConfig, rtbs)
 }
 
 func getProjectList(

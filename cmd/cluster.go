@@ -657,7 +657,7 @@ func listClusterMembers(ctx *cli.Context, out io.Writer, config userConfig, crtb
 		Writer: out,
 	}
 
-	return listRoleTemplateBindings(ctx, writerConfig, rtbs)
+	return listRoleTemplateBindings(writerConfig, rtbs)
 }
 
 // getClusterRegToken will return an existing token or create one if none exist
