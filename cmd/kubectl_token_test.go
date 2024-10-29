@@ -136,7 +136,7 @@ func Test_cacheCredential(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expires := &config.Time{time.Now().Add(time.Hour * 2)}
+	expires := &config.Time{Time: time.Now().Add(time.Hour * 2)}
 	cfg.CurrentServer = "rancher.example.com"
 	cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ClientKeyData = "this-is-not-real"
 	cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ExpirationTimestamp = expires
