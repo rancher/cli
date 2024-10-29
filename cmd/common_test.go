@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"testing"
 
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
@@ -94,9 +95,9 @@ func TestConvertSnakeCaseKeysToCamelCase(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for i, test := range tests {
 		test := test
-		t.Run("", func(t *testing.T) {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 
 			convertSnakeCaseKeysToCamelCase(test.input)
@@ -134,7 +135,7 @@ func TestParsePrincipalID(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run("", func(t *testing.T) {
+		t.Run(test.id, func(t *testing.T) {
 			t.Parallel()
 
 			assert.Equal(t, test.want, parsePrincipalID(test.id))
