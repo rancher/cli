@@ -149,11 +149,6 @@ func Test_cacheCredential(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	flagSet = flag.NewFlagSet("test", 0)
-	flagSet.String("server", "rancher.example.com", "doc")
-	flagSet.String("config", tempDir, "doc")
-	cliCtx = cli.NewContext(nil, flagSet, nil)
-
 	cred = &config.ExecCredential{Status: &config.ExecCredentialStatus{Token: "new-token"}}
 	err = cacheCredential(cliCtx, cred, "local")
 	if err != nil {
