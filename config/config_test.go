@@ -28,7 +28,7 @@ const (
 	invalidFile = `invalid config file`
 )
 
-func Test_GetFilePermissionWarnings(t *testing.T) {
+func TestGetFilePermissionWarnings(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -78,7 +78,7 @@ func Test_GetFilePermissionWarnings(t *testing.T) {
 	}
 }
 
-func Test_Permission(t *testing.T) {
+func TestPermission(t *testing.T) {
 	t.Parallel()
 
 	// New config files should have 0600 permissions
@@ -131,7 +131,7 @@ func Test_Permission(t *testing.T) {
 	})
 }
 
-func Test_LoadFromPath(t *testing.T) {
+func TestLoadFromPath(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
