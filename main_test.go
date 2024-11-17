@@ -3,62 +3,57 @@ package main
 import (
 	"testing"
 
-	"gopkg.in/check.v1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) {
-	check.TestingT(t)
-}
+func TestParseArgs(t *testing.T) {
+	t.Parallel()
 
-type MainTestSuite struct {
-}
-
-var _ = check.Suite(&MainTestSuite{})
-
-func (m *MainTestSuite) SetUpSuite(c *check.C) {
-}
-
-func (m *MainTestSuite) TestParseArgs(c *check.C) {
-	input := [][]string{
-		{"rancher", "run", "--debug", "-itd"},
-		{"rancher", "run", "--debug", "-itf=b"},
-		{"rancher", "run", "--debug", "-itd#"},
-		{"rancher", "run", "--debug", "-f=b"},
-		{"rancher", "run", "--debug", "-=b"},
-		{"rancher", "run", "--debug", "-"},
-	}
-	r0, err := parseArgs(input[0])
-	if err != nil {
-		c.Fatal(err)
-	}
-	c.Assert(r0, check.DeepEquals, []string{"rancher", "run", "--debug", "-i", "-t", "-d"})
-
-	r1, err := parseArgs(input[1])
-	if err != nil {
-		c.Fatal(err)
-	}
-	c.Assert(r1, check.DeepEquals, []string{"rancher", "run", "--debug", "-i", "-t", "-f=b"})
-
-	_, err = parseArgs(input[2])
-	if err == nil {
-		c.Fatal("should raise error")
+	tests := []struct {
+		input     string
+		want      []string
+		shouldErr bool
+	}{
+		{
+			input: "-itd",
+			want:  []string{"-i", "-t", "-d"},
+		},
+		{
+			input: "-itf=b",
+			want:  []string{"-i", "-t", "-f=b"},
+		},
+		{
+			input:     "-itd#",
+			shouldErr: true,
+		},
+		{
+			input: "-f=b",
+			want:  []string{"-f=b"},
+		},
+		{
+			input:     "-=b",
+			shouldErr: true,
+		},
+		{
+			input: "-",
+			want:  []string{"-"},
+		},
 	}
 
-	r3, err := parseArgs(input[3])
-	if err != nil {
-		c.Fatal(err)
-	}
-	c.Assert(r3, check.DeepEquals, []string{"rancher", "run", "--debug", "-f=b"})
+	for _, test := range tests {
+		test := test
+		t.Run(test.input, func(t *testing.T) {
+			t.Parallel()
 
-	_, err = parseArgs(input[4])
-	if err == nil {
-		c.Fatal("should raise error")
-	}
+			got, err := parseArgs([]string{"rancher", "run", "--debug", test.input})
+			if test.shouldErr {
+				require.Error(t, err)
+				return
+			}
 
-	r5, err := parseArgs(input[5])
-	if err != nil {
-		c.Fatal(err)
+			require.NoError(t, err)
+			assert.Equal(t, append([]string{"rancher", "run", "--debug"}, test.want...), got)
+		})
 	}
-	c.Assert(r5, check.DeepEquals, []string{"rancher", "run", "--debug", "-"})
 }

@@ -74,7 +74,7 @@ type RoleTemplate struct {
 
 type RoleTemplateBinding struct {
 	ID      string
-	User    string
+	Member  string
 	Role    string
 	Created string
 }
@@ -121,25 +121,58 @@ func listRoles(ctx *cli.Context, context string) error {
 	return writer.Err()
 }
 
-func listRoleTemplateBindings(ctx *cli.Context, b []RoleTemplateBinding) error {
-	writer := NewTableWriter([][]string{
+func listRoleTemplateBindings(writerConfig *TableWriterConfig, rtbs []RoleTemplateBinding) error {
+	writer := NewTableWriterWithConfig([][]string{
 		{"BINDING-ID", "ID"},
-		{"USER", "User"},
+		{"MEMBER", "Member"},
 		{"ROLE", "Role"},
 		{"CREATED", "Created"},
-	}, ctx)
-
+	}, writerConfig)
 	defer writer.Close()
 
-	for _, item := range b {
-		writer.Write(&RoleTemplateBinding{
-			ID:      item.ID,
-			User:    item.User,
-			Role:    item.Role,
-			Created: item.Created,
-		})
+	for _, rtb := range rtbs {
+		writer.Write(&rtb)
 	}
+
 	return writer.Err()
+}
+
+type principalGetter interface {
+	ByID(id string) (*managementClient.Principal, error)
+}
+
+func getMemberNameFromPrincipal(principals principalGetter, principalID string) string {
+	principal, err := principals.ByID(url.PathEscape(principalID))
+	if err != nil {
+		principal = parsePrincipalID(principalID)
+	}
+
+	return fmt.Sprintf(
+		"%s (%s %s)",
+		principal.Name,
+		cases.Title(language.Und).String(principal.Provider),
+		cases.Title(language.Und).String(principal.PrincipalType),
+	)
+}
+
+func parsePrincipalID(principalID string) *managementClient.Principal {
+	scheme, id, _ := strings.Cut(principalID, "://")
+	provider, ptype, _ := strings.Cut(scheme, "_")
+
+	if provider == "local" && ptype == "" {
+		ptype = "user"
+	}
+
+	if ptype != "user" {
+		ptype = "group"
+	}
+
+	return &managementClient.Principal{
+		Name:          id,
+		LoginName:     id,
+		Provider:      provider,
+		PrincipalType: ptype,
+	}
 }
 
 func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
@@ -148,7 +181,11 @@ func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
 		return nil, err
 	}
 
-	focusedServer := cf.FocusedServer()
+	focusedServer, err := cf.FocusedServer()
+	if err != nil {
+		return nil, err
+	}
+
 	kubeConfig := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
 	return kubeConfig, nil
 }
@@ -159,25 +196,17 @@ func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config)
 		return err
 	}
 
-	if cf.FocusedServer().KubeConfigs == nil {
-		cf.FocusedServer().KubeConfigs = make(map[string]*api.Config)
+	focusedServer, err := cf.FocusedServer()
+	if err != nil {
+		return err
 	}
-	focusedServer := cf.FocusedServer()
+
+	if focusedServer.KubeConfigs == nil {
+		focusedServer.KubeConfigs = make(map[string]*api.Config)
+	}
+
 	focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())] = kubeConfig
 	return cf.Write()
-}
-
-func usersToNameMapping(u []managementClient.User) map[string]string {
-	userMapping := make(map[string]string)
-	for _, user := range u {
-		if user.Name != "" {
-			userMapping[user.ID] = user.Name
-
-		} else {
-			userMapping[user.ID] = user.Username
-		}
-	}
-	return userMapping
 }
 
 func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (*managementClient.Principal, error) {
@@ -273,9 +302,9 @@ func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 		return nil, err
 	}
 
-	cs := cf.FocusedServer()
-	if cs == nil {
-		return nil, errors.New("no configuration found, run `login`")
+	cs, err := cf.FocusedServer()
+	if err != nil {
+		return nil, err
 	}
 
 	return cs, nil
@@ -586,12 +615,14 @@ func getClusterName(cluster *managementClient.Cluster) string {
 	return cluster.ID
 }
 
+const humanTimeFormat = "02 Jan 2006 15:04:05 MST"
+
 func createdTimetoHuman(t string) (string, error) {
 	parsedTime, err := time.Parse(time.RFC3339, t)
 	if err != nil {
 		return "", err
 	}
-	return parsedTime.Format("02 Jan 2006 15:04:05 MST"), nil
+	return parsedTime.Format(humanTimeFormat), nil
 }
 
 func outputMembers(ctx *cli.Context, c *cliclient.MasterClient, members []managementClient.Member) error {

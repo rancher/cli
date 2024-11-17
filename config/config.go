@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+var ErrNoConfigurationFound = errors.New("no configuration found, run `login`")
 
 // Config holds the main config for the user
 type Config struct {
@@ -100,12 +103,24 @@ func (c Config) Write() error {
 	return json.NewEncoder(output).Encode(c)
 }
 
-func (c Config) FocusedServer() *ServerConfig {
-	return c.Servers[c.CurrentServer]
+func (c Config) FocusedServer() (*ServerConfig, error) {
+	currentServer, found := c.Servers[c.CurrentServer]
+	if !found || currentServer == nil {
+		return nil, ErrNoConfigurationFound
+	}
+	return currentServer, nil
 }
 
 func (c ServerConfig) FocusedCluster() string {
-	return strings.Split(c.Project, ":")[0]
+	cluster, _, ok := strings.Cut(c.Project, ":")
+	if !ok {
+		return ""
+	}
+	return cluster
+}
+
+func (c ServerConfig) FocusedProject() string {
+	return c.Project
 }
 
 func (c ServerConfig) KubeToken(key string) *ExecCredential {

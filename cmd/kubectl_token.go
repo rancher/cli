@@ -296,11 +296,12 @@ func cacheCredential(ctx *cli.Context, cred *config.ExecCredential, id string) e
 		return err
 	}
 
-	if sc.KubeCredentials[id] == nil {
+	if sc.KubeCredentials == nil {
 		sc.KubeCredentials = make(map[string]*config.ExecCredential)
 	}
 	sc.KubeCredentials[id] = cred
 	cf.Servers[server] = sc
+
 	return cf.Write()
 }
 
@@ -558,7 +559,12 @@ func getAuthProviders(server string) ([]TypedProvider, error) {
 			if err != nil {
 				return nil, fmt.Errorf("attempting to decode the auth provider of type %s: %w", providerType, err)
 			}
-			supportedProviders = append(supportedProviders, typedProvider)
+
+			if typedProvider.GetType() == "localProvider" {
+				supportedProviders = append([]TypedProvider{typedProvider}, supportedProviders...)
+			} else {
+				supportedProviders = append(supportedProviders, typedProvider)
+			}
 		}
 	}
 
