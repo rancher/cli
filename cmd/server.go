@@ -58,11 +58,18 @@ be displayed and one can be selected.
 				},
 			},
 			{
-				Name:  "ls",
-				Usage: "List all servers",
+				Name:      "ls",
+				Usage:     "List all servers",
+				ArgsUsage: "None",
 				Action: func(ctx *cli.Context) error {
 					format := ctx.String("format")
 					return serverLs(ctx.App.Writer, cfg, format)
+				},
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "format",
+						Usage: "'json', 'yaml' or Custom format: '{{.Name}} {{.URL}}'",
+					},
 				},
 			},
 			{
