@@ -248,14 +248,6 @@ func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (
 	return &results.Data[selection], nil
 }
 
-func getRancherServerVersion(c *cliclient.MasterClient) (string, error) {
-	setting, err := c.ManagementClient.Setting.ByID("server-version")
-	if err != nil {
-		return "", err
-	}
-	return setting.Value, err
-}
-
 func loadAndVerifyCert(path string) (string, error) {
 	caCert, err := os.ReadFile(path)
 	if err != nil {
@@ -623,73 +615,6 @@ func createdTimetoHuman(t string) (string, error) {
 		return "", err
 	}
 	return parsedTime.Format(humanTimeFormat), nil
-}
-
-func outputMembers(ctx *cli.Context, c *cliclient.MasterClient, members []managementClient.Member) error {
-	writer := NewTableWriter([][]string{
-		{"NAME", "Name"},
-		{"MEMBER_TYPE", "MemberType"},
-		{"ACCESS_TYPE", "AccessType"},
-	}, ctx)
-
-	defer writer.Close()
-
-	for _, m := range members {
-		principalID := m.UserPrincipalID
-		if m.UserPrincipalID == "" {
-			principalID = m.GroupPrincipalID
-		}
-		principal, err := c.ManagementClient.Principal.ByID(url.PathEscape(principalID))
-		if err != nil {
-			return err
-		}
-
-		memberType := fmt.Sprintf("%s %s", principal.Provider, principal.PrincipalType)
-		writer.Write(&MemberData{
-			Name:       principal.Name,
-			MemberType: cases.Title(language.Und).String(memberType),
-			AccessType: m.AccessType,
-		})
-	}
-	return writer.Err()
-}
-
-func addMembersByNames(ctx *cli.Context, c *cliclient.MasterClient, members []managementClient.Member, toAddMembers []string, accessType string) ([]managementClient.Member, error) {
-	for _, name := range toAddMembers {
-		member, err := searchForMember(ctx, c, name)
-		if err != nil {
-			return nil, err
-		}
-
-		toAddMember := managementClient.Member{
-			AccessType: accessType,
-		}
-		if member.PrincipalType == "user" {
-			toAddMember.UserPrincipalID = member.ID
-		} else {
-			toAddMember.GroupPrincipalID = member.ID
-		}
-		members = append(members, toAddMember)
-	}
-	return members, nil
-}
-
-func deleteMembersByNames(ctx *cli.Context, c *cliclient.MasterClient, members []managementClient.Member, todeleteMembers []string) ([]managementClient.Member, error) {
-	for _, name := range todeleteMembers {
-		member, err := searchForMember(ctx, c, name)
-		if err != nil {
-			return nil, err
-		}
-
-		var toKeepMembers []managementClient.Member
-		for _, m := range members {
-			if m.GroupPrincipalID != member.ID && m.UserPrincipalID != member.ID {
-				toKeepMembers = append(toKeepMembers, m)
-			}
-		}
-		members = toKeepMembers
-	}
-	return members, nil
 }
 
 func ConfigDir() (string, error) {
