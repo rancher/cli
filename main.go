@@ -105,15 +105,12 @@ func mainErr() error {
 		},
 	}
 	app.Commands = []cli.Command{
-		cmd.AppCommand(),
-		cmd.CatalogCommand(),
 		cmd.ClusterCommand(),
 		cmd.ContextCommand(),
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
 		cmd.LoginCommand(),
 		cmd.MachineCommand(),
-		cmd.MultiClusterAppCommand(),
 		cmd.NamespaceCommand(),
 		cmd.NodeCommand(),
 		cmd.ProjectCommand(),
