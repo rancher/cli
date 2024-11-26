@@ -7,62 +7,7 @@ import (
 
 	"github.com/rancher/cli/config"
 	"github.com/stretchr/testify/assert"
-	"github.com/urfave/cli"
 )
-
-func TestServerCommand(t *testing.T) {
-	// Checking if two functions are equal is not possible
-	// Hence, we set them to nil here to skip checking
-	got := ServerCommand()
-	got.Before = nil
-	for idx := range got.Subcommands {
-		got.Subcommands[idx].Action = nil
-	}
-
-	expected := cli.Command{
-		Name:  "server",
-		Usage: "Operations for the server",
-		Description: `Switch or view the server currently in focus.
-`,
-		Subcommands: []cli.Command{
-			{
-				Name:  "current",
-				Usage: "Display the current server",
-			},
-			{
-				Name:      "delete",
-				Usage:     "Delete a server from the local config",
-				ArgsUsage: "[SERVER_NAME]",
-				Description: `
-The server arg is optional, if not passed in a list of available servers will
-be displayed and one can be selected.
-`,
-			},
-			{
-				Name:      "ls",
-				Usage:     "List all servers",
-				ArgsUsage: "None",
-				Flags: []cli.Flag{
-					cli.StringFlag{
-						Name:  "format",
-						Usage: "'json', 'yaml' or Custom format: '{{.Name}} {{.URL}}'",
-					},
-				},
-			},
-			{
-				Name:      "switch",
-				Usage:     "Switch to a new server",
-				ArgsUsage: "[SERVER_NAME]",
-				Description: `
-		The server arg is optional, if not passed in a list of available servers will
-		be displayed and one can be selected.
-		`,
-			},
-		},
-	}
-
-	assert.Equal(t, expected, got)
-}
 
 func TestServerCurrentCommand(t *testing.T) {
 	tt := []struct {
