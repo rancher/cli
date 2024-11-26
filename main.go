@@ -109,7 +109,6 @@ func mainErr() error {
 		cmd.CatalogCommand(),
 		cmd.ClusterCommand(),
 		cmd.ContextCommand(),
-		cmd.GlobalDNSCommand(),
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
 		cmd.LoginCommand(),
