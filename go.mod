@@ -9,7 +9,6 @@ replace k8s.io/client-go => k8s.io/client-go v0.31.1
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
-	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.0.0-20241001183610-78a520c160ab
 	github.com/rancher/rancher/pkg/apis v0.0.0-20241119163817-d801b4924311
@@ -23,7 +22,6 @@ require (
 	golang.org/x/sync v0.8.0
 	golang.org/x/term v0.25.0
 	golang.org/x/text v0.19.0
-	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/client-go v12.0.0+incompatible
 )
 
@@ -75,6 +73,7 @@ require (
 	golang.org/x/time v0.7.0 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.31.1 // indirect
 	k8s.io/apimachinery v0.31.1 // indirect
