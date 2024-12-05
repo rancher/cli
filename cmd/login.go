@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -260,10 +261,25 @@ func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.Ma
 
 	req.SetBasicAuth(cf.AccessKey, cf.SecretKey)
 
+	var proxy func(*http.Request) (*url.URL, error)
+	if cf.ProxyURL != "" {
+		proxyURL, err := url.Parse(cf.ProxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("invalid proxy address %s: %w", cf.ProxyURL, err)
+		}
+		proxy = http.ProxyURL(proxyURL)
+	} else {
+		proxy = http.ProxyFromEnvironment
+	}
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		Proxy:           proxy,
 	}
 	client := &http.Client{Transport: tr}
+	if cf.HTTPTimeoutSeconds > 0 {
+		client.Timeout = time.Duration(cf.HTTPTimeoutSeconds) * time.Second
+	}
 
 	res, err := client.Do(req)
 	if err != nil {

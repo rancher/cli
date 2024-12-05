@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	errorsPkg "github.com/pkg/errors"
 	"github.com/rancher/cli/config"
@@ -185,7 +186,13 @@ func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
 		AccessKey: config.AccessKey,
 		SecretKey: config.SecretKey,
 		CACerts:   config.CACerts,
+		ProxyURL:  config.ProxyURL,
 	}
+
+	if config.HTTPTimeoutSeconds > 0 {
+		options.Timeout = time.Duration(config.HTTPTimeoutSeconds) * time.Second
+	}
+
 	return options
 }
 
