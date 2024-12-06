@@ -12,7 +12,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -253,32 +252,18 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 	return projectCollection.Data[selection].ID, nil
 }
 
-func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.MasterClient, error) {
-	req, err := http.NewRequest("GET", cf.URL+"/v3/settings/cacerts", nil)
+func getCertFromServer(ctx *cli.Context, serverConfig *config.ServerConfig) (*cliclient.MasterClient, error) {
+	req, err := http.NewRequest("GET", serverConfig.URL+"/v3/settings/cacerts", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.SetBasicAuth(cf.AccessKey, cf.SecretKey)
+	req.SetBasicAuth(serverConfig.AccessKey, serverConfig.SecretKey)
 
-	var proxy func(*http.Request) (*url.URL, error)
-	if cf.ProxyURL != "" {
-		proxyURL, err := url.Parse(cf.ProxyURL)
-		if err != nil {
-			return nil, fmt.Errorf("invalid proxy address %s: %w", cf.ProxyURL, err)
-		}
-		proxy = http.ProxyURL(proxyURL)
-	} else {
-		proxy = http.ProxyFromEnvironment
-	}
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		Proxy:           proxy,
-	}
-	client := &http.Client{Transport: tr}
-	if cf.HTTPTimeoutSeconds > 0 {
-		client.Timeout = time.Duration(cf.HTTPTimeoutSeconds) * time.Second
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	client, err := newHTTPClient(serverConfig, tlsConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	res, err := client.Do(req)
@@ -296,7 +281,7 @@ func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.Ma
 	var certReponse *CACertResponse
 	err = json.Unmarshal(content, &certReponse)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse response from %s/v3/settings/cacerts\nError: %s\nResponse:\n%s", cf.URL, err, content)
+		return nil, fmt.Errorf("Unable to parse response from %s/v3/settings/cacerts\nError: %s\nResponse:\n%s", serverConfig.URL, err, content)
 	}
 
 	cert, err := verifyCert([]byte(certReponse.Value))
@@ -311,14 +296,14 @@ func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.Ma
 	}
 
 	if !ctx.Bool("skip-verify") {
-		if ok := verifyUserAcceptsCert(serverCerts, cf.URL); !ok {
+		if ok := verifyUserAcceptsCert(serverCerts, serverConfig.URL); !ok {
 			return nil, errors.New("CACert of server was not accepted, unable to login")
 		}
 	}
 
-	cf.CACerts = cert
+	serverConfig.CACerts = cert
 
-	return cliclient.NewManagementClient(cf)
+	return cliclient.NewManagementClient(serverConfig)
 }
 
 func verifyUserAcceptsCert(certs []string, url string) bool {

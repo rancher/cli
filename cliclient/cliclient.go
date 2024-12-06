@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	errorsPkg "github.com/pkg/errors"
 	"github.com/rancher/cli/config"
@@ -181,19 +180,14 @@ func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
 		serverURL = config.URL + "/v3"
 	}
 
-	options := &clientbase.ClientOpts{
+	return &clientbase.ClientOpts{
 		URL:       serverURL,
 		AccessKey: config.AccessKey,
 		SecretKey: config.SecretKey,
 		CACerts:   config.CACerts,
 		ProxyURL:  config.ProxyURL,
+		Timeout:   config.GetHTTPTimeout(),
 	}
-
-	if config.HTTPTimeoutSeconds > 0 {
-		options.Timeout = time.Duration(config.HTTPTimeoutSeconds) * time.Second
-	}
-
-	return options
 }
 
 func SplitOnColon(s string) []string {

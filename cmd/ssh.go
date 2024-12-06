@@ -9,12 +9,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
@@ -172,35 +170,21 @@ func getSSHKey(c *cliclient.MasterClient, link, nodeName string) ([]byte, string
 	req.SetBasicAuth(c.UserConfig.AccessKey, c.UserConfig.SecretKey)
 	req.Header.Add("Accept-Encoding", "zip")
 
-	var proxy func(*http.Request) (*url.URL, error)
-	if c.UserConfig.ProxyURL != "" {
-		proxyURL, err := url.Parse(c.UserConfig.ProxyURL)
-		if err != nil {
-			return nil, "", fmt.Errorf("invalid proxy address %s: %w", c.UserConfig.ProxyURL, err)
-		}
-		proxy = http.ProxyURL(proxyURL)
-	} else {
-		proxy = http.ProxyFromEnvironment
-	}
-
-	tr := &http.Transport{
-		Proxy: proxy,
-	}
-
+	var tlsConfig *tls.Config
 	if c.UserConfig.CACerts != "" {
 		roots := x509.NewCertPool()
 		ok := roots.AppendCertsFromPEM([]byte(c.UserConfig.CACerts))
 		if !ok {
 			return []byte{}, "", err
 		}
-		tr.TLSClientConfig = &tls.Config{
+		tlsConfig = &tls.Config{
 			RootCAs: roots,
 		}
 	}
 
-	client := &http.Client{Transport: tr}
-	if c.UserConfig.HTTPTimeoutSeconds > 0 {
-		client.Timeout = time.Duration(c.UserConfig.HTTPTimeoutSeconds) * time.Second
+	client, err := newHTTPClient(c.UserConfig, tlsConfig)
+	if err != nil {
+		return nil, "", err
 	}
 
 	resp, err := client.Do(req)
