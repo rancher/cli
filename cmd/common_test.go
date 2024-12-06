@@ -1,11 +1,15 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"testing"
+	"time"
 
+	"github.com/rancher/cli/config"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -199,4 +203,92 @@ func TestGetMemberNameFromPrincipal(t *testing.T) {
 			assert.Equal(t, test.want, got)
 		})
 	}
+}
+
+func TestNewHTTPClient(t *testing.T) {
+	t.Run("default timeout and no proxy", func(t *testing.T) {
+		serverConfig := &config.ServerConfig{}
+		tlsConfig := &tls.Config{InsecureSkipVerify: true}
+
+		client, err := newHTTPClient(serverConfig, tlsConfig)
+		require.NoError(t, err)
+
+		assert.Equal(t, defaultHTTPTimeout, client.Timeout)
+
+		transport, ok := client.Transport.(*http.Transport)
+		require.True(t, ok)
+
+		assert.True(t, transport.TLSClientConfig.InsecureSkipVerify)
+	})
+
+	t.Run("set timeout", func(t *testing.T) {
+		serverConfig := &config.ServerConfig{
+			HTTPTimeoutSeconds: 30,
+		}
+
+		client, err := newHTTPClient(serverConfig, nil)
+		require.NoError(t, err)
+
+		assert.Equal(t, 30*time.Second, client.Timeout)
+	})
+
+	t.Run("explicitly set proxy URL", func(t *testing.T) {
+		httpProxy := "http://corp.example.com:8080"
+		serverConfig := &config.ServerConfig{
+			ProxyURL: httpProxy,
+		}
+
+		client, err := newHTTPClient(serverConfig, nil)
+		require.NoError(t, err)
+
+		transport, ok := client.Transport.(*http.Transport)
+		require.True(t, ok)
+
+		req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
+		require.NoError(t, err)
+
+		proxyURL, err := transport.Proxy(req)
+		require.NoError(t, err)
+		require.NotNil(t, proxyURL)
+		assert.Equal(t, httpProxy, proxyURL.String())
+	})
+
+	t.Run("invalid proxy URL", func(t *testing.T) {
+		invalidURL := "http://corp .example.com:8080"
+		serverConfig := &config.ServerConfig{
+			ProxyURL: invalidURL,
+		}
+
+		_, err := newHTTPClient(serverConfig, nil)
+		require.Error(t, err)
+	})
+
+	t.Run("set proxy via env vars", func(t *testing.T) {
+		httpProxy := "http://corp.example.com:8080"
+		t.Setenv("HTTP_PROXY", httpProxy)
+		t.Setenv("NO_PROXY", "foo.com")
+
+		serverConfig := &config.ServerConfig{}
+
+		client, err := newHTTPClient(serverConfig, nil)
+		require.NoError(t, err)
+
+		transport, ok := client.Transport.(*http.Transport)
+		require.True(t, ok)
+
+		req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
+		require.NoError(t, err)
+
+		proxyURL, err := transport.Proxy(req)
+		require.NoError(t, err)
+		require.NotNil(t, proxyURL)
+		assert.Equal(t, httpProxy, proxyURL.String())
+
+		req, err = http.NewRequest(http.MethodGet, "http://foo.com", nil)
+		require.NoError(t, err)
+
+		proxyURL, err = transport.Proxy(req)
+		require.NoError(t, err)
+		require.Nil(t, proxyURL)
+	})
 }

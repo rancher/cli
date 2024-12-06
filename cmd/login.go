@@ -252,18 +252,19 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 	return projectCollection.Data[selection].ID, nil
 }
 
-func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.MasterClient, error) {
-	req, err := http.NewRequest("GET", cf.URL+"/v3/settings/cacerts", nil)
+func getCertFromServer(ctx *cli.Context, serverConfig *config.ServerConfig) (*cliclient.MasterClient, error) {
+	req, err := http.NewRequest("GET", serverConfig.URL+"/v3/settings/cacerts", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.SetBasicAuth(cf.AccessKey, cf.SecretKey)
+	req.SetBasicAuth(serverConfig.AccessKey, serverConfig.SecretKey)
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	client, err := newHTTPClient(serverConfig, tlsConfig)
+	if err != nil {
+		return nil, err
 	}
-	client := &http.Client{Transport: tr}
 
 	res, err := client.Do(req)
 	if err != nil {
@@ -280,7 +281,7 @@ func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.Ma
 	var certReponse *CACertResponse
 	err = json.Unmarshal(content, &certReponse)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse response from %s/v3/settings/cacerts\nError: %s\nResponse:\n%s", cf.URL, err, content)
+		return nil, fmt.Errorf("Unable to parse response from %s/v3/settings/cacerts\nError: %s\nResponse:\n%s", serverConfig.URL, err, content)
 	}
 
 	cert, err := verifyCert([]byte(certReponse.Value))
@@ -295,14 +296,14 @@ func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.Ma
 	}
 
 	if !ctx.Bool("skip-verify") {
-		if ok := verifyUserAcceptsCert(serverCerts, cf.URL); !ok {
+		if ok := verifyUserAcceptsCert(serverCerts, serverConfig.URL); !ok {
 			return nil, errors.New("CACert of server was not accepted, unable to login")
 		}
 	}
 
-	cf.CACerts = cert
+	serverConfig.CACerts = cert
 
-	return cliclient.NewManagementClient(cf)
+	return cliclient.NewManagementClient(serverConfig)
 }
 
 func verifyUserAcceptsCert(certs []string, url string) bool {
