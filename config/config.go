@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -68,6 +69,13 @@ func LoadFromPath(path string) (Config, error) {
 // We want this because configuration may have sensitive information (eg: creds).
 // A nil error is returned if the file doesn't exist.
 func GetFilePermissionWarnings(path string) ([]string, error) {
+	// Permission bits on Windows are not representative
+	// of the actual ACLs set for a given file. As the owner
+	// bit is always used for all three bits on Windows, this check
+	// will always fail, even if the file has restricted access to admins only.
+	if runtime.GOOS == "windows" {
+		return nil, nil
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
