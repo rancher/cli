@@ -170,20 +170,21 @@ func getSSHKey(c *cliclient.MasterClient, link, nodeName string) ([]byte, string
 	req.SetBasicAuth(c.UserConfig.AccessKey, c.UserConfig.SecretKey)
 	req.Header.Add("Accept-Encoding", "zip")
 
-	client := &http.Client{}
-
+	var tlsConfig *tls.Config
 	if c.UserConfig.CACerts != "" {
 		roots := x509.NewCertPool()
 		ok := roots.AppendCertsFromPEM([]byte(c.UserConfig.CACerts))
 		if !ok {
 			return []byte{}, "", err
 		}
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: roots,
-			},
+		tlsConfig = &tls.Config{
+			RootCAs: roots,
 		}
-		client.Transport = tr
+	}
+
+	client, err := newHTTPClient(c.UserConfig, tlsConfig)
+	if err != nil {
+		return nil, "", err
 	}
 
 	resp, err := client.Do(req)

@@ -3,11 +3,13 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -39,6 +41,7 @@ const (
 	letters             = "abcdefghijklmnopqrstuvwxyz0123456789"
 	cfgFile             = "cli2.json"
 	kubeConfigKeyFormat = "%s-%s"
+	defaultHTTPTimeout  = time.Minute // Matches the default timeout of the Norman Api Client.
 )
 
 var (
@@ -623,4 +626,34 @@ func ConfigDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(homeDir, ".rancher"), nil
+}
+
+func newHTTPClient(serverConfig *config.ServerConfig, tlsConfig *tls.Config) (*http.Client, error) {
+	var proxy func(*http.Request) (*url.URL, error)
+	if serverConfig.ProxyURL != "" {
+		proxyURL, err := url.Parse(serverConfig.ProxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("invalid proxy address %s: %w", serverConfig.ProxyURL, err)
+		}
+		proxy = http.ProxyURL(proxyURL)
+	} else {
+		proxy = http.ProxyFromEnvironment
+	}
+
+	tr := &http.Transport{
+		Proxy: proxy,
+	}
+	if tlsConfig != nil {
+		tr.TLSClientConfig = tlsConfig
+	}
+
+	timeout := serverConfig.GetHTTPTimeout()
+	if timeout == 0 {
+		timeout = defaultHTTPTimeout
+	}
+
+	return &http.Client{
+		Transport: tr,
+		Timeout:   timeout,
+	}, nil
 }

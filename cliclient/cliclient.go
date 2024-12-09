@@ -180,13 +180,14 @@ func createClientOpts(config *config.ServerConfig) *clientbase.ClientOpts {
 		serverURL = config.URL + "/v3"
 	}
 
-	options := &clientbase.ClientOpts{
+	return &clientbase.ClientOpts{
 		URL:       serverURL,
 		AccessKey: config.AccessKey,
 		SecretKey: config.SecretKey,
 		CACerts:   config.CACerts,
+		ProxyURL:  config.ProxyURL,
+		Timeout:   config.GetHTTPTimeout(),
 	}
-	return options
 }
 
 func SplitOnColon(s string) []string {

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -27,14 +28,20 @@ type Config struct {
 
 // ServerConfig holds the config for each server the user has setup
 type ServerConfig struct {
-	AccessKey       string                     `json:"accessKey"`
-	SecretKey       string                     `json:"secretKey"`
-	TokenKey        string                     `json:"tokenKey"`
-	URL             string                     `json:"url"`
-	Project         string                     `json:"project"`
-	CACerts         string                     `json:"cacert"`
-	KubeCredentials map[string]*ExecCredential `json:"kubeCredentials"`
-	KubeConfigs     map[string]*api.Config     `json:"kubeConfigs"`
+	AccessKey          string                     `json:"accessKey"`
+	SecretKey          string                     `json:"secretKey"`
+	TokenKey           string                     `json:"tokenKey"`
+	URL                string                     `json:"url"`
+	Project            string                     `json:"project"`
+	CACerts            string                     `json:"cacert"`
+	KubeCredentials    map[string]*ExecCredential `json:"kubeCredentials"`
+	KubeConfigs        map[string]*api.Config     `json:"kubeConfigs"`
+	ProxyURL           string                     `json:"proxyUrl"`
+	HTTPTimeoutSeconds int                        `json:"httpTimeoutSeconds"`
+}
+
+func (c *ServerConfig) GetHTTPTimeout() time.Duration {
+	return time.Duration(c.HTTPTimeoutSeconds) * time.Second
 }
 
 // LoadFromPath attempts to load a config from the given file path. If the file
