@@ -39,7 +39,7 @@ Run `CROSS=1 make build`.
 
 ## Docker Image
 
-Run `docker run --rm -it -v <PATH_TO_CONFIG>:/root/.rancher/cli2.json rancher/cli2 [ARGS]`.
+Run `docker run --rm -it -v <PATH_TO_CONFIG>:/home/cli/.rancher/cli2.json rancher/cli2 [ARGS]`.
 Pass credentials by replacing `<PATH_TO_CONFIG>` with your config file for the server.
 
 To build `rancher/cli`, run `make`.  To use a custom Docker repository, do `REPO=custom make`, which produces a `custom/cli` image.
