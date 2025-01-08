@@ -14,7 +14,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	url2 "net/url"
+	"net/url"
 	"os"
 	"os/signal"
 	"runtime"
@@ -135,28 +135,32 @@ func CredentialCommand() cli.Command {
 }
 
 func runCredential(ctx *cli.Context) error {
-	if ctx.Bool("delete") {
-		return deleteCachedCredential(ctx)
-	}
 	server := ctx.String("server")
 	if server == "" {
 		return errors.New("name of rancher server is required")
 	}
-	url, err := url2.Parse(server)
+
+	serverURL, err := url.Parse(server)
 	if err != nil {
 		return err
 	}
-	if url.Scheme == "" {
+	if serverURL.Scheme == "" {
 		server = fmt.Sprintf("https://%s", server)
 	}
+
 	userID := ctx.String("user")
 	if userID == "" {
 		return errors.New("user-id is required")
 	}
 	clusterID := ctx.String("cluster")
 
+	serverConfig, err := lookupServerConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("error looking up server config: %w", err)
+	}
+
 	cachedCredName := fmt.Sprintf("%s_%s", userID, clusterID)
-	cachedCred, err := loadCachedCredential(ctx, cachedCredName)
+	cachedCred, err := loadCachedCredential(ctx, serverConfig, cachedCredName)
 	if err != nil {
 		customPrint(fmt.Errorf("LoadToken: %v", err))
 	}
@@ -173,12 +177,22 @@ func runCredential(ctx *cli.Context) error {
 		skipVerify:   ctx.Bool("skip-verify"),
 	}
 
-	newCred, err := loginAndGenerateCred(input)
+	tlsConfig, err := getTLSConfig(input.skipVerify, input.caCerts)
 	if err != nil {
 		return err
 	}
 
-	if err := cacheCredential(ctx, newCred, fmt.Sprintf("%s_%s", userID, clusterID)); err != nil {
+	client, err := newHTTPClient(serverConfig, tlsConfig)
+	if err != nil {
+		return err
+	}
+
+	newCred, err := loginAndGenerateCred(client, input)
+	if err != nil {
+		return err
+	}
+
+	if err := cacheCredential(ctx, serverConfig, cachedCredName, newCred); err != nil {
 		customPrint(fmt.Errorf("CacheToken: %v", err))
 	}
 
@@ -214,20 +228,15 @@ func deleteCachedCredential(ctx *cli.Context) error {
 	for _, key := range ctx.Args() {
 		customPrint(fmt.Sprintf("removing [%s]", key))
 		for _, server := range cf.Servers {
-			server.KubeCredentials[key] = nil
+			delete(server.KubeCredentials, key)
 		}
 	}
 
 	return cf.Write()
 }
 
-func loadCachedCredential(ctx *cli.Context, key string) (*config.ExecCredential, error) {
-	sc, err := lookupServerConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	cred := sc.KubeToken(key)
+func loadCachedCredential(ctx *cli.Context, serverConfig *config.ServerConfig, key string) (*config.ExecCredential, error) {
+	cred := serverConfig.KubeToken(key)
 	if cred == nil {
 		return cred, nil
 	}
@@ -275,7 +284,7 @@ func lookupServerConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 	return sc, nil
 }
 
-func cacheCredential(ctx *cli.Context, cred *config.ExecCredential, id string) error {
+func cacheCredential(ctx *cli.Context, serverConfig *config.ServerConfig, key string, cred *config.ExecCredential) error {
 	// cache only if valid
 	if cred.Status.Token == "" {
 		return nil
@@ -291,28 +300,17 @@ func cacheCredential(ctx *cli.Context, cred *config.ExecCredential, id string) e
 		return err
 	}
 
-	sc, err := lookupServerConfig(ctx)
-	if err != nil {
-		return err
+	if serverConfig.KubeCredentials == nil {
+		serverConfig.KubeCredentials = make(map[string]*config.ExecCredential)
 	}
-
-	if sc.KubeCredentials == nil {
-		sc.KubeCredentials = make(map[string]*config.ExecCredential)
-	}
-	sc.KubeCredentials[id] = cred
-	cf.Servers[server] = sc
+	serverConfig.KubeCredentials[key] = cred
+	cf.Servers[server] = serverConfig
 
 	return cf.Write()
 }
 
-func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
-	// setup a client with the provided TLS configuration
-	client, err := getClient(input.skipVerify, input.caCerts)
-	if err != nil {
-		return nil, err
-	}
-
-	authProviders, err := getAuthProviders(input.server)
+func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecCredential, error) {
+	authProviders, err := getAuthProviders(client, input.server)
 	if err != nil {
 		return nil, err
 	}
@@ -325,19 +323,19 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 
 	token := managementClient.Token{}
 	if samlProviders[input.authProvider] {
-		token, err = samlAuth(input, client)
+		token, err = samlAuth(client, input)
 		if err != nil {
 			return nil, err
 		}
 	} else if oauthProviders[input.authProvider] {
-		tokenPtr, err := oauthAuth(input, selectedProvider)
+		tokenPtr, err := oauthAuth(client, input, selectedProvider)
 		if err != nil {
 			return nil, err
 		}
 		token = *tokenPtr
 	} else {
 		customPrint(fmt.Sprintf("Enter credentials for %s \n", input.authProvider))
-		token, err = basicAuth(input)
+		token, err = basicAuth(client, input)
 		if err != nil {
 			return nil, err
 		}
@@ -364,7 +362,7 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 
 }
 
-func basicAuth(input *LoginInput) (managementClient.Token, error) {
+func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, error) {
 	token := managementClient.Token{}
 	username, err := customPrompt("Enter username: ", true)
 	if err != nil {
@@ -381,18 +379,26 @@ func basicAuth(input *LoginInput) (managementClient.Token, error) {
 		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
 	}
 
-	body := fmt.Sprintf(`{"responseType":%q, "username":%q, "password":%q}`, responseType, username, password)
+	reqBody := fmt.Sprintf(`{"responseType":%q, "username":%q, "password":%q}`, responseType, username, password)
 
-	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, input.authProvider,
+	loginURL := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, input.authProvider,
 		strings.ToLower(strings.Replace(input.authProvider, "Provider", "", 1)))
 
-	response, err := request(http.MethodPost, url, bytes.NewBufferString(body))
+	req, err := http.NewRequest(http.MethodPost, loginURL, bytes.NewBufferString(reqBody))
+	if err != nil {
+		return token, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, respBody, err := doRequest(client, req)
+	if err == nil && resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+	}
 	if err != nil {
 		return token, nil
 	}
 
 	apiError := map[string]interface{}{}
-	err = json.Unmarshal(response, &apiError)
+	err = json.Unmarshal(respBody, &apiError)
 	if err != nil {
 		return token, err
 	}
@@ -402,15 +408,17 @@ func basicAuth(input *LoginInput) (managementClient.Token, error) {
 			"[%v] message:[%v]", apiError["code"], apiError["message"])
 	}
 
-	err = json.Unmarshal(response, &token)
+	err = json.Unmarshal(respBody, &token)
 	if err != nil {
 		return token, err
 	}
+
 	return token, nil
 }
 
-func samlAuth(input *LoginInput, client *http.Client) (managementClient.Token, error) {
+func samlAuth(client *http.Client, input *LoginInput) (managementClient.Token, error) {
 	token := managementClient.Token{}
+
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return token, err
@@ -434,45 +442,45 @@ func samlAuth(input *LoginInput, client *http.Client) (managementClient.Token, e
 
 	tokenURL := fmt.Sprintf(authTokenURL, input.server, id)
 
-	req, err := http.NewRequest(http.MethodGet, tokenURL, bytes.NewBuffer(nil))
+	getReq, err := http.NewRequest(http.MethodGet, tokenURL, bytes.NewBuffer(nil))
 	if err != nil {
 		return token, err
 	}
+	getReq.Header.Set("content-type", "application/json")
+	getReq.Header.Set("accept", "application/json")
 
-	req.Header.Set("content-type", "application/json")
-	req.Header.Set("accept", "application/json")
+	deleteReq, err := http.NewRequest(http.MethodDelete, tokenURL, bytes.NewBuffer(nil))
+	if err != nil {
+		return token, err
+	}
+	deleteReq.Header.Set("content-type", "application/json")
+	deleteReq.Header.Set("accept", "application/json")
 
-	client.Timeout = 300 * time.Second
-
-	loginRequest := fmt.Sprintf("%s/dashboard/auth/login?requestId=%s&publicKey=%s&responseType=%s",
+	loginURL := fmt.Sprintf("%s/dashboard/auth/login?requestId=%s&publicKey=%s&responseType=%s",
 		input.server, id, encodedKey, responseType)
 
-	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s \n", loginRequest))
+	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s \n", loginURL))
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	// timeout for user to login and get token
-	timeout := time.NewTicker(15 * time.Minute)
+	// Timeout for the login flow.
+	timeout := time.NewTimer(15 * time.Minute)
 	defer timeout.Stop()
-
+	// Poll for the auth token every 10 seconds.
 	poll := time.NewTicker(10 * time.Second)
 	defer poll.Stop()
 
+loop:
 	for {
 		select {
 		case <-poll.C:
-			res, err := client.Do(req)
+			// Fetch the auth token.
+			_, respBody, err := doRequest(client, getReq)
 			if err != nil {
 				return token, err
 			}
-			content, err := io.ReadAll(res.Body)
-			if err != nil {
-				res.Body.Close()
-				return token, err
-			}
-			res.Body.Close()
-			err = json.Unmarshal(content, &token)
+			err = json.Unmarshal(respBody, &token)
 			if err != nil {
 				return token, err
 			}
@@ -489,55 +497,54 @@ func samlAuth(input *LoginInput, client *http.Client) (managementClient.Token, e
 			}
 			token.Token = string(decryptedBytes)
 
-			// delete token
-			req, err = http.NewRequest(http.MethodDelete, tokenURL, bytes.NewBuffer(nil))
-			if err != nil {
-				return token, err
+			// Delete the auth token.
+			resp, _, err := doRequest(client, deleteReq)
+			if err == nil && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+				err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
 			}
-			req.Header.Set("content-type", "application/json")
-			req.Header.Set("accept", "application/json")
-
-			client.Timeout = 150 * time.Second
-
-			res, err = client.Do(req)
 			if err != nil {
-				// log error and use the token if login succeeds
-				customPrint(fmt.Errorf("DeleteToken: %v", err))
+				// Log the error and move on.
+				customPrint(fmt.Errorf("error deleting auth token: %s", err))
 			}
-			defer res.Body.Close()
 
 			return token, nil
 
 		case <-timeout.C:
-			break
+			customPrint("timed out waiting for the auth token")
+			break loop
 
 		case <-interrupt:
-			customPrint("received interrupt")
-			break
+			customPrint("interrupted waiting for the auth token")
+			break loop
 		}
-
-		return token, nil
 	}
+
+	return token, nil
 }
 
 type TypedProvider interface {
 	GetType() string
 }
 
-func getAuthProviders(server string) ([]TypedProvider, error) {
+func getAuthProviders(client *http.Client, server string) ([]TypedProvider, error) {
 	authProvidersURL := fmt.Sprintf(authProviderURL, server)
-	customPrint(authProvidersURL)
+	req, err := http.NewRequest(http.MethodGet, authProvidersURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
 
-	response, err := request(http.MethodGet, authProvidersURL, nil)
+	resp, respBody, err := doRequest(client, req)
+	if err == nil && resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	if !gjson.ValidBytes(response) {
+	if !gjson.ValidBytes(respBody) {
 		return nil, fmt.Errorf("invalid JSON response from %s", authProvidersURL)
 	}
-
-	data := gjson.GetBytes(response, "data").Array()
+	data := gjson.GetBytes(respBody, "data").Array()
 
 	var supportedProviders []TypedProvider
 	for _, provider := range data {
@@ -596,19 +603,16 @@ func selectAuthProvider(authProviders []TypedProvider, providerType string) (Typ
 		providers = append(providers, fmt.Sprintf("%d - %s", i, val.GetType()))
 	}
 
-	try := 0
-	for try < 3 {
+	for try := 0; try < 3; try++ {
 		customPrint(fmt.Sprintf("Auth providers:\n%v", strings.Join(providers, "\n")))
 		providerIndexStr, err := customPrompt("Select auth provider: ", true)
 		if err != nil {
-			try++
 			continue
 		}
 
 		providerIndex, err := strconv.Atoi(providerIndexStr)
 		if err != nil || (providerIndex < 0 || providerIndex > len(providers)-1) {
 			customPrint("Pick a valid auth provider")
-			try++
 			continue
 		}
 
@@ -631,19 +635,6 @@ func generateKey() (string, error) {
 	}
 
 	return string(token), nil
-}
-
-// getClient return a client with the provided TLS configuration
-func getClient(skipVerify bool, caCerts string) (*http.Client, error) {
-	tlsConfig, err := getTLSConfig(skipVerify, caCerts)
-	if err != nil {
-		return nil, err
-	}
-
-	// clone the DefaultTransport to get the default values
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = tlsConfig
-	return &http.Client{Transport: transport}, nil
 }
 
 func getTLSConfig(skipVerify bool, caCerts string) (*tls.Config, error) {
@@ -671,30 +662,19 @@ func getTLSConfig(skipVerify bool, caCerts string) (*tls.Config, error) {
 	return config, nil
 }
 
-func request(method, url string, body io.Reader) ([]byte, error) {
-	var response []byte
-
-	req, err := http.NewRequest(method, url, body)
+func doRequest(client *http.Client, req *http.Request) (*http.Response, []byte, error) {
+	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return resp, nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp, nil, err
 	}
 
-	client, err := getClient(true, "")
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	response, err = io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return resp, body, nil
 }
 
 func customPrompt(msg string, show bool) (result string, err error) {

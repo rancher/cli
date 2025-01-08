@@ -15,13 +15,15 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func oauthAuth(input *LoginInput, provider TypedProvider) (*managementClient.Token, error) {
+func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (*managementClient.Token, error) {
+	// TODO: make it possible to pass an http.Client.
 	oauthConfig, err := newOauthConfig(provider)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := context.Background()
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, client) // Set the custom HTTP client.
+
 	deviceAuthResp, err := oauthConfig.DeviceAuth(ctx)
 	if err != nil {
 		return nil, err
@@ -38,10 +40,11 @@ func oauthAuth(input *LoginInput, provider TypedProvider) (*managementClient.Tok
 		return nil, err
 	}
 
-	token, err := rancherLogin(input, provider, oauthToken)
+	token, err := rancherLogin(client, input, provider, oauthToken)
 	if err != nil {
 		return nil, fmt.Errorf("error during rancher login: %w", err)
 	}
+
 	return token, nil
 }
 
@@ -66,7 +69,7 @@ func newOauthConfig(provider TypedProvider) (*oauth2.Config, error) {
 	}, nil
 }
 
-func rancherLogin(input *LoginInput, provider TypedProvider, oauthToken *oauth2.Token) (*managementClient.Token, error) {
+func rancherLogin(client *http.Client, input *LoginInput, provider TypedProvider, oauthToken *oauth2.Token) (*managementClient.Token, error) {
 	// login with id_token
 	providerName := strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider"))
 	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, provider.GetType(), providerName)
@@ -84,15 +87,24 @@ func rancherLogin(input *LoginInput, provider TypedProvider, oauthToken *oauth2.
 		return nil, err
 	}
 
-	b, err := request(http.MethodPost, url, bytes.NewBuffer(jsonBody))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, respBody, err := doRequest(client, req)
+	if err == nil && resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	token := &managementClient.Token{}
-	err = json.Unmarshal(b, token)
+	err = json.Unmarshal(respBody, token)
 	if err != nil {
 		return nil, err
 	}
+
 	return token, nil
 }
