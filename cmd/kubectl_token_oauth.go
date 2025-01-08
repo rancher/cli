@@ -11,12 +11,10 @@ import (
 	"github.com/pkg/errors"
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
-
 	"golang.org/x/oauth2"
 )
 
 func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (*managementClient.Token, error) {
-	// TODO: make it possible to pass an http.Client.
 	oauthConfig, err := newOauthConfig(provider)
 	if err != nil {
 		return nil, err
