@@ -392,20 +392,16 @@ func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, 
 	resp, respBody, err := doRequest(client, req)
 	if err == nil && resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
-	}
-	if err != nil {
-		return token, nil
-	}
 
-	apiError := map[string]interface{}{}
-	err = json.Unmarshal(respBody, &apiError)
+		apiError := map[string]interface{}{}
+		if rerr := json.Unmarshal(respBody, &apiError); rerr == nil {
+			if responseType := apiError["type"]; responseType == "error" {
+				err = fmt.Errorf("error logging in: code: [%v] message:[%v]", apiError["code"], apiError["message"])
+			}
+		}
+	}
 	if err != nil {
 		return token, err
-	}
-
-	if responseType := apiError["type"]; responseType == "error" {
-		return token, fmt.Errorf("error logging in: code: "+
-			"[%v] message:[%v]", apiError["code"], apiError["message"])
 	}
 
 	err = json.Unmarshal(respBody, &token)
