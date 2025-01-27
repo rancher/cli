@@ -11,15 +11,18 @@ import (
 	"github.com/rancher/cli/config"
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
 )
 
-func Test_getAuthProviders(t *testing.T) {
+func TestGetAuthProviders(t *testing.T) {
 	setupServer := func(response string) *httptest.Server {
 		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, response)
 		}))
 	}
+
+	client := &http.Client{Timeout: time.Second}
 
 	tt := []struct {
 		name              string
@@ -60,12 +63,13 @@ func Test_getAuthProviders(t *testing.T) {
 			expectedErr: "invalid JSON response from",
 		},
 	}
+
 	for _, tc := range tt {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(tc.server.Close)
 
-			got, err := getAuthProviders(tc.server.URL)
+			got, err := getAuthProviders(client, tc.server.URL)
 
 			if tc.expectedErr != "" {
 				assert.ErrorContains(t, err, tc.expectedErr)
@@ -118,53 +122,48 @@ var responseOK = `{
     ]
 }`
 
-func Test_cacheCredential(t *testing.T) {
-	tempDir := t.TempDir()
-
-	cred := &config.ExecCredential{Status: &config.ExecCredentialStatus{Token: "test-token"}}
+func TestCacheCredential(t *testing.T) {
 	flagSet := flag.NewFlagSet("test", 0)
 	flagSet.String("server", "rancher.example.com", "doc")
-	flagSet.String("config", tempDir, "doc")
+	flagSet.String("config", t.TempDir(), "doc")
 	cliCtx := cli.NewContext(nil, flagSet, nil)
 
-	err := cacheCredential(cliCtx, cred, "dev-server")
+	serverConfig, err := lookupServerConfig(cliCtx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	cred := &config.ExecCredential{Status: &config.ExecCredentialStatus{Token: "test-token"}}
+
+	err = cacheCredential(cliCtx, serverConfig, "dev-server", cred)
+	require.NoError(t, err)
+
 	cfg, err := loadConfig(cliCtx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	expires := &config.Time{Time: time.Now().Add(time.Hour * 2)}
 	cfg.CurrentServer = "rancher.example.com"
 	cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ClientKeyData = "this-is-not-real"
 	cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ExpirationTimestamp = expires
-	if err := cfg.Write(); err != nil {
-		t.Fatal(err)
-	}
 
-	_, err = cfg.FocusedServer()
-	if err != nil {
-		t.Fatal(err)
-	}
+	err = cfg.Write()
+	require.NoError(t, err)
+
+	serverConfig, err = cfg.FocusedServer()
+	require.NoError(t, err)
 
 	cred = &config.ExecCredential{Status: &config.ExecCredentialStatus{Token: "new-token"}}
-	err = cacheCredential(cliCtx, cred, "local")
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	err = cacheCredential(cliCtx, serverConfig, "local", cred)
+	require.NoError(t, err)
 
 	cfg, err = loadConfig(cliCtx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if v := cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ClientKeyData; v != "this-is-not-real" {
-		t.Errorf("got ClientKeyData %q, want \"this-is-not-real\"", v)
-	}
-	if v := cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ExpirationTimestamp; !v.Time.Equal(expires.Time) {
-		t.Errorf("got ExpirationTimestamp %v, want %v", v, expires)
-	}
+	clientKeyData := cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ClientKeyData
+	assert.Equal(t, "this-is-not-real", clientKeyData)
 
+	expirationTimestamp := cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ExpirationTimestamp
+	require.NotNil(t, expirationTimestamp)
+	assert.True(t, expirationTimestamp.Time.Equal(expires.Time))
 }
