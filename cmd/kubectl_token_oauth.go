@@ -91,7 +91,7 @@ func rancherLogin(client *http.Client, input *LoginInput, provider TypedProvider
 	}
 
 	resp, respBody, err := doRequest(client, req)
-	if err == nil && resp.StatusCode != http.StatusOK {
+	if err == nil && resp.StatusCode != http.StatusCreated {
 		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
 	}
 	if err != nil {

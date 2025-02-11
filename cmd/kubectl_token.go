@@ -390,18 +390,18 @@ func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, 
 	}
 
 	resp, respBody, err := doRequest(client, req)
-	if err == nil && resp.StatusCode != http.StatusOK {
+	if err == nil && resp.StatusCode != http.StatusCreated {
 		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
 
 		apiError := map[string]interface{}{}
 		if rerr := json.Unmarshal(respBody, &apiError); rerr == nil {
 			if responseType := apiError["type"]; responseType == "error" {
-				err = fmt.Errorf("error logging in: code: [%v] message:[%v]", apiError["code"], apiError["message"])
+				err = fmt.Errorf("error logging user in: code: [%v] message:[%v]", apiError["code"], apiError["message"])
 			}
 		}
 	}
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("error logging user in: %w", err)
 	}
 
 	err = json.Unmarshal(respBody, &token)
@@ -495,7 +495,7 @@ loop:
 
 			// Delete the auth token.
 			resp, _, err := doRequest(client, deleteReq)
-			if err == nil && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+			if err == nil && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
 				err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
 			}
 			if err != nil {
@@ -534,7 +534,7 @@ func getAuthProviders(client *http.Client, server string) ([]TypedProvider, erro
 		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error listing auth providers: %w", err)
 	}
 
 	if !gjson.ValidBytes(respBody) {
