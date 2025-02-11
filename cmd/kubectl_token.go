@@ -495,7 +495,7 @@ loop:
 
 			// Delete the auth token.
 			resp, _, err := doRequest(client, deleteReq)
-			if err == nil && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+			if err == nil && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
 				err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
 			}
 			if err != nil {
