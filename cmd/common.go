@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -23,7 +24,6 @@ import (
 	"unicode"
 
 	"github.com/ghodss/yaml"
-	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
@@ -266,7 +266,7 @@ func verifyCert(caCert []byte) (string, error) {
 	block, _ := pem.Decode(caCert)
 
 	if nil == block {
-		return "", errors.New("No cert was found")
+		return "", errors.New("no cert was found")
 	}
 
 	parsedCert, err := x509.ParseCertificate(block.Bytes)
@@ -275,7 +275,7 @@ func verifyCert(caCert []byte) (string, error) {
 	}
 
 	if !parsedCert.IsCA {
-		return "", errors.New("CACerts is not valid")
+		return "", errors.New("caCerts is not valid")
 	}
 	return string(caCert), nil
 }

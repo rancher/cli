@@ -9,7 +9,6 @@ replace k8s.io/client-go => k8s.io/client-go v0.32.2
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
-	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.5.2
 	github.com/rancher/rancher/pkg/apis v0.0.0-20250312180415-94853c35bd1e
 	github.com/rancher/rancher/pkg/client v0.0.0-20250312180415-94853c35bd1e
@@ -52,6 +51,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.20.5 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect

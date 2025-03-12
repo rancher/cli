@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/urfave/cli"
