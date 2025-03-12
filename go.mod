@@ -2,7 +2,7 @@ module github.com/rancher/cli
 
 go 1.23.4
 
-toolchain go1.23.6
+toolchain go1.23.7
 
 replace k8s.io/client-go => k8s.io/client-go v0.31.1
 
