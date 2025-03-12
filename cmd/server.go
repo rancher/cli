@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/rancher/cli/config"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -98,7 +98,7 @@ func serverCurrent(out io.Writer, cfg *config.Config) error {
 
 	currentServer, found := cfg.Servers[serverName]
 	if !found {
-		return errors.New("Current server not set")
+		return errors.New("current server not set")
 	}
 
 	fmt.Fprintf(out, "Name: %s URL: %s\n", serverName, currentServer.URL)
@@ -109,7 +109,7 @@ func serverCurrent(out io.Writer, cfg *config.Config) error {
 func serverDelete(cfg *config.Config, serverName string) error {
 	_, ok := cfg.Servers[serverName]
 	if !ok {
-		return errors.New("Server not found")
+		return errors.New("server not found")
 	}
 	delete(cfg.Servers, serverName)
 
@@ -152,7 +152,7 @@ func serverLs(out io.Writer, cfg *config.Config, format string) error {
 func serverSwitch(cf *config.Config, serverName string) error {
 	_, ok := cf.Servers[serverName]
 	if !ok {
-		return errors.New("Server not found")
+		return errors.New("server not found")
 	}
 
 	if len(cf.Servers[serverName].Project) == 0 {

@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/rancher/cli/cliclient"
 	clusterClient "github.com/rancher/rancher/pkg/client/generated/cluster/v3"
 	"github.com/urfave/cli"
@@ -200,7 +199,7 @@ func namespaceMove(ctx *cli.Context) error {
 	}
 
 	if anno, ok := namespace.Annotations["cattle.io/appIds"]; ok && anno != "" {
-		return errors.Errorf("Namespace %v cannot be moved", namespace.Name)
+		return fmt.Errorf("namespace %s cannot be moved", namespace.Name)
 	}
 
 	if _, ok := namespace.Actions["move"]; ok {

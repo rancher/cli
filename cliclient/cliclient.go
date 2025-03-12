@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	errorsPkg "github.com/pkg/errors"
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
@@ -120,7 +119,7 @@ func (mc *MasterClient) newClusterClient() error {
 	cc, err := clusterClient.NewClient(options)
 	if err != nil {
 		if clientbase.IsNotFound(err) {
-			err = errorsPkg.WithMessage(err, "Current cluster not available, try running `rancher context switch`. Error")
+			err = fmt.Errorf("current cluster not available, try running `rancher context switch`: %w", err)
 		}
 		return err
 	}
@@ -137,7 +136,7 @@ func (mc *MasterClient) newProjectClient() error {
 	pc, err := projectClient.NewClient(options)
 	if err != nil {
 		if clientbase.IsNotFound(err) {
-			err = errorsPkg.WithMessage(err, "Current project not available, try running `rancher context switch`. Error")
+			err = fmt.Errorf("current project not available, try running `rancher context switch: %w", err)
 		}
 		return err
 	}

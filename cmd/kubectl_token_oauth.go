@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/pkg/errors"
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"golang.org/x/oauth2"
@@ -53,7 +52,7 @@ func newOauthConfig(provider TypedProvider) (*oauth2.Config, error) {
 	case *apiv3.AzureADProvider:
 		oauthProvider = p.OAuthProvider
 	default:
-		return nil, errors.New("provider is not a supported OAuth provider")
+		return nil, fmt.Errorf("provider %s is not a supported OAuth provider", provider.GetType())
 	}
 
 	return &oauth2.Config{

@@ -1,11 +1,12 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/rancher/cli/cmd"
 	"github.com/rancher/cli/config"
 	"github.com/sirupsen/logrus"
@@ -148,7 +149,7 @@ func parseArgs(args []string) ([]string, error) {
 				} else if singleAlphaLetterRegxp.MatchString(string(c)) {
 					result = append(result, "-"+string(c))
 				} else {
-					return nil, errors.Errorf("invalid input %v in flag", string(c))
+					return nil, fmt.Errorf("invalid input %s in flag", string(c))
 				}
 			}
 		} else {

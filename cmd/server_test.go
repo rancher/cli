@@ -28,7 +28,7 @@ func TestServerCurrentCommand(t *testing.T) {
 				cfg.CurrentServer = ""
 				return cfg
 			}(),
-			expectedErr: "Current server not set",
+			expectedErr: "current server not set",
 		},
 		{
 			name: "non existing current server set",
@@ -38,7 +38,7 @@ func TestServerCurrentCommand(t *testing.T) {
 					"my-server": {URL: "https://myserver.com"},
 				},
 			},
-			expectedErr: "Current server not set",
+			expectedErr: "current server not set",
 		},
 	}
 	for _, tc := range tt {
@@ -84,7 +84,7 @@ func TestServerDelete(t *testing.T) {
 			actualCurrentServer:   "server1",
 			serverToDelete:        "server-nope",
 			expectedCurrentServer: "server1",
-			expectedErr:           "Server not found",
+			expectedErr:           "server not found",
 		},
 	}
 	for _, tc := range tt {
@@ -140,14 +140,14 @@ func TestServerSwitch(t *testing.T) {
 			actualCurrentServer:   "server1",
 			serverName:            "server-nope",
 			expectedCurrentServer: "server1",
-			expectedErr:           "Server not found",
+			expectedErr:           "server not found",
 		},
 		{
 			name:                  "switch to empty server fails",
 			actualCurrentServer:   "server1",
 			serverName:            "",
 			expectedCurrentServer: "server1",
-			expectedErr:           "Server not found",
+			expectedErr:           "server not found",
 		},
 	}
 	for _, tc := range tt {
