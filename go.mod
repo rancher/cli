@@ -11,18 +11,18 @@ require (
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/norman v0.0.0-20241001183610-78a520c160ab
-	github.com/rancher/rancher/pkg/apis v0.0.0-20241219161611-47da90f225c9
-	github.com/rancher/rancher/pkg/client v0.0.0-20241219161611-47da90f225c9
+	github.com/rancher/norman v0.4.1
+	github.com/rancher/rancher/pkg/apis v0.0.0-20250325235412-7951f5d32bf1
+	github.com/rancher/rancher/pkg/client v0.0.0-20250325235412-7951f5d32bf1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.5
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
-	golang.org/x/oauth2 v0.24.0
-	golang.org/x/sync v0.10.0
-	golang.org/x/term v0.27.0
-	golang.org/x/text v0.21.0
+	golang.org/x/oauth2 v0.26.0
+	golang.org/x/sync v0.11.0
+	golang.org/x/term v0.29.0
+	golang.org/x/text v0.22.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/client-go v12.0.0+incompatible
@@ -61,12 +61,12 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.10.1 // indirect
-	github.com/rancher/eks-operator v1.10.1 // indirect
-	github.com/rancher/fleet/pkg/apis v0.11.0 // indirect
-	github.com/rancher/gke-operator v1.10.1 // indirect
-	github.com/rancher/lasso v0.0.0-20240924233157-8f384efc8813 // indirect
-	github.com/rancher/rke v1.7.1 // indirect
+	github.com/rancher/aks-operator v1.10.3 // indirect
+	github.com/rancher/eks-operator v1.10.3 // indirect
+	github.com/rancher/fleet/pkg/apis v0.11.3 // indirect
+	github.com/rancher/gke-operator v1.10.3 // indirect
+	github.com/rancher/lasso v0.2.0 // indirect
+	github.com/rancher/rke v1.7.5-rc.1 // indirect
 	github.com/rancher/wrangler/v3 v3.1.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
@@ -74,10 +74,10 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/net v0.32.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
-	google.golang.org/protobuf v1.35.2 // indirect
+	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.31.1 // indirect
