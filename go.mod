@@ -4,7 +4,10 @@ go 1.23.4
 
 toolchain go1.23.7
 
-replace k8s.io/client-go => k8s.io/client-go v0.32.2
+replace (
+	k8s.io/client-go => k8s.io/client-go v0.32.2
+	k8s.io/kubernetes => k8s.io/kubernetes v1.32.2
+)
 
 require (
 	github.com/ghodss/yaml v1.0.0
