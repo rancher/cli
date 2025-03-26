@@ -6,8 +6,9 @@ toolchain go1.23.7
 
 replace (
 	golang.org/x/net => golang.org/x/net v0.36.0
-	k8s.io/client-go => k8s.io/client-go v0.29.14
-	k8s.io/kubernetes => k8s.io/kubernetes v1.29.14
+	k8s.io/api => k8s.io/api v0.28.12
+	k8s.io/client-go => k8s.io/client-go v0.28.12
+	k8s.io/kubernetes => k8s.io/kubernetes v1.28.12
 )
 
 require (
