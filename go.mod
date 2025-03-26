@@ -2,7 +2,7 @@ module github.com/rancher/cli
 
 go 1.23.0
 
-toolchain go1.23.1
+toolchain go1.23.7
 
 replace (
 	golang.org/x/net => golang.org/x/net v0.36.0
