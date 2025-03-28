@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/urfave/cli"
@@ -9,6 +11,13 @@ import (
 type UserData struct {
 	ID   string
 	User managementClient.User
+}
+
+var availableRoles = map[string]bool{
+	"admin":            true,
+	"restricted-admin": true,
+	"user":             true,
+	"user-base":        true,
 }
 
 func UserCommand() cli.Command {
@@ -124,6 +133,9 @@ func userCreate(ctx *cli.Context) error {
 
 	// setup GlobalRoleBinding(s) to assign user permissions
 	for _, role := range ctx.StringSlice("role") {
+		if _, ok := availableRoles[role]; !ok {
+			return fmt.Errorf("provided role doesn't exists")
+		}
 		grBinding := &managementClient.GlobalRoleBinding{
 			UserID:       rancherUser.ID,
 			GlobalRoleID: role,
