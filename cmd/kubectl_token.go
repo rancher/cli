@@ -45,6 +45,7 @@ Example:
 type LoginInput struct {
 	server       string
 	userID       string
+	username     string
 	clusterID    string
 	authProvider string
 	caCerts      string
@@ -106,6 +107,10 @@ func CredentialCommand() cli.Command {
 			cli.StringFlag{
 				Name:  "user",
 				Usage: "user-id",
+			},
+			cli.StringFlag{
+				Name:  "username",
+				Usage: "Username for basic auth",
 			},
 			cli.StringFlag{
 				Name:  "cluster",
@@ -171,6 +176,7 @@ func runCredential(ctx *cli.Context) error {
 		authProvider: ctx.String("auth-provider"),
 		caCerts:      ctx.String("cacerts"),
 		skipVerify:   ctx.Bool("skip-verify"),
+		username:     ctx.String("username"),
 	}
 
 	newCred, err := loginAndGenerateCred(input)
@@ -365,9 +371,14 @@ func loginAndGenerateCred(input *LoginInput) (*config.ExecCredential, error) {
 
 func basicAuth(input *LoginInput) (managementClient.Token, error) {
 	token := managementClient.Token{}
-	username, err := customPrompt("Enter username: ", true)
-	if err != nil {
-		return token, err
+
+	username := input.username
+	if username == "" {
+		var err error
+		username, err = customPrompt("Enter username:", true)
+		if err != nil {
+			return token, err
+		}
 	}
 
 	password, err := customPrompt("Enter password: ", false)
