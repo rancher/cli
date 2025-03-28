@@ -120,6 +120,7 @@ func mainErr() error {
 		cmd.SettingsCommand(),
 		cmd.SSHCommand(),
 		cmd.UpCommand(),
+		cmd.UserCommand(),
 		cmd.WaitCommand(),
 		cmd.CredentialCommand(),
 	}
