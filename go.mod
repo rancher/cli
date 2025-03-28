@@ -9,9 +9,9 @@ replace k8s.io/client-go => k8s.io/client-go v0.32.2
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
-	github.com/rancher/norman v0.6.0
-	github.com/rancher/rancher/pkg/apis v0.0.0-20250327220300-b5776d195066
-	github.com/rancher/rancher/pkg/client v0.0.0-20250327220300-b5776d195066
+	github.com/rancher/norman v0.5.2
+	github.com/rancher/rancher/pkg/apis v0.0.0-20250312180415-94853c35bd1e
+	github.com/rancher/rancher/pkg/client v0.0.0-20250312180415-94853c35bd1e
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.17.0
@@ -57,13 +57,13 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.11.0 // indirect
-	github.com/rancher/eks-operator v1.11.0 // indirect
-	github.com/rancher/fleet/pkg/apis v0.12.0 // indirect
-	github.com/rancher/gke-operator v1.11.0 // indirect
+	github.com/rancher/aks-operator v1.11.0-rc.5 // indirect
+	github.com/rancher/eks-operator v1.11.0-rc.4 // indirect
+	github.com/rancher/fleet/pkg/apis v0.12.0-alpha.2.0.20250307143218-68772e96751c // indirect
+	github.com/rancher/gke-operator v1.11.0-rc.4 // indirect
 	github.com/rancher/lasso v0.2.1 // indirect
 	github.com/rancher/rke v1.8.0-rc.4 // indirect
-	github.com/rancher/wrangler/v3 v3.2.0 // indirect
+	github.com/rancher/wrangler/v3 v3.2.0-rc.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -72,7 +72,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/otel v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
-	golang.org/x/net v0.36.0 // indirect
+	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
