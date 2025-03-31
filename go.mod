@@ -16,8 +16,8 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.4.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20250325235412-7951f5d32bf1
-	github.com/rancher/rancher/pkg/client v0.0.0-20250325235412-7951f5d32bf1
+	github.com/rancher/rancher/pkg/apis v0.0.0-20250331170513-3fdfa8c24361
+	github.com/rancher/rancher/pkg/client v0.0.0-20250331170513-3fdfa8c24361
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.17.0
@@ -70,7 +70,7 @@ require (
 	github.com/rancher/fleet/pkg/apis v0.11.3 // indirect
 	github.com/rancher/gke-operator v1.10.3 // indirect
 	github.com/rancher/lasso v0.2.0 // indirect
-	github.com/rancher/rke v1.7.5-rc.1 // indirect
+	github.com/rancher/rke v1.7.5 // indirect
 	github.com/rancher/wrangler/v3 v3.1.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
