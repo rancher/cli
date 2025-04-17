@@ -17,8 +17,8 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.2.0
-	github.com/rancher/rancher/pkg/apis v0.0.0-20250331170445-d704a664ad62
-	github.com/rancher/rancher/pkg/client v0.0.0-20250331170445-d704a664ad62
+	github.com/rancher/rancher/pkg/apis v0.0.0-20250415222707-742f2946c8b8
+	github.com/rancher/rancher/pkg/client v0.0.0-20250415222707-742f2946c8b8
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.17.0
@@ -85,8 +85,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.29.14 // indirect
 	k8s.io/apimachinery v0.29.14 // indirect
-	k8s.io/apiserver v0.28.9 // indirect
-	k8s.io/component-base v0.28.9 // indirect
+	k8s.io/apiserver v0.28.12 // indirect
+	k8s.io/component-base v0.28.12 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/kubernetes v1.28.9 // indirect
