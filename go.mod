@@ -5,6 +5,7 @@ go 1.23.4
 toolchain go1.23.7
 
 replace (
+	golang.org/x/net => golang.org/x/net v0.38.0 // CVE-2025-22872
 	k8s.io/client-go => k8s.io/client-go v0.32.2
 	k8s.io/kubernetes => k8s.io/kubernetes v1.32.2
 )
