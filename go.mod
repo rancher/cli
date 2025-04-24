@@ -17,8 +17,8 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.2.0
-	github.com/rancher/rancher/pkg/apis v0.0.0-20250415222707-742f2946c8b8
-	github.com/rancher/rancher/pkg/client v0.0.0-20250415222707-742f2946c8b8
+	github.com/rancher/rancher/pkg/apis v0.0.0-20250424144546-66c7e4111577
+	github.com/rancher/rancher/pkg/client v0.0.0-20250424144546-66c7e4111577
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.17.0
