@@ -6,8 +6,13 @@ toolchain go1.23.7
 
 replace (
 	golang.org/x/net => golang.org/x/net v0.38.0 // CVE-2025-22872
+	k8s.io/api => k8s.io/api v0.32.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.32.2
+	k8s.io/apiserver => k8s.io/apiserver v0.32.2
 	k8s.io/client-go => k8s.io/client-go v0.32.2
+	k8s.io/component-base => k8s.io/component-base v0.32.2
 	k8s.io/kubernetes => k8s.io/kubernetes v1.32.2
+
 )
 
 require (
