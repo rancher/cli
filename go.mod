@@ -7,11 +7,13 @@ toolchain go1.23.7
 replace (
 	golang.org/x/net => golang.org/x/net v0.38.0 // CVE-2025-22872
 	k8s.io/api => k8s.io/api v0.30.10
+	k8s.io/apimachinery => k8s.io/apimachinery v0.30.10
 	k8s.io/apiserver => k8s.io/apiserver v0.30.10
 	k8s.io/client-go => k8s.io/client-go v0.30.10
 	k8s.io/component-base => k8s.io/component-base v0.30.10
 	k8s.io/kubernetes => k8s.io/kubernetes v1.30.10
-
+	sigs.k8s.io/cli-utils => sigs.k8s.io/cli-utils v0.30.0
+	sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.4.3
 )
 
 require (
@@ -43,7 +45,6 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
@@ -82,7 +83,6 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
