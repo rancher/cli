@@ -7,8 +7,13 @@ toolchain go1.23.7
 replace (
 	golang.org/x/net => golang.org/x/net v0.38.0 // CVE-2025-22872
 	k8s.io/api => k8s.io/api v0.30.10
+	k8s.io/apimachinery => k8s.io/apimachinery v0.30.10
+	k8s.io/apiserver => k8s.io/apiserver v0.30.10
 	k8s.io/client-go => k8s.io/client-go v0.30.10
+	k8s.io/component-base => k8s.io/component-base v0.30.10
 	k8s.io/kubernetes => k8s.io/kubernetes v1.30.10
+	sigs.k8s.io/cli-utils => sigs.k8s.io/cli-utils v0.30.0
+	sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.4.3
 )
 
 require (
@@ -17,17 +22,17 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.3.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20250424145414-2ab728bf633a
-	github.com/rancher/rancher/pkg/client v0.0.0-20250424145414-2ab728bf633a
+	github.com/rancher/rancher/pkg/apis v0.0.0-20250514154247-fc47e69e4e3f
+	github.com/rancher/rancher/pkg/client v0.0.0-20250514154247-fc47e69e4e3f
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.5
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/oauth2 v0.28.0
-	golang.org/x/sync v0.12.0
-	golang.org/x/term v0.30.0
-	golang.org/x/text v0.23.0
+	golang.org/x/oauth2 v0.29.0
+	golang.org/x/sync v0.14.0
+	golang.org/x/term v0.32.0
+	golang.org/x/text v0.25.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/client-go v12.0.0+incompatible
@@ -40,7 +45,6 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
@@ -67,21 +71,20 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.9.8 // indirect
-	github.com/rancher/eks-operator v1.9.8 // indirect
+	github.com/rancher/aks-operator v1.9.9-rc.1 // indirect
+	github.com/rancher/eks-operator v1.9.9-rc.1 // indirect
 	github.com/rancher/fleet/pkg/apis v0.10.11 // indirect
-	github.com/rancher/gke-operator v1.9.8 // indirect
+	github.com/rancher/gke-operator v1.9.9-rc.1 // indirect
 	github.com/rancher/lasso v0.2.1 // indirect
-	github.com/rancher/rke v1.6.9 // indirect
+	github.com/rancher/rke v1.6.10-rc.2 // indirect
 	github.com/rancher/wrangler/v3 v3.1.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/net v0.37.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
