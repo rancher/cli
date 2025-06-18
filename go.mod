@@ -1,10 +1,9 @@
 module github.com/rancher/cli
 
-go 1.23.4
-
-toolchain go1.23.7
+go 1.24.0
 
 replace (
+	golang.org/x/net => golang.org/x/net v0.38.0 // CVE-2025-22872
 	k8s.io/client-go => k8s.io/client-go v0.32.2
 	k8s.io/kubernetes => k8s.io/kubernetes v1.32.2
 )
@@ -13,17 +12,17 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/rancher/norman v0.6.0
-	github.com/rancher/rancher/pkg/apis v0.0.0-20250327220300-b5776d195066
-	github.com/rancher/rancher/pkg/client v0.0.0-20250327220300-b5776d195066
+	github.com/rancher/rancher/pkg/apis v0.0.0-20250618160441-f147151dd3e8
+	github.com/rancher/rancher/pkg/client v0.0.0-20250618160441-f147151dd3e8
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.14
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/oauth2 v0.26.0
-	golang.org/x/sync v0.11.0
-	golang.org/x/term v0.29.0
-	golang.org/x/text v0.22.0
+	golang.org/x/sync v0.12.0
+	golang.org/x/term v0.30.0
+	golang.org/x/text v0.23.0
 	k8s.io/client-go v12.0.0+incompatible
 )
 
@@ -64,9 +63,9 @@ require (
 	github.com/rancher/eks-operator v1.11.0 // indirect
 	github.com/rancher/fleet/pkg/apis v0.12.0 // indirect
 	github.com/rancher/gke-operator v1.11.0 // indirect
-	github.com/rancher/lasso v0.2.1 // indirect
+	github.com/rancher/lasso v0.2.2 // indirect
 	github.com/rancher/rke v1.8.0-rc.4 // indirect
-	github.com/rancher/wrangler/v3 v3.2.0 // indirect
+	github.com/rancher/wrangler/v3 v3.2.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -76,7 +75,7 @@ require (
 	go.opentelemetry.io/otel v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
 	golang.org/x/net v0.36.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
