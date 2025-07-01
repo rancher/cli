@@ -455,6 +455,7 @@ func samlAuth(client *http.Client, input *LoginInput) (managementClient.Token, e
 	loginURL := fmt.Sprintf("%s/dashboard/auth/login?requestId=%s&publicKey=%s&responseType=%s",
 		input.server, id, encodedKey, responseType)
 
+	customPrint(fmt.Sprintf("\nLogin Request Id: %s \n", id))
 	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s \n", loginURL))
 
 	interrupt := make(chan os.Signal, 1)
