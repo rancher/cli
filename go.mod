@@ -2,7 +2,7 @@ module github.com/rancher/cli
 
 go 1.23.0
 
-toolchain go1.23.7
+toolchain go1.23.12
 
 replace (
 	golang.org/x/net => golang.org/x/net v0.38.0 // CVE-2025-22872
