@@ -18,8 +18,8 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/rancher/norman v0.5.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20250731022341-f3f6a23fac32
-	github.com/rancher/rancher/pkg/client v0.0.0-20250731022341-f3f6a23fac32
+	github.com/rancher/rancher/pkg/apis v0.0.0-20250814212239-d3f3338f3b66
+	github.com/rancher/rancher/pkg/client v0.0.0-20250814212239-d3f3338f3b66
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.17.0
@@ -65,10 +65,10 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.11.4 // indirect
-	github.com/rancher/eks-operator v1.11.4 // indirect
+	github.com/rancher/aks-operator v1.11.5-rc.1 // indirect
+	github.com/rancher/eks-operator v1.11.5-rc.1 // indirect
 	github.com/rancher/fleet/pkg/apis v0.12.3 // indirect
-	github.com/rancher/gke-operator v1.11.4 // indirect
+	github.com/rancher/gke-operator v1.11.5-rc.1 // indirect
 	github.com/rancher/lasso v0.2.2 // indirect
 	github.com/rancher/rke v1.8.5 // indirect
 	github.com/rancher/wrangler/v3 v3.2.1 // indirect
@@ -84,7 +84,7 @@ require (
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
-	google.golang.org/protobuf v1.36.5 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -98,5 +98,5 @@ require (
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.3 // indirect
-	sigs.k8s.io/yaml v1.5.0 // indirect
+	sigs.k8s.io/yaml v1.6.0 // indirect
 )
