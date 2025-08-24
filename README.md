@@ -21,6 +21,68 @@ $ rancher login https://<RANCHER_SERVER_URL> -t my-secret-token
 
 > **Note:** When entering your `<RANCHER_SERVER_URL>`, include the port that was exposed while you installed Rancher Server.
 
+### External Config Helper Support
+
+The Rancher CLI supports external config helpers for enhanced credential management and integration with external systems like credential stores, password managers, or CI/CD pipelines.
+
+#### Using Config Helpers
+
+You can specify a config helper using the `--config-helper` flag or the `RANCHER_CONFIG_HELPER` environment variable:
+
+```bash
+# Use an external helper script
+$ rancher --config-helper /path/to/my-helper login
+
+# Use environment variable
+$ export RANCHER_CONFIG_HELPER=/path/to/my-helper
+$ rancher login
+
+# Use built-in file-based config (default)
+$ rancher --config-helper built-in login
+```
+
+#### Creating Config Helpers
+
+Config helpers are executable scripts or programs that handle loading and storing Rancher CLI configuration. They must support two commands:
+
+**Loading Configuration:**
+```bash
+helper-script get
+```
+Should output the complete Rancher CLI configuration as JSON to stdout.
+
+**Storing Configuration:**
+```bash
+helper-script store '{"Servers":{"server1":{...}},"CurrentServer":"server1"}'
+```
+Should persist the provided JSON configuration.
+
+**Example Helper Script:**
+```bash
+#!/bin/bash
+case "$1" in
+  get)
+    # Load config from your external system
+    gopass show -o -y rancher-config
+    ;;
+
+  store)
+    # Store config to your external system
+    echo $2 | gopass insert -f rancher-config
+    ;;
+  *)
+    echo "Usage: $0 {get|store}"
+    exit 1
+    ;;
+esac
+```
+
+This feature enables integration with:
+- Corporate credential management systems
+- Cloud provider secret stores (AWS Secrets Manager, Azure Key Vault, etc.)
+- CI/CD pipeline secret injection
+- Multi-environment configuration management
+
 ## Usage
 
 Run `rancher --help` for a list of available commands.
