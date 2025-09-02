@@ -452,7 +452,7 @@ func samlAuth(client *http.Client, input *LoginInput) (managementClient.Token, e
 	deleteReq.Header.Set("content-type", "application/json")
 	deleteReq.Header.Set("accept", "application/json")
 
-	loginURL := fmt.Sprintf("%s/dashboard/auth/login?requestId=%s&publicKey=%s&responseType=%s",
+	loginURL := fmt.Sprintf("%s/dashboard/auth/login?cli=true&requestId=%s&publicKey=%s&responseType=%s",
 		input.server, id, encodedKey, responseType)
 
 	customPrint(fmt.Sprintf("\nLogin Request Id: %s \n", id))
