@@ -443,10 +443,11 @@ func samlAuth(input *LoginInput, client *http.Client) (managementClient.Token, e
 
 	client.Timeout = 300 * time.Second
 
-	loginRequest := fmt.Sprintf("%s/dashboard/auth/login?requestId=%s&publicKey=%s&responseType=%s",
+	loginRequest := fmt.Sprintf("%s/dashboard/auth/login?cli=true&requestId=%s&publicKey=%s&responseType=%s",
 		input.server, id, encodedKey, responseType)
 
-	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s \n", loginRequest))
+	customPrint(fmt.Sprintf("\nLogin Request Id: %s\n", id))
+	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s\n", loginRequest))
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
