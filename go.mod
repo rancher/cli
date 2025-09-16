@@ -5,12 +5,12 @@ go 1.23.0
 toolchain go1.23.12
 
 replace (
-	k8s.io/api => k8s.io/api v0.31.6
-	k8s.io/apimachinery => k8s.io/apimachinery v0.31.6
-	k8s.io/apiserver => k8s.io/apiserver v0.31.6
-	k8s.io/client-go => k8s.io/client-go v0.31.6
-	k8s.io/component-base => k8s.io/component-base v0.31.6
-	k8s.io/kubernetes => k8s.io/kubernetes v1.31.6
+	k8s.io/api => k8s.io/api v0.31.12
+	k8s.io/apimachinery => k8s.io/apimachinery v0.31.12
+	k8s.io/apiserver => k8s.io/apiserver v0.31.12
+	k8s.io/client-go => k8s.io/client-go v0.31.12
+	k8s.io/component-base => k8s.io/component-base v0.31.12
+	k8s.io/kubernetes => k8s.io/kubernetes v1.31.12
 
 )
 
