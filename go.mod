@@ -5,18 +5,18 @@ go 1.24.0
 toolchain go1.24.6
 
 replace (
-	k8s.io/apiserver => k8s.io/apiserver v0.33.2
-	k8s.io/client-go => k8s.io/client-go v0.33.2
-	k8s.io/component-base => k8s.io/component-base v0.33.2
-	k8s.io/kubernetes => k8s.io/kubernetes v1.33.2
+	k8s.io/apiserver => k8s.io/apiserver v0.33.4
+	k8s.io/client-go => k8s.io/client-go v0.33.4
+	k8s.io/component-base => k8s.io/component-base v0.33.4
+	k8s.io/kubernetes => k8s.io/kubernetes v1.33.4
 )
 
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/rancher/norman v0.6.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20250828225308-ed376a329731
-	github.com/rancher/rancher/pkg/client v0.0.0-20250828225308-ed376a329731
+	github.com/rancher/rancher/pkg/apis v0.0.0-20250916121127-683e40dc58ba
+	github.com/rancher/rancher/pkg/client v0.0.0-20250916121127-683e40dc58ba
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.17.0
@@ -64,7 +64,7 @@ require (
 	github.com/rancher/gke-operator v1.12.1 // indirect
 	github.com/rancher/lasso v0.2.3 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
-	github.com/rancher/wrangler/v3 v3.2.3 // indirect
+	github.com/rancher/wrangler/v3 v3.2.4 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
