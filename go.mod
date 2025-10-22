@@ -17,8 +17,8 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/rancher/norman v0.5.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20250924223025-8e2eb63d5d2b
-	github.com/rancher/rancher/pkg/client v0.0.0-20250924223025-8e2eb63d5d2b
+	github.com/rancher/rancher/pkg/apis v0.0.0-20251015184622-abf7ebcdf110
+	github.com/rancher/rancher/pkg/client v0.0.0-20251015184622-abf7ebcdf110
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
