@@ -15,8 +15,8 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/rancher/norman v0.7.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20251021175546-d963555ab77f
-	github.com/rancher/rancher/pkg/client v0.0.0-20251021175546-d963555ab77f
+	github.com/rancher/rancher/pkg/apis v0.0.0-20251125015639-f94ac947f75e
+	github.com/rancher/rancher/pkg/client v0.0.0-20251125015639-f94ac947f75e
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
@@ -58,13 +58,13 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.13.0-rc.1 // indirect
-	github.com/rancher/ali-operator v0.0.3-0.20251001142421-ca64da576db5 // indirect
-	github.com/rancher/eks-operator v1.13.0-rc.1 // indirect
-	github.com/rancher/fleet/pkg/apis v0.14.0-beta.1 // indirect
-	github.com/rancher/gke-operator v1.13.0-rc.1 // indirect
+	github.com/rancher/aks-operator v1.13.0 // indirect
+	github.com/rancher/ali-operator v1.13.0 // indirect
+	github.com/rancher/eks-operator v1.13.0 // indirect
+	github.com/rancher/fleet/pkg/apis v0.14.0 // indirect
+	github.com/rancher/gke-operator v1.13.0 // indirect
 	github.com/rancher/lasso v0.2.5 // indirect
-	github.com/rancher/rke v1.8.0-rc.4 // indirect
+	github.com/rancher/rke v1.8.0 // indirect
 	github.com/rancher/wrangler/v3 v3.3.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
