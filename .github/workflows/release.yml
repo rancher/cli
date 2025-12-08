@@ -14,7 +14,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
     - name: Load Secrets from Vault
       uses: rancher-eio/read-vault-secrets@main
@@ -31,18 +31,18 @@ jobs:
         password: ${{ env.DOCKER_PASSWORD }}
 
     - name: Authenticate to Google Cloud 
-      uses: google-github-actions/auth@v2
+      uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
       with:
         credentials_json: "${{ env.GOOGLE_AUTH }}"
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6
       with:
         go-version-file: go.mod
         cache: false
 
     - name: Lint
-      uses: golangci/golangci-lint-action@v4
+      uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
 
     - name: Validate Go modules
       run: ./scripts/validate
@@ -82,7 +82,7 @@ jobs:
         gh release upload $VERSION *.txt *.xz *.gz *.zip
 
     - name: Upload Release assets to Google Cloud
-      uses: google-github-actions/upload-cloud-storage@v2
+      uses: google-github-actions/upload-cloud-storage@6397bd7208e18d13ba2619ee21b9873edc94427a # v3
       with:
         path: dist/artifacts/${{ env.VERSION }}
         destination: releases.rancher.com/cli2/${{ env.VERSION }}
@@ -93,7 +93,7 @@ jobs:
           cache-control: public,max-age=3600
 
     - name: Docker Build
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
       with:
         push: true
         context: package
