@@ -261,7 +261,7 @@ func loadAndVerifyCert(path string) (string, error) {
 
 func verifyCert(caCert []byte) (string, error) {
 	// replace the escaped version of the line break
-	caCert = bytes.Replace(caCert, []byte(`\n`), []byte("\n"), -1)
+	caCert = bytes.ReplaceAll(caCert, []byte(`\n`), []byte("\n"))
 
 	block, _ := pem.Decode(caCert)
 
@@ -322,28 +322,28 @@ func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
 // GetResourceType maps an incoming resource type to a valid one from the schema
 func GetResourceType(c *cliclient.MasterClient, resource string) (string, error) {
 	if c.ManagementClient != nil {
-		for key := range c.ManagementClient.APIBaseClient.Types {
+		for key := range c.ManagementClient.Types {
 			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.ProjectClient != nil {
-		for key := range c.ProjectClient.APIBaseClient.Types {
+		for key := range c.ProjectClient.Types {
 			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.ClusterClient != nil {
-		for key := range c.ClusterClient.APIBaseClient.Types {
+		for key := range c.ClusterClient.Types {
 			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.CAPIClient != nil {
-		for key := range c.CAPIClient.APIBaseClient.Types {
+		for key := range c.CAPIClient.Types {
 			lowerKey := strings.ToLower(key)
 			if strings.HasPrefix(lowerKey, "cluster.x-k8s.io") && lowerKey == strings.ToLower(resource) {
 				return key, nil
@@ -370,17 +370,17 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 			}
 		}
 		if c.ManagementClient != nil {
-			if _, ok := c.ManagementClient.APIBaseClient.Types[rt]; ok {
+			if _, ok := c.ManagementClient.Types[rt]; ok {
 				schemaClient = c.ManagementClient
 			}
 		}
 		if c.ProjectClient != nil {
-			if _, ok := c.ProjectClient.APIBaseClient.Types[rt]; ok {
+			if _, ok := c.ProjectClient.Types[rt]; ok {
 				schemaClient = c.ProjectClient
 			}
 		}
 		if c.ClusterClient != nil {
-			if _, ok := c.ClusterClient.APIBaseClient.Types[rt]; ok {
+			if _, ok := c.ClusterClient.Types[rt]; ok {
 				schemaClient = c.ClusterClient
 			}
 		}
@@ -415,7 +415,7 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 			for _, data := range collection.Data {
 				ids = append(ids, data.ID)
 			}
-			return nil, fmt.Errorf("Multiple resources of type %s found for name %s: %v", schemaType, name, ids)
+			return nil, fmt.Errorf("multiple resources of type %s found for name %s: %v", schemaType, name, ids)
 		}
 
 		// No matches for this schemaType, try the next one
@@ -424,7 +424,7 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 		}
 
 		if byName != nil {
-			return nil, fmt.Errorf("Multiple resources named %s: %s:%s, %s:%s", name, collection.Data[0].Type,
+			return nil, fmt.Errorf("multiple resources named %s: %s:%s, %s:%s", name, collection.Data[0].Type,
 				collection.Data[0].ID, byName.Type, byName.ID)
 		}
 
@@ -433,7 +433,7 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 	}
 
 	if byName == nil {
-		return nil, fmt.Errorf("Not found: %s", name)
+		return nil, fmt.Errorf("not found: %s", name)
 	}
 
 	return byName, nil
@@ -546,7 +546,7 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 		parts := SplitOnColon(id)
 		return parts[0], parts[1], nil
 	}
-	return "", "", fmt.Errorf("Unable to extract clusterid and projectid from [%s]", id)
+	return "", "", fmt.Errorf("unable to extract clusterid and projectid from [%s]", id)
 }
 
 // Return a JSON blob of the file at path

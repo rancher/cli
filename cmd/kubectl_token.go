@@ -241,7 +241,7 @@ func loadCachedCredential(ctx *cli.Context, serverConfig *config.ServerConfig, k
 		return cred, nil
 	}
 	ts := cred.Status.ExpirationTimestamp
-	if ts != nil && ts.Time.Before(time.Now()) {
+	if ts != nil && ts.Before(time.Now()) {
 		cf, err := loadConfig(ctx)
 		if err != nil {
 			return nil, err
