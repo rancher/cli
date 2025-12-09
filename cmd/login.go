@@ -19,7 +19,7 @@ import (
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/config"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type LoginData struct {

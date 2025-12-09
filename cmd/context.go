@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/rancher/cli/cliclient"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 func ContextCommand() cli.Command {

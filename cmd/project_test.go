@@ -12,7 +12,7 @@ import (
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 func TestListProjectMembers(t *testing.T) {

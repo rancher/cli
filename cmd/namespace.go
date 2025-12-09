@@ -5,7 +5,7 @@ import (
 
 	"github.com/rancher/cli/cliclient"
 	clusterClient "github.com/rancher/rancher/pkg/client/generated/cluster/v3"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type NamespaceData struct {

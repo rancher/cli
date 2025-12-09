@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/ghodss/yaml"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type TableWriter struct {

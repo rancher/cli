@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/rancher/norman/types"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 func baseListOpts() *types.ListOpts {

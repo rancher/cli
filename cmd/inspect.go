@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 func InspectCommand() cli.Command {

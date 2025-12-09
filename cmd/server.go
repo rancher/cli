@@ -12,7 +12,7 @@ import (
 
 	"github.com/rancher/cli/config"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/exp/maps"
 )
 

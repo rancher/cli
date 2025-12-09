@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"github.com/rancher/cli/cliclient"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )

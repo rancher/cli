@@ -10,7 +10,7 @@ import (
 	"github.com/rancher/cli/cmd"
 	"github.com/rancher/cli/config"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 var VERSION = "dev"

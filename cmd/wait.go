@@ -7,7 +7,7 @@ import (
 
 	ntypes "github.com/rancher/norman/types"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 var (
