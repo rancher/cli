@@ -9,6 +9,7 @@
     "enable": [
       "govet",
       "ineffassign",
+      "staticcheck",
       "unused"
     ]
   },
