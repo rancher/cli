@@ -15,14 +15,14 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/rancher/norman v0.6.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20251124235659-76503613f6f9
-	github.com/rancher/rancher/pkg/client v0.0.0-20251124235659-76503613f6f9
+	github.com/rancher/rancher/pkg/apis v0.0.0-20251210134911-e26bf2b57abb
+	github.com/rancher/rancher/pkg/client v0.0.0-20251210134911-e26bf2b57abb
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.14
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/oauth2 v0.32.0
+	golang.org/x/oauth2 v0.33.0
 	golang.org/x/sync v0.17.0
 	golang.org/x/term v0.36.0
 	golang.org/x/text v0.30.0
@@ -58,10 +58,10 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.12.3 // indirect
-	github.com/rancher/eks-operator v1.12.3 // indirect
+	github.com/rancher/aks-operator v1.12.4-rc.1 // indirect
+	github.com/rancher/eks-operator v1.12.4-rc.1 // indirect
 	github.com/rancher/fleet/pkg/apis v0.13.0 // indirect
-	github.com/rancher/gke-operator v1.12.3 // indirect
+	github.com/rancher/gke-operator v1.12.4-rc.1 // indirect
 	github.com/rancher/lasso v0.2.4 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
 	github.com/rancher/wrangler/v3 v3.2.4 // indirect
@@ -80,10 +80,10 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.33.4 // indirect
-	k8s.io/apimachinery v0.33.4 // indirect
-	k8s.io/apiserver v0.33.4 // indirect
-	k8s.io/component-base v0.33.4 // indirect
+	k8s.io/api v0.33.6 // indirect
+	k8s.io/apimachinery v0.33.6 // indirect
+	k8s.io/apiserver v0.33.6 // indirect
+	k8s.io/component-base v0.33.6 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/kubernetes v1.33.4 // indirect
