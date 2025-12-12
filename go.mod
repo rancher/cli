@@ -2,29 +2,29 @@ module github.com/rancher/cli
 
 go 1.24.0
 
-toolchain go1.24.7
+toolchain go1.24.11
 
 replace (
-	k8s.io/api => k8s.io/api v0.32.8
-	k8s.io/apimachinery => k8s.io/apimachinery v0.32.8
-	k8s.io/apiserver => k8s.io/apiserver v0.32.8
-	k8s.io/client-go => k8s.io/client-go v0.32.8
-	k8s.io/component-base => k8s.io/component-base v0.32.8
-	k8s.io/kubernetes => k8s.io/kubernetes v1.32.8
+	k8s.io/api => k8s.io/api v0.32.10
+	k8s.io/apimachinery => k8s.io/apimachinery v0.32.10
+	k8s.io/apiserver => k8s.io/apiserver v0.32.10
+	k8s.io/client-go => k8s.io/client-go v0.32.10
+	k8s.io/component-base => k8s.io/component-base v0.32.10
+	k8s.io/kubernetes => k8s.io/kubernetes v1.32.10
 )
 
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/rancher/norman v0.5.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20251124220505-78cb3d2cf2c8
-	github.com/rancher/rancher/pkg/client v0.0.0-20251124220505-78cb3d2cf2c8
+	github.com/rancher/rancher/pkg/apis v0.0.0-20251211191657-db5ffc631a33
+	github.com/rancher/rancher/pkg/client v0.0.0-20251211191657-db5ffc631a33
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.14
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/oauth2 v0.30.0
+	golang.org/x/oauth2 v0.33.0
 	golang.org/x/sync v0.16.0
 	golang.org/x/term v0.34.0
 	golang.org/x/text v0.28.0
@@ -63,10 +63,10 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.11.7 // indirect
-	github.com/rancher/eks-operator v1.11.7 // indirect
+	github.com/rancher/aks-operator v1.11.8-rc.1 // indirect
+	github.com/rancher/eks-operator v1.11.8-rc.1 // indirect
 	github.com/rancher/fleet/pkg/apis v0.12.3 // indirect
-	github.com/rancher/gke-operator v1.11.7 // indirect
+	github.com/rancher/gke-operator v1.11.8-rc.1 // indirect
 	github.com/rancher/lasso v0.2.3 // indirect
 	github.com/rancher/rke v1.8.5 // indirect
 	github.com/rancher/wrangler/v3 v3.2.4 // indirect
@@ -92,7 +92,7 @@ require (
 	k8s.io/component-base v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
-	k8s.io/kubernetes v1.32.1 // indirect
+	k8s.io/kubernetes v1.32.10 // indirect
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
