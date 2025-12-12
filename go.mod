@@ -5,12 +5,12 @@ go 1.24.0
 toolchain go1.24.7
 
 replace (
-	k8s.io/api => k8s.io/api v0.32.8
-	k8s.io/apimachinery => k8s.io/apimachinery v0.32.8
-	k8s.io/apiserver => k8s.io/apiserver v0.32.8
-	k8s.io/client-go => k8s.io/client-go v0.32.8
-	k8s.io/component-base => k8s.io/component-base v0.32.8
-	k8s.io/kubernetes => k8s.io/kubernetes v1.32.8
+	k8s.io/api => k8s.io/api v0.32.10
+	k8s.io/apimachinery => k8s.io/apimachinery v0.32.10
+	k8s.io/apiserver => k8s.io/apiserver v0.32.10
+	k8s.io/client-go => k8s.io/client-go v0.32.10
+	k8s.io/component-base => k8s.io/component-base v0.32.10
+	k8s.io/kubernetes => k8s.io/kubernetes v1.32.10
 )
 
 require (
@@ -92,7 +92,7 @@ require (
 	k8s.io/component-base v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
-	k8s.io/kubernetes v1.32.1 // indirect
+	k8s.io/kubernetes v1.32.10 // indirect
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
