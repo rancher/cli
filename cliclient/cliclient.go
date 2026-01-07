@@ -162,11 +162,11 @@ func (mc *MasterClient) newCAPIClient() error {
 func (mc *MasterClient) ByID(resource *ntypes.Resource, respObject interface{}) error {
 	if strings.HasPrefix(resource.Type, "cluster.x-k8s.io") {
 		return mc.CAPIClient.ByID(resource.Type, resource.ID, &respObject)
-	} else if _, ok := mc.ManagementClient.APIBaseClient.Types[resource.Type]; ok {
+	} else if _, ok := mc.ManagementClient.Types[resource.Type]; ok {
 		return mc.ManagementClient.ByID(resource.Type, resource.ID, &respObject)
-	} else if _, ok := mc.ProjectClient.APIBaseClient.Types[resource.Type]; ok {
+	} else if _, ok := mc.ProjectClient.Types[resource.Type]; ok {
 		return mc.ProjectClient.ByID(resource.Type, resource.ID, &respObject)
-	} else if _, ok := mc.ClusterClient.APIBaseClient.Types[resource.Type]; ok {
+	} else if _, ok := mc.ClusterClient.Types[resource.Type]; ok {
 		return mc.ClusterClient.ByID(resource.Type, resource.ID, &respObject)
 	}
 	return fmt.Errorf("MasterClient - unknown resource type %v", resource.Type)

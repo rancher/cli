@@ -85,7 +85,7 @@ func loginSetup(ctx *cli.Context) error {
 	// Validate the url and drop the path
 	u, err := url.ParseRequestURI(ctx.Args().First())
 	if err != nil {
-		return fmt.Errorf("Failed to parse SERVERURL (%s), make sure it is a valid HTTPS URL (e.g. https://rancher.yourdomain.com or https://1.1.1.1). Error: %s", ctx.Args().First(), err)
+		return fmt.Errorf("failed to parse SERVERURL (%s), make sure it is a valid HTTPS URL (e.g. https://rancher.yourdomain.com or https://1.1.1.1). Error: %s", ctx.Args().First(), err)
 	}
 
 	u.Path = ""
@@ -152,12 +152,12 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 		// Check if given context is in valid format
 		_, _, err := parseClusterAndProjectID(context)
 		if err != nil {
-			return "", fmt.Errorf("Unable to parse context (%s). Please provide context as local:p-xxxxx, c-xxxxx:p-xxxxx, c-xxxxx:project-xxxxx, c-m-xxxxxxxx:p-xxxxx or c-m-xxxxxxxx:project-xxxxx", context)
+			return "", fmt.Errorf("unable to parse context (%s). Please provide context as local:p-xxxxx, c-xxxxx:p-xxxxx, c-xxxxx:project-xxxxx, c-m-xxxxxxxx:p-xxxxx or c-m-xxxxxxxx:project-xxxxx", context)
 		}
 		// Check if context exists
 		_, err = Lookup(c, context, "project")
 		if err != nil {
-			return "", fmt.Errorf("Unable to find context (%s). Make sure the context exists and you have permissions to use it. Error: %s", context, err)
+			return "", fmt.Errorf("unable to find context (%s). Make sure the context exists and you have permissions to use it. Error: %s", context, err)
 		}
 		return context, nil
 	}
@@ -281,7 +281,7 @@ func getCertFromServer(ctx *cli.Context, serverConfig *config.ServerConfig) (*cl
 	var certReponse *CACertResponse
 	err = json.Unmarshal(content, &certReponse)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse response from %s/v3/settings/cacerts\nError: %s\nResponse:\n%s", serverConfig.URL, err, content)
+		return nil, fmt.Errorf("unable to parse response from %s/v3/settings/cacerts\nError: %s\nResponse:\n%s", serverConfig.URL, err, content)
 	}
 
 	cert, err := verifyCert([]byte(certReponse.Value))
@@ -317,9 +317,10 @@ func verifyUserAcceptsCert(certs []string, url string) bool {
 		input := scanner.Text()
 		input = strings.ToLower(strings.TrimSpace(input))
 
-		if input == "yes" || input == "y" {
+		switch input {
+		case "yes", "y":
 			return true
-		} else if input == "no" || input == "n" {
+		case "no", "n":
 			return false
 		}
 		fmt.Printf("Please type 'yes' or 'no': ")
