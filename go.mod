@@ -15,7 +15,6 @@ replace (
 
 require (
 	github.com/ghodss/yaml v1.0.0
-	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/hashicorp/go-version v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.4.2

@@ -2,23 +2,17 @@ package cmd
 
 import (
 	"bufio"
-	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
-	"github.com/grantae/certinfo"
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/config"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -56,10 +50,6 @@ func LoginCommand() cli.Command {
 			cli.StringFlag{
 				Name:  "name",
 				Usage: "Name of the Server",
-			},
-			cli.BoolFlag{
-				Name:  "skip-verify",
-				Usage: "Skip verification of the CACerts presented by the Server",
 			},
 		},
 	}
@@ -115,16 +105,7 @@ func loginSetup(ctx *cli.Context) error {
 
 	c, err := cliclient.NewManagementClient(serverConfig)
 	if err != nil {
-		if _, ok := err.(*url.Error); ok && strings.Contains(err.Error(), "certificate signed by unknown authority") {
-			// no cert was provided and it's most likely a self signed cert if
-			// we get here so grab the cacert and see if the user accepts the server
-			c, err = getCertFromServer(ctx, serverConfig)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
+		return err
 	}
 
 	proj, err := getProjectContext(ctx, c)
@@ -250,93 +231,6 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 		}
 	}
 	return projectCollection.Data[selection].ID, nil
-}
-
-func getCertFromServer(ctx *cli.Context, cf *config.ServerConfig) (*cliclient.MasterClient, error) {
-	req, err := http.NewRequest("GET", cf.URL+"/v3/settings/cacerts", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.SetBasicAuth(cf.AccessKey, cf.SecretKey)
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Body.Close()
-
-	content, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var certReponse *CACertResponse
-	err = json.Unmarshal(content, &certReponse)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse response from %s/v3/settings/cacerts\nError: %s\nResponse:\n%s", cf.URL, err, content)
-	}
-
-	cert, err := verifyCert([]byte(certReponse.Value))
-	if err != nil {
-		return nil, err
-	}
-
-	// Get the server cert chain in a printable form
-	serverCerts, err := processServerChain(res)
-	if err != nil {
-		return nil, err
-	}
-
-	if !ctx.Bool("skip-verify") {
-		if ok := verifyUserAcceptsCert(serverCerts, cf.URL); !ok {
-			return nil, errors.New("CACert of server was not accepted, unable to login")
-		}
-	}
-
-	cf.CACerts = cert
-
-	return cliclient.NewManagementClient(cf)
-}
-
-func verifyUserAcceptsCert(certs []string, url string) bool {
-	fmt.Printf("The authenticity of server '%s' can't be established.\n", url)
-	fmt.Printf("Cert chain is : %v \n", certs)
-	fmt.Print("Do you want to continue connecting (yes/no)? ")
-
-	scanner := bufio.NewScanner(os.Stdin)
-
-	for scanner.Scan() {
-		input := scanner.Text()
-		input = strings.ToLower(strings.TrimSpace(input))
-
-		if input == "yes" || input == "y" {
-			return true
-		} else if input == "no" || input == "n" {
-			return false
-		}
-		fmt.Printf("Please type 'yes' or 'no': ")
-	}
-	return false
-}
-
-func processServerChain(res *http.Response) ([]string, error) {
-	var allCerts []string
-
-	for _, cert := range res.TLS.PeerCertificates {
-		result, err := certinfo.CertificateText(cert)
-		if err != nil {
-			return allCerts, err
-		}
-		allCerts = append(allCerts, result)
-	}
-	return allCerts, nil
 }
 
 func loginContext(ctx *cli.Context) error {
