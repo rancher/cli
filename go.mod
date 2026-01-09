@@ -15,7 +15,6 @@ replace (
 
 require (
 	github.com/ghodss/yaml v1.0.0
-	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/rancher/norman v0.5.2
 	github.com/rancher/rancher/pkg/apis v0.0.0-20251218230456-70c97f7d5a04
 	github.com/rancher/rancher/pkg/client v0.0.0-20251218230456-70c97f7d5a04
