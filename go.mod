@@ -2,7 +2,7 @@ module github.com/rancher/cli
 
 go 1.25.0
 
-toolchain go1.25.4
+toolchain go1.25.5
 
 replace (
 	k8s.io/apiserver => k8s.io/apiserver v0.34.1
@@ -13,9 +13,9 @@ replace (
 
 require (
 	github.com/ghodss/yaml v1.0.0
-	github.com/rancher/norman v0.7.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20251021175546-d963555ab77f
-	github.com/rancher/rancher/pkg/client v0.0.0-20251021175546-d963555ab77f
+	github.com/rancher/norman v0.8.1
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260109182643-230c7fbdae00
+	github.com/rancher/rancher/pkg/client v0.0.0-20260109182643-230c7fbdae00
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
@@ -57,13 +57,13 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.13.0-rc.1 // indirect
-	github.com/rancher/ali-operator v0.0.3-0.20251001142421-ca64da576db5 // indirect
-	github.com/rancher/eks-operator v1.13.0-rc.1 // indirect
-	github.com/rancher/fleet/pkg/apis v0.14.0-beta.1 // indirect
-	github.com/rancher/gke-operator v1.13.0-rc.1 // indirect
+	github.com/rancher/aks-operator v1.13.0-rc.4 // indirect
+	github.com/rancher/ali-operator v1.13.0-rc.2 // indirect
+	github.com/rancher/eks-operator v1.13.0-rc.4 // indirect
+	github.com/rancher/fleet/pkg/apis v0.15.0-alpha.4 // indirect
+	github.com/rancher/gke-operator v1.13.0-rc.3 // indirect
 	github.com/rancher/lasso v0.2.5 // indirect
-	github.com/rancher/rke v1.8.0-rc.4 // indirect
+	github.com/rancher/rke v1.8.0 // indirect
 	github.com/rancher/wrangler/v3 v3.3.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
@@ -81,8 +81,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.34.1 // indirect
-	k8s.io/apimachinery v0.34.1 // indirect
+	k8s.io/api v0.34.3 // indirect
+	k8s.io/apimachinery v0.34.3 // indirect
 	k8s.io/apiserver v0.34.1 // indirect
 	k8s.io/component-base v0.34.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
