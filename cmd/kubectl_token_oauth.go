@@ -63,21 +63,10 @@ func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (
 // performDeviceCodeFlow implements the device code OAuth flow
 func performDeviceCodeFlow(ctx context.Context, provider TypedProvider) (*oauth2.Token, error) {
 	// For device flow, the port doesn't matter, so we use 0 as a placeholder
-	oauthConfig, _, err := newOauthConfig(provider, 0)
+	oauthConfig, err := newOauthConfig(provider, 0)
 	if err != nil {
 		return nil, err
 	}
-
-	// For device flow, we need to set the DeviceAuthURL
-	var oauthProvider apiv3.OAuthProvider
-	switch p := provider.(type) {
-	case *apiv3.AzureADProvider:
-		oauthProvider = p.OAuthProvider
-	default:
-		return nil, fmt.Errorf("provider %s is not a supported OAuth provider", provider.GetType())
-	}
-
-	oauthConfig.Endpoint.DeviceAuthURL = oauthProvider.DeviceAuthURL
 
 	deviceAuthResp, err := oauthConfig.DeviceAuth(ctx)
 	if err != nil {
@@ -100,7 +89,7 @@ func performDeviceCodeFlow(ctx context.Context, provider TypedProvider) (*oauth2
 
 // performAuthCodeFlow2 implements the authorization code OAuth flow with PKCE
 func performAuthCodeFlow2(ctx context.Context, provider TypedProvider, client *http.Client, callbackPort int) (*oauth2.Token, error) {
-	oauthConfig, redirectURI, err := newOauthConfig(provider, callbackPort)
+	oauthConfig, err := newOauthConfig(provider, callbackPort)
 	if err != nil {
 		return nil, err
 	}
@@ -113,13 +102,13 @@ func performAuthCodeFlow2(ctx context.Context, provider TypedProvider, client *h
 	codeChallenge := generateCodeChallenge(codeVerifier)
 
 	// Start local callback server
-	authCode, err := performAuthCodeFlow(ctx, oauthConfig, redirectURI, codeChallenge, callbackPort)
+	authCode, err := performAuthCodeFlow(ctx, oauthConfig, codeChallenge, callbackPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to perform auth code flow: %w", err)
 	}
 
 	// Exchange authorization code for token
-	oauthToken, err := exchangeCodeForToken(ctx, oauthConfig, authCode, codeVerifier, redirectURI)
+	oauthToken, err := exchangeCodeForToken(ctx, oauthConfig, authCode, codeVerifier)
 	if err != nil {
 		return nil, fmt.Errorf("failed to exchange code for token: %w", err)
 	}
@@ -127,14 +116,14 @@ func performAuthCodeFlow2(ctx context.Context, provider TypedProvider, client *h
 	return oauthToken, nil
 }
 
-func newOauthConfig(provider TypedProvider, callbackPort int) (*oauth2.Config, string, error) {
+func newOauthConfig(provider TypedProvider, callbackPort int) (*oauth2.Config, error) {
 	var oauthProvider apiv3.OAuthProvider
 
 	switch p := provider.(type) {
 	case *apiv3.AzureADProvider:
 		oauthProvider = p.OAuthProvider
 	default:
-		return nil, "", fmt.Errorf("provider %s is not a supported OAuth provider", provider.GetType())
+		return nil, fmt.Errorf("provider %s is not a supported OAuth provider", provider.GetType())
 	}
 
 	// Use the specified port for the local callback server
@@ -145,10 +134,11 @@ func newOauthConfig(provider TypedProvider, callbackPort int) (*oauth2.Config, s
 		Scopes:      oauthProvider.Scopes,
 		RedirectURL: redirectURI,
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  oauthProvider.AuthURL,
-			TokenURL: oauthProvider.TokenURL,
+			AuthURL:       oauthProvider.AuthURL,
+			TokenURL:      oauthProvider.TokenURL,
+			DeviceAuthURL: oauthProvider.DeviceAuthURL,
 		},
-	}, redirectURI, nil
+	}, nil
 }
 
 func rancherLogin(client *http.Client, input *LoginInput, provider TypedProvider, oauthToken *oauth2.Token) (*managementClient.Token, error) {
@@ -207,8 +197,7 @@ func generateCodeChallenge(verifier string) string {
 }
 
 // performAuthCodeFlow starts the local callback server and opens the browser
-func performAuthCodeFlow(ctx context.Context, config *oauth2.Config, redirectURI, codeChallenge string, callbackPort int) (string, error) {
-	// Create a listener on the specified port
+func performAuthCodeFlow(ctx context.Context, config *oauth2.Config, codeChallenge string, callbackPort int) (string, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", callbackPort))
 	if err != nil {
 		return "", fmt.Errorf("failed to start local server on port %d: %w", callbackPort, err)
@@ -290,12 +279,12 @@ func performAuthCodeFlow(ctx context.Context, config *oauth2.Config, redirectURI
 }
 
 // exchangeCodeForToken exchanges the authorization code for an access token
-func exchangeCodeForToken(ctx context.Context, config *oauth2.Config, code, codeVerifier, redirectURI string) (*oauth2.Token, error) {
+func exchangeCodeForToken(ctx context.Context, config *oauth2.Config, code, codeVerifier string) (*oauth2.Token, error) {
 	// Build token request
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", redirectURI)
+	data.Set("redirect_uri", config.RedirectURL)
 	data.Set("client_id", config.ClientID)
 	data.Set("code_verifier", codeVerifier)
 
