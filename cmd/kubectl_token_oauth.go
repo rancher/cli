@@ -43,7 +43,7 @@ func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (
 	case OAuthFlowDevice:
 		oauthToken, err = performDeviceCodeFlow(ctx, provider)
 	case OAuthFlowAuthCode:
-		oauthToken, err = performAuthCodeFlow2(ctx, provider, client, input.oauthCallbackPort)
+		oauthToken, err = performAuthCodeFlow(ctx, provider, client, input.oauthCallbackPort)
 	default:
 		return nil, fmt.Errorf("invalid oauth flow: %s. Valid values are '%s' or '%s'", input.oauthFlow, OAuthFlowAuthCode, OAuthFlowDevice)
 	}
@@ -87,8 +87,8 @@ func performDeviceCodeFlow(ctx context.Context, provider TypedProvider) (*oauth2
 	return oauthToken, nil
 }
 
-// performAuthCodeFlow2 implements the authorization code OAuth flow with PKCE
-func performAuthCodeFlow2(ctx context.Context, provider TypedProvider, client *http.Client, callbackPort int) (*oauth2.Token, error) {
+// performAuthCodeFlow implements the authorization code OAuth flow with PKCE
+func performAuthCodeFlow(ctx context.Context, provider TypedProvider, client *http.Client, callbackPort int) (*oauth2.Token, error) {
 	oauthConfig, err := newOauthConfig(provider, callbackPort)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func performAuthCodeFlow2(ctx context.Context, provider TypedProvider, client *h
 	codeChallenge := generateCodeChallenge(codeVerifier)
 
 	// Start local callback server
-	authCode, err := performAuthCodeFlow(ctx, oauthConfig, codeChallenge, callbackPort)
+	authCode, err := performAuthCodeCallbackFlow(ctx, oauthConfig, codeChallenge, callbackPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to perform auth code flow: %w", err)
 	}
@@ -196,8 +196,8 @@ func generateCodeChallenge(verifier string) string {
 	return base64.RawURLEncoding.EncodeToString(hash[:])
 }
 
-// performAuthCodeFlow starts the local callback server and opens the browser
-func performAuthCodeFlow(ctx context.Context, config *oauth2.Config, codeChallenge string, callbackPort int) (string, error) {
+// performAuthCodeCallbackFlow starts the local callback server and opens the browser
+func performAuthCodeCallbackFlow(ctx context.Context, config *oauth2.Config, codeChallenge string, callbackPort int) (string, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", callbackPort))
 	if err != nil {
 		return "", fmt.Errorf("failed to start local server on port %d: %w", callbackPort, err)
