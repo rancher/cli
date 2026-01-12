@@ -272,5 +272,6 @@ func newTestConfig() *config.Config {
 			"server2": {URL: "https://myserver-2.com"},
 			"server3": {URL: "https://myserver-3.com"},
 		},
+		Helper: "built-in",
 	}
 }
