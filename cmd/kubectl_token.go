@@ -43,12 +43,14 @@ Example:
 `
 
 type LoginInput struct {
-	server       string
-	userID       string
-	clusterID    string
-	authProvider string
-	caCerts      string
-	skipVerify   bool
+	server            string
+	userID            string
+	clusterID         string
+	authProvider      string
+	caCerts           string
+	skipVerify        bool
+	oauthFlow         string
+	oauthCallbackPort int
 }
 
 const (
@@ -123,6 +125,16 @@ func CredentialCommand() cli.Command {
 				Name:  "skip-verify",
 				Usage: "Skip verification of the CACerts presented by the Server",
 			},
+			cli.StringFlag{
+				Name:  "oauth-flow",
+				Usage: "OAuth flow type for Azure AD (authcode or device). Default is authcode",
+				Value: "authcode",
+			},
+			cli.IntFlag{
+				Name:  "oauth-callback-port",
+				Usage: "Local callback port for OAuth authcode flow. Default is 8888",
+				Value: 8888,
+			},
 		},
 		Subcommands: []cli.Command{
 			{
@@ -168,13 +180,21 @@ func runCredential(ctx *cli.Context) error {
 		return json.NewEncoder(os.Stdout).Encode(cachedCred)
 	}
 
+	oauthFlow := ctx.String("oauth-flow")
+	// Validate OAuth flow type
+	if oauthFlow != "authcode" && oauthFlow != "device" {
+		return fmt.Errorf("invalid oauth-flow value: %s. Valid values are 'authcode' or 'device'", oauthFlow)
+	}
+
 	input := &LoginInput{
-		server:       server,
-		userID:       userID,
-		clusterID:    clusterID,
-		authProvider: ctx.String("auth-provider"),
-		caCerts:      ctx.String("cacerts"),
-		skipVerify:   ctx.Bool("skip-verify"),
+		server:            server,
+		userID:            userID,
+		clusterID:         clusterID,
+		authProvider:      ctx.String("auth-provider"),
+		caCerts:           ctx.String("cacerts"),
+		skipVerify:        ctx.Bool("skip-verify"),
+		oauthFlow:         oauthFlow,
+		oauthCallbackPort: ctx.Int("oauth-callback-port"),
 	}
 
 	tlsConfig, err := getTLSConfig(input.skipVerify, input.caCerts)
