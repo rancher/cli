@@ -127,8 +127,8 @@ func CredentialCommand() cli.Command {
 			},
 			cli.StringFlag{
 				Name:  "oauth-flow",
-				Usage: "OAuth flow type for Azure AD (authcode or device). Default is authcode",
-				Value: "authcode",
+				Usage: "OAuth flow type for Azure AD (authcode or device). Default is device",
+				Value: "device",
 			},
 			cli.IntFlag{
 				Name:  "oauth-callback-port",
