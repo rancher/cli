@@ -5,10 +5,10 @@ go 1.24.0
 toolchain go1.24.11
 
 replace (
-	k8s.io/apiserver => k8s.io/apiserver v0.34.2
-	k8s.io/client-go => k8s.io/client-go v0.34.2
-	k8s.io/component-base => k8s.io/component-base v0.34.2
-	k8s.io/kubernetes => k8s.io/kubernetes v1.34.2
+	k8s.io/apiserver => k8s.io/apiserver v0.34.3
+	k8s.io/client-go => k8s.io/client-go v0.34.3
+	k8s.io/component-base => k8s.io/component-base v0.34.3
+	k8s.io/kubernetes => k8s.io/kubernetes v1.34.3
 )
 
 require (
