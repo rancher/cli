@@ -14,8 +14,8 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.7.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20251218234335-4c2e04b31079
-	github.com/rancher/rancher/pkg/client v0.0.0-20251218234335-4c2e04b31079
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260116184620-291abe75bdeb
+	github.com/rancher/rancher/pkg/client v0.0.0-20260116184620-291abe75bdeb
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
@@ -60,7 +60,7 @@ require (
 	github.com/rancher/aks-operator v1.13.1 // indirect
 	github.com/rancher/ali-operator v1.13.0 // indirect
 	github.com/rancher/eks-operator v1.13.1 // indirect
-	github.com/rancher/fleet/pkg/apis v0.14.1-0.20251210150425-9e77da0d13fd // indirect
+	github.com/rancher/fleet/pkg/apis v0.14.2-beta.1 // indirect
 	github.com/rancher/gke-operator v1.13.1 // indirect
 	github.com/rancher/lasso v0.2.5 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
@@ -81,13 +81,13 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.34.2 // indirect
+	k8s.io/api v0.34.3 // indirect
 	k8s.io/apimachinery v0.34.3 // indirect
-	k8s.io/apiserver v0.34.2 // indirect
-	k8s.io/component-base v0.34.2 // indirect
+	k8s.io/apiserver v0.34.3 // indirect
+	k8s.io/component-base v0.34.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
-	k8s.io/kubernetes v1.34.2 // indirect
+	k8s.io/kubernetes v1.34.3 // indirect
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
