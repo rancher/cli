@@ -16,7 +16,7 @@ require (
 	github.com/rancher/norman v0.8.1
 	github.com/rancher/rancher/pkg/apis v0.0.0-20260109182643-230c7fbdae00
 	github.com/rancher/rancher/pkg/client v0.0.0-20260109182643-230c7fbdae00
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.14
