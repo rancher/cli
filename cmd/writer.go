@@ -93,21 +93,22 @@ func (t *TableWriter) Write(obj interface{}) {
 		return
 	}
 
-	if t.ValueFormat == "json" {
+	switch t.ValueFormat {
+	case "json":
 		content, err := json.Marshal(obj)
 		t.err = err
 		if t.err != nil {
 			return
 		}
 		_, t.err = t.Writer.Write(append(content, byte('\n')))
-	} else if t.ValueFormat == "yaml" {
+	case "yaml":
 		content, err := yaml.Marshal(obj)
 		t.err = err
 		if t.err != nil {
 			return
 		}
 		_, t.err = t.Writer.Write(append(content, byte('\n')))
-	} else {
+	default:
 		t.err = printTemplate(t.Writer, t.ValueFormat, obj)
 	}
 }
