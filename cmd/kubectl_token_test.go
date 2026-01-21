@@ -167,3 +167,31 @@ func TestCacheCredential(t *testing.T) {
 	require.NotNil(t, expirationTimestamp)
 	assert.True(t, expirationTimestamp.Equal(expires.Time))
 }
+
+func TestGenerateCodeVerifier(t *testing.T) {
+	verifier1, err := generateCodeVerifier()
+	require.NoError(t, err)
+	assert.NotEmpty(t, verifier1)
+
+	// Verify it's URL-safe base64 encoded
+	assert.Regexp(t, "^[A-Za-z0-9_-]+$", verifier1)
+
+	// Generate another one to ensure they're different
+	verifier2, err := generateCodeVerifier()
+	require.NoError(t, err)
+	assert.NotEmpty(t, verifier2)
+	assert.NotEqual(t, verifier1, verifier2)
+}
+
+func TestGenerateCodeChallenge(t *testing.T) {
+	verifier := "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+	challenge := generateCodeChallenge(verifier)
+
+	// Verify it's URL-safe base64 encoded
+	assert.Regexp(t, "^[A-Za-z0-9_-]+$", challenge)
+	assert.NotEmpty(t, challenge)
+
+	// Same verifier should produce same challenge
+	challenge2 := generateCodeChallenge(verifier)
+	assert.Equal(t, challenge, challenge2)
+}
