@@ -16,8 +16,8 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.5.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260119205036-6005330a31a3
-	github.com/rancher/rancher/pkg/client v0.0.0-20260119205036-6005330a31a3
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260129100856-dcd9eae95989
+	github.com/rancher/rancher/pkg/client v0.0.0-20260129100856-dcd9eae95989
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
