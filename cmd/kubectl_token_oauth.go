@@ -16,14 +16,14 @@ import (
 func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (*managementClient.Token, error) {
 	oauthConfig, err := newOauthConfig(provider)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("oauth: failed to create oauth config: %w", err)
 	}
 
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, client) // Set the custom HTTP client.
 
 	deviceAuthResp, err := oauthConfig.DeviceAuth(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("oauth: failed to initiate device authorization: %w", err)
 	}
 
 	customPrint(fmt.Sprintf(
@@ -34,12 +34,12 @@ func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (
 
 	oauthToken, err := oauthConfig.DeviceAccessToken(ctx, deviceAuthResp)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("oauth: failed to retrieve access token: %w", err)
 	}
 
-	token, err := rancherLogin(client, input, provider, oauthToken)
+	token, err := rancherLogin(client, input, oauthToken)
 	if err != nil {
-		return nil, fmt.Errorf("error during rancher login: %w", err)
+		return nil, fmt.Errorf("oauth: error during rancher login: %w", err)
 	}
 
 	return token, nil
@@ -66,25 +66,24 @@ func newOauthConfig(provider TypedProvider) (*oauth2.Config, error) {
 	}, nil
 }
 
-func rancherLogin(client *http.Client, input *LoginInput, provider TypedProvider, oauthToken *oauth2.Token) (*managementClient.Token, error) {
-	// login with id_token
-	providerName := strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider"))
-	url := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, provider.GetType(), providerName)
+func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Token) (*managementClient.Token, error) {
+	url := input.server + "/v1-public/login"
 
 	responseType := "kubeconfig"
 	if input.clusterID != "" {
 		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
 	}
 
-	jsonBody, err := json.Marshal(map[string]interface{}{
+	reqBody, err := json.Marshal(map[string]any{
+		"type":         strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider")),
 		"responseType": responseType,
 		"id_token":     oauthToken.Extra("id_token"),
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBody))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
@@ -100,7 +99,7 @@ func rancherLogin(client *http.Client, input *LoginInput, provider TypedProvider
 	token := &managementClient.Token{}
 	err = json.Unmarshal(respBody, token)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling login response: %w", err)
 	}
 
 	return token, nil

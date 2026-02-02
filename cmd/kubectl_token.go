@@ -52,8 +52,8 @@ type LoginInput struct {
 }
 
 const (
-	authProviderURL = "%s/v3-public/authProviders"
-	authTokenURL    = "%s/v3-public/authTokens/%s"
+	authProviderURL = "%s/v1-public/authproviders"
+	authTokenURL    = "%s/v1-public/authtokens/%s"
 )
 
 var samlProviders = map[string]bool{
@@ -364,6 +364,7 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 
 func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, error) {
 	token := managementClient.Token{}
+
 	username, err := customPrompt("Enter username: ", true)
 	if err != nil {
 		return token, err
@@ -379,34 +380,41 @@ func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, 
 		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
 	}
 
-	reqBody := fmt.Sprintf(`{"responseType":%q, "username":%q, "password":%q}`, responseType, username, password)
-
-	loginURL := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, input.authProvider,
-		strings.ToLower(strings.Replace(input.authProvider, "Provider", "", 1)))
-
-	req, err := http.NewRequest(http.MethodPost, loginURL, bytes.NewBufferString(reqBody))
+	reqBody, err := json.Marshal(map[string]any{
+		"type":         strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider")),
+		"responseType": responseType,
+		"username":     username,
+		"password":     password,
+	})
 	if err != nil {
-		return token, fmt.Errorf("error creating request: %w", err)
+		return token, fmt.Errorf("basicauth: failed to marshal request body: %w", err)
+	}
+
+	loginURL := input.server + "/v1-public/login"
+
+	req, err := http.NewRequest(http.MethodPost, loginURL, bytes.NewReader(reqBody))
+	if err != nil {
+		return token, fmt.Errorf("basicauth: error creating request: %w", err)
 	}
 
 	resp, respBody, err := doRequest(client, req)
 	if err == nil && resp.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+		err = fmt.Errorf("basicauth: unexpected http status code %d", resp.StatusCode)
 
-		apiError := map[string]interface{}{}
+		apiError := map[string]any{}
 		if rerr := json.Unmarshal(respBody, &apiError); rerr == nil {
 			if responseType := apiError["type"]; responseType == "error" {
-				err = fmt.Errorf("error logging user in: code: [%v] message:[%v]", apiError["code"], apiError["message"])
+				err = fmt.Errorf("basicauth:error logging user in: code: [%v] message:[%v]", apiError["code"], apiError["message"])
 			}
 		}
 	}
 	if err != nil {
-		return token, fmt.Errorf("error logging user in: %w", err)
+		return token, fmt.Errorf("basicauth: error logging user in: %w", err)
 	}
 
 	err = json.Unmarshal(respBody, &token)
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("basicauth: error unmarshaling login response: %w", err)
 	}
 
 	return token, nil
@@ -417,18 +425,19 @@ func samlAuth(client *http.Client, input *LoginInput) (managementClient.Token, e
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("samlauth: error generating key: %w", err)
 	}
+
 	publicKey := privateKey.PublicKey
 	marshalKey, err := json.Marshal(publicKey)
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("samlauth: error marshaling public key: %w", err)
 	}
 	encodedKey := base64.StdEncoding.EncodeToString(marshalKey)
 
 	id, err := generateKey()
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("samlauth: error generating request id: %w", err)
 	}
 
 	responseType := "kubeconfig"
@@ -440,20 +449,29 @@ func samlAuth(client *http.Client, input *LoginInput) (managementClient.Token, e
 
 	getReq, err := http.NewRequest(http.MethodGet, tokenURL, bytes.NewBuffer(nil))
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("samlauth: error creating get token request: %w", err)
 	}
 	getReq.Header.Set("content-type", "application/json")
 	getReq.Header.Set("accept", "application/json")
 
 	deleteReq, err := http.NewRequest(http.MethodDelete, tokenURL, bytes.NewBuffer(nil))
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("samlauth: error creating delete token request: %w", err)
 	}
 	deleteReq.Header.Set("content-type", "application/json")
 	deleteReq.Header.Set("accept", "application/json")
 
-	loginURL := fmt.Sprintf("%s/dashboard/auth/login?cli=true&requestId=%s&publicKey=%s&responseType=%s",
-		input.server, id, encodedKey, responseType)
+	loginURL, err := url.Parse(input.server + "/dashboard/auth/login")
+	if err != nil {
+		return token, fmt.Errorf("samlauth: error parsing login url: %w", err)
+	}
+
+	q := url.Values{}
+	q.Set("cli", "true")
+	q.Set("requestId", id)
+	q.Set("publicKey", encodedKey)
+	q.Set("responseType", responseType)
+	loginURL.RawQuery = q.Encode()
 
 	customPrint(fmt.Sprintf("\nLogin Request Id: %s\n", id))
 	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s \n", loginURL))
@@ -497,7 +515,7 @@ loop:
 			// Delete the auth token.
 			resp, _, err := doRequest(client, deleteReq)
 			if err == nil && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
-				err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+				err = fmt.Errorf("samlauth: unexpected http status code %d", resp.StatusCode)
 			}
 			if err != nil {
 				// Log the error and move on.
@@ -687,6 +705,6 @@ func customPrompt(msg string, show bool) (result string, err error) {
 	return result, err
 }
 
-func customPrint(data interface{}) {
+func customPrint(data any) {
 	fmt.Fprintf(os.Stderr, "%v \n", data)
 }
