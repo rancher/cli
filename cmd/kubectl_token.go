@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"crypto"
 	"crypto/rand"
@@ -365,9 +366,17 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, error) {
 	token := managementClient.Token{}
 
-	username, err := customPrompt("Enter username: ", true)
+	prompt := "Enter username"
+	if input.userID != "" {
+		prompt += " [" + input.userID + "]"
+	}
+	username, err := customPrompt(prompt+": ", true)
 	if err != nil {
 		return token, err
+	}
+
+	if username == "" && input.userID != "" {
+		username = input.userID
 	}
 
 	password, err := customPrompt("Enter password: ", false)
@@ -711,7 +720,11 @@ func doRequest(client *http.Client, req *http.Request) (*http.Response, []byte, 
 func customPrompt(msg string, show bool) (result string, err error) {
 	fmt.Fprint(os.Stderr, msg)
 	if show {
-		_, err = fmt.Fscan(os.Stdin, &result)
+		scanner := bufio.NewScanner(os.Stdin)
+		if scanner.Scan() {
+			result = scanner.Text()
+		}
+		err = scanner.Err()
 	} else {
 		var data []byte
 		data, err = term.ReadPassword(int(os.Stdin.Fd()))
