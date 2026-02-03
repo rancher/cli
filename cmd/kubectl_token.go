@@ -561,11 +561,15 @@ func getAuthProviders(client *http.Client, server string) ([]TypedProvider, erro
 	}
 
 	resp, respBody, err := doRequest(client, req)
-	if err == nil && resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
-	}
 	if err != nil {
 		return nil, fmt.Errorf("error listing auth providers: %w", err)
+	}
+	switch resp.StatusCode {
+	case http.StatusOK: // Proceed.
+	case http.StatusNotFound:
+		return nil, errors.New("/v1-public endpoints are not supported by this Rancher server version")
+	default:
+		return nil, fmt.Errorf("unexpected http status code %d", resp.StatusCode)
 	}
 
 	if !gjson.ValidBytes(respBody) {
