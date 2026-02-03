@@ -60,7 +60,7 @@ func TestGetAuthProviders(t *testing.T) {
 		{
 			name:        "json error",
 			server:      setupServer(`hnjskjnksnj`),
-			expectedErr: "invalid JSON response from",
+			expectedErr: "invalid JSON response",
 		},
 	}
 

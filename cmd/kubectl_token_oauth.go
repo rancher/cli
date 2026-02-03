@@ -15,14 +15,14 @@ import (
 func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (*managementClient.Token, error) {
 	oauthConfig, err := newOauthConfig(provider)
 	if err != nil {
-		return nil, fmt.Errorf("oauth: failed to create oauth config: %w", err)
+		return nil, fmt.Errorf("failed to create oauth config: %w", err)
 	}
 
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, client) // Set the custom HTTP client.
 
 	deviceAuthResp, err := oauthConfig.DeviceAuth(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("oauth: failed to initiate device authorization: %w", err)
+		return nil, fmt.Errorf("failed to initiate device authorization: %w", err)
 	}
 
 	customPrint(fmt.Sprintf(
@@ -33,12 +33,12 @@ func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (
 
 	oauthToken, err := oauthConfig.DeviceAccessToken(ctx, deviceAuthResp)
 	if err != nil {
-		return nil, fmt.Errorf("oauth: failed to retrieve access token: %w", err)
+		return nil, fmt.Errorf("failed to retrieve access token: %w", err)
 	}
 
 	token, err := rancherLogin(client, input, oauthToken)
 	if err != nil {
-		return nil, fmt.Errorf("oauth: error during rancher login: %w", err)
+		return nil, fmt.Errorf("error during rancher login: %w", err)
 	}
 
 	return token, nil
