@@ -413,7 +413,7 @@ func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, 
 		apiError := map[string]any{}
 		if rerr := json.Unmarshal(respBody, &apiError); rerr == nil {
 			if responseType := apiError["type"]; responseType == "error" {
-				err = fmt.Errorf("basicauth:error logging user in: code: [%v] message:[%v]", apiError["code"], apiError["message"])
+				err = fmt.Errorf("basicauth: error logging user in: code: [%v] message:[%v]", apiError["code"], apiError["message"])
 			}
 		}
 	}
