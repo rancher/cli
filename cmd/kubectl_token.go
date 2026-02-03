@@ -381,7 +381,7 @@ func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, 
 	}
 
 	reqBody, err := json.Marshal(map[string]any{
-		"type":         strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider")),
+		"type":         input.authProvider,
 		"responseType": responseType,
 		"username":     username,
 		"password":     password,
@@ -491,31 +491,43 @@ loop:
 		select {
 		case <-poll.C:
 			// Fetch the auth token.
-			_, respBody, err := doRequest(client, getReq)
+			resp, respBody, err := doRequest(client, getReq)
 			if err != nil {
-				return token, err
+				return token, fmt.Errorf("samlauth: error fetching auth token: %w", err)
 			}
+			switch resp.StatusCode {
+			case http.StatusOK: // Found the token.
+			case http.StatusNotFound: // Token not yet created, continue polling.
+				continue
+			default:
+				return token, fmt.Errorf("samlauth: unexpected http status code %d", resp.StatusCode)
+			}
+
 			err = json.Unmarshal(respBody, &token)
 			if err != nil {
-				return token, err
+				return token, fmt.Errorf("samlauth: error unmarshaling auth token response: %w", err)
 			}
 			if token.Token == "" {
 				continue
 			}
 			decoded, err := base64.StdEncoding.DecodeString(token.Token)
 			if err != nil {
-				return token, err
+				return token, fmt.Errorf("samlauth: error decoding auth token: %w", err)
 			}
 			decryptedBytes, err := privateKey.Decrypt(nil, decoded, &rsa.OAEPOptions{Hash: crypto.SHA256})
 			if err != nil {
-				panic(err)
+				return token, fmt.Errorf("samlauth: error decrypting auth token: %w", err)
 			}
 			token.Token = string(decryptedBytes)
 
 			// Delete the auth token.
-			resp, _, err := doRequest(client, deleteReq)
-			if err == nil && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
-				err = fmt.Errorf("samlauth: unexpected http status code %d", resp.StatusCode)
+			resp, _, err = doRequest(client, deleteReq)
+			if err == nil {
+				switch resp.StatusCode {
+				case http.StatusOK, http.StatusNoContent, http.StatusNotFound: // Do nothing.
+				default:
+					err = fmt.Errorf("samlauth: unexpected http status code %d", resp.StatusCode)
+				}
 			}
 			if err != nil {
 				// Log the error and move on.
@@ -618,7 +630,7 @@ func selectAuthProvider(authProviders []TypedProvider, providerType string) (Typ
 		providers = append(providers, fmt.Sprintf("%d - %s", i, val.GetType()))
 	}
 
-	for try := 0; try < 3; try++ {
+	for range 3 {
 		customPrint(fmt.Sprintf("Auth providers:\n%v", strings.Join(providers, "\n")))
 		providerIndexStr, err := customPrompt("Select auth provider: ", true)
 		if err != nil {

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
@@ -75,7 +74,7 @@ func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Tok
 	}
 
 	reqBody, err := json.Marshal(map[string]any{
-		"type":         strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider")),
+		"type":         input.authProvider,
 		"responseType": responseType,
 		"id_token":     oauthToken.Extra("id_token"),
 	})
