@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"crypto"
 	"crypto/rand"
@@ -52,8 +53,8 @@ type LoginInput struct {
 }
 
 const (
-	authProviderURL = "%s/v3-public/authProviders"
-	authTokenURL    = "%s/v3-public/authTokens/%s"
+	authProviderURL = "%s/v1-public/authproviders"
+	authTokenURL    = "%s/v1-public/authtokens/%s"
 )
 
 var samlProviders = map[string]bool{
@@ -364,9 +365,18 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 
 func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, error) {
 	token := managementClient.Token{}
-	username, err := customPrompt("Enter username: ", true)
+
+	prompt := "Enter username"
+	if input.userID != "" {
+		prompt += " [" + input.userID + "]"
+	}
+	username, err := customPrompt(prompt+": ", true)
 	if err != nil {
 		return token, err
+	}
+
+	if username == "" && input.userID != "" {
+		username = input.userID
 	}
 
 	password, err := customPrompt("Enter password: ", false)
@@ -379,26 +389,26 @@ func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, 
 		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
 	}
 
-	reqBody := fmt.Sprintf(`{"responseType":%q, "username":%q, "password":%q}`, responseType, username, password)
+	reqBody, err := json.Marshal(map[string]any{
+		"type":         input.authProvider,
+		"responseType": responseType,
+		"username":     username,
+		"password":     password,
+	})
+	if err != nil {
+		return token, fmt.Errorf("failed to marshal request body: %w", err)
+	}
 
-	loginURL := fmt.Sprintf("%s/v3-public/%ss/%s?action=login", input.server, input.authProvider,
-		strings.ToLower(strings.Replace(input.authProvider, "Provider", "", 1)))
+	loginURL := input.server + "/v1-public/login"
 
-	req, err := http.NewRequest(http.MethodPost, loginURL, bytes.NewBufferString(reqBody))
+	req, err := http.NewRequest(http.MethodPost, loginURL, bytes.NewReader(reqBody))
 	if err != nil {
 		return token, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, respBody, err := doRequest(client, req)
 	if err == nil && resp.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
-
-		apiError := map[string]interface{}{}
-		if rerr := json.Unmarshal(respBody, &apiError); rerr == nil {
-			if responseType := apiError["type"]; responseType == "error" {
-				err = fmt.Errorf("error logging user in: code: [%v] message:[%v]", apiError["code"], apiError["message"])
-			}
-		}
+		err = fmt.Errorf("%d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 	if err != nil {
 		return token, fmt.Errorf("error logging user in: %w", err)
@@ -406,7 +416,7 @@ func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, 
 
 	err = json.Unmarshal(respBody, &token)
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("error unmarshaling login response: %w", err)
 	}
 
 	return token, nil
@@ -417,18 +427,19 @@ func samlAuth(client *http.Client, input *LoginInput) (managementClient.Token, e
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("error generating key: %w", err)
 	}
+
 	publicKey := privateKey.PublicKey
 	marshalKey, err := json.Marshal(publicKey)
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("error marshaling public key: %w", err)
 	}
 	encodedKey := base64.StdEncoding.EncodeToString(marshalKey)
 
 	id, err := generateKey()
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("error generating request id: %w", err)
 	}
 
 	responseType := "kubeconfig"
@@ -440,20 +451,29 @@ func samlAuth(client *http.Client, input *LoginInput) (managementClient.Token, e
 
 	getReq, err := http.NewRequest(http.MethodGet, tokenURL, bytes.NewBuffer(nil))
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("error creating get token request: %w", err)
 	}
 	getReq.Header.Set("content-type", "application/json")
 	getReq.Header.Set("accept", "application/json")
 
 	deleteReq, err := http.NewRequest(http.MethodDelete, tokenURL, bytes.NewBuffer(nil))
 	if err != nil {
-		return token, err
+		return token, fmt.Errorf("error creating delete token request: %w", err)
 	}
 	deleteReq.Header.Set("content-type", "application/json")
 	deleteReq.Header.Set("accept", "application/json")
 
-	loginURL := fmt.Sprintf("%s/dashboard/auth/login?cli=true&requestId=%s&publicKey=%s&responseType=%s",
-		input.server, id, encodedKey, responseType)
+	loginURL, err := url.Parse(input.server + "/dashboard/auth/login")
+	if err != nil {
+		return token, fmt.Errorf("error parsing login url: %w", err)
+	}
+
+	q := url.Values{}
+	q.Set("cli", "true")
+	q.Set("requestId", id)
+	q.Set("publicKey", encodedKey)
+	q.Set("responseType", responseType)
+	loginURL.RawQuery = q.Encode()
 
 	customPrint(fmt.Sprintf("\nLogin Request Id: %s\n", id))
 	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s \n", loginURL))
@@ -473,31 +493,43 @@ loop:
 		select {
 		case <-poll.C:
 			// Fetch the auth token.
-			_, respBody, err := doRequest(client, getReq)
+			resp, respBody, err := doRequest(client, getReq)
 			if err != nil {
-				return token, err
+				return token, fmt.Errorf("error fetching auth token: %w", err)
 			}
+			switch resp.StatusCode {
+			case http.StatusOK: // Found the token.
+			case http.StatusNotFound: // Token not yet created, continue polling.
+				continue
+			default:
+				return token, fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+			}
+
 			err = json.Unmarshal(respBody, &token)
 			if err != nil {
-				return token, err
+				return token, fmt.Errorf("error unmarshaling auth token response: %w", err)
 			}
 			if token.Token == "" {
 				continue
 			}
 			decoded, err := base64.StdEncoding.DecodeString(token.Token)
 			if err != nil {
-				return token, err
+				return token, fmt.Errorf("error decoding auth token: %w", err)
 			}
 			decryptedBytes, err := privateKey.Decrypt(nil, decoded, &rsa.OAEPOptions{Hash: crypto.SHA256})
 			if err != nil {
-				panic(err)
+				return token, fmt.Errorf("error decrypting auth token: %w", err)
 			}
 			token.Token = string(decryptedBytes)
 
 			// Delete the auth token.
-			resp, _, err := doRequest(client, deleteReq)
-			if err == nil && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
-				err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+			resp, _, err = doRequest(client, deleteReq)
+			if err == nil {
+				switch resp.StatusCode {
+				case http.StatusOK, http.StatusNoContent, http.StatusNotFound: // Do nothing.
+				default:
+					err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+				}
 			}
 			if err != nil {
 				// Log the error and move on.
@@ -531,15 +563,21 @@ func getAuthProviders(client *http.Client, server string) ([]TypedProvider, erro
 	}
 
 	resp, respBody, err := doRequest(client, req)
-	if err == nil && resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+	if err == nil {
+		switch resp.StatusCode {
+		case http.StatusOK: // Proceed.
+		case http.StatusNotFound:
+			err = errors.New("/v1-public endpoints are not supported by this Rancher server version")
+		default:
+			err = fmt.Errorf("%d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error listing auth providers: %w", err)
 	}
 
 	if !gjson.ValidBytes(respBody) {
-		return nil, fmt.Errorf("invalid JSON response from %s", authProvidersURL)
+		return nil, errors.New("invalid JSON response")
 	}
 	data := gjson.GetBytes(respBody, "data").Array()
 
@@ -561,7 +599,7 @@ func getAuthProviders(client *http.Client, server string) ([]TypedProvider, erro
 
 			err = json.Unmarshal([]byte(provider.Raw), typedProvider)
 			if err != nil {
-				return nil, fmt.Errorf("attempting to decode the auth provider of type %s: %w", providerType, err)
+				return nil, fmt.Errorf("error decoding the auth provider %s: %w", providerType, err)
 			}
 
 			if typedProvider.GetType() == "localProvider" {
@@ -600,7 +638,7 @@ func selectAuthProvider(authProviders []TypedProvider, providerType string) (Typ
 		providers = append(providers, fmt.Sprintf("%d - %s", i, val.GetType()))
 	}
 
-	for try := 0; try < 3; try++ {
+	for range 3 {
 		customPrint(fmt.Sprintf("Auth providers:\n%v", strings.Join(providers, "\n")))
 		providerIndexStr, err := customPrompt("Select auth provider: ", true)
 		if err != nil {
@@ -677,7 +715,11 @@ func doRequest(client *http.Client, req *http.Request) (*http.Response, []byte, 
 func customPrompt(msg string, show bool) (result string, err error) {
 	fmt.Fprint(os.Stderr, msg)
 	if show {
-		_, err = fmt.Fscan(os.Stdin, &result)
+		scanner := bufio.NewScanner(os.Stdin)
+		if scanner.Scan() {
+			result = scanner.Text()
+		}
+		err = scanner.Err()
 	} else {
 		var data []byte
 		data, err = term.ReadPassword(int(os.Stdin.Fd()))
@@ -687,6 +729,6 @@ func customPrompt(msg string, show bool) (result string, err error) {
 	return result, err
 }
 
-func customPrint(data interface{}) {
+func customPrint(data any) {
 	fmt.Fprintf(os.Stderr, "%v \n", data)
 }
