@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"golang.org/x/oauth2"
 )
 
-func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (*managementClient.Token, error) {
+func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider, useV1Public bool) (*managementClient.Token, error) {
 	oauthConfig, err := newOauthConfig(provider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oauth config: %w", err)
@@ -36,7 +37,7 @@ func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider) (
 		return nil, fmt.Errorf("failed to retrieve access token: %w", err)
 	}
 
-	token, err := rancherLogin(client, input, oauthToken)
+	token, err := rancherLogin(client, input, oauthToken, useV1Public)
 	if err != nil {
 		return nil, fmt.Errorf("error during rancher login: %w", err)
 	}
@@ -65,8 +66,12 @@ func newOauthConfig(provider TypedProvider) (*oauth2.Config, error) {
 	}, nil
 }
 
-func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Token) (*managementClient.Token, error) {
-	url := input.server + "/v1-public/login"
+func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Token, useV1Public bool) (*managementClient.Token, error) {
+	reqURL := fmt.Sprintf(loginURL, input.server)
+	if !useV1Public {
+		providerName := strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider"))
+		reqURL = fmt.Sprintf(loginURLv3, input.server, input.authProvider, providerName)
+	}
 
 	responseType := "kubeconfig"
 	if input.clusterID != "" {
@@ -82,14 +87,14 @@ func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Tok
 		return nil, fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(reqBody))
+	req, err := http.NewRequest(http.MethodPost, reqURL, bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, respBody, err := doRequest(client, req)
 	if err == nil && resp.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+		err = fmt.Errorf("%d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 	if err != nil {
 		return nil, err
