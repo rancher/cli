@@ -53,8 +53,12 @@ type LoginInput struct {
 }
 
 const (
-	authProviderURL = "%s/v1-public/authproviders"
-	authTokenURL    = "%s/v1-public/authtokens/%s"
+	loginURL          = "%s/v1-public/login"
+	authProviderURL   = "%s/v1-public/authproviders"
+	authTokenURL      = "%s/v1-public/authtokens/%s"
+	loginURLv3        = "%s/v3-public/%ss/%s?action=login" // Deprecated, use loginURL.
+	authProviderURLv3 = "%s/v3-public/authProviders"       // Deprecated, use authProviderURL.
+	authTokenURLv3    = "%s/v3-public/authTokens/%s"       // Deprecated, use authTokenURL.
 )
 
 var samlProviders = map[string]bool{
@@ -311,7 +315,8 @@ func cacheCredential(ctx *cli.Context, serverConfig *config.ServerConfig, key st
 }
 
 func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecCredential, error) {
-	authProviders, err := getAuthProviders(client, input.server)
+	// Try /v1-public first.
+	authProviders, useV1Public, err := getAuthProviders(client, input.server, true)
 	if err != nil {
 		return nil, err
 	}
@@ -324,19 +329,19 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 
 	token := managementClient.Token{}
 	if samlProviders[input.authProvider] {
-		token, err = samlAuth(client, input)
+		token, err = samlAuth(client, input, useV1Public)
 		if err != nil {
 			return nil, err
 		}
 	} else if oauthProviders[input.authProvider] {
-		tokenPtr, err := oauthAuth(client, input, selectedProvider)
+		tokenPtr, err := oauthAuth(client, input, selectedProvider, useV1Public)
 		if err != nil {
 			return nil, err
 		}
 		token = *tokenPtr
 	} else {
 		customPrint(fmt.Sprintf("Enter credentials for %s \n", input.authProvider))
-		token, err = basicAuth(client, input)
+		token, err = basicAuth(client, input, useV1Public)
 		if err != nil {
 			return nil, err
 		}
@@ -363,7 +368,7 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 
 }
 
-func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, error) {
+func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (managementClient.Token, error) {
 	token := managementClient.Token{}
 
 	prompt := "Enter username"
@@ -399,9 +404,13 @@ func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, 
 		return token, fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	loginURL := input.server + "/v1-public/login"
+	reqURL := fmt.Sprintf(loginURL, input.server)
+	if !useV1Public {
+		providerName := strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider"))
+		reqURL = fmt.Sprintf(loginURLv3, input.server, input.authProvider, providerName)
+	}
 
-	req, err := http.NewRequest(http.MethodPost, loginURL, bytes.NewReader(reqBody))
+	req, err := http.NewRequest(http.MethodPost, reqURL, bytes.NewReader(reqBody))
 	if err != nil {
 		return token, fmt.Errorf("error creating request: %w", err)
 	}
@@ -422,7 +431,7 @@ func basicAuth(client *http.Client, input *LoginInput) (managementClient.Token, 
 	return token, nil
 }
 
-func samlAuth(client *http.Client, input *LoginInput) (managementClient.Token, error) {
+func samlAuth(client *http.Client, input *LoginInput, useV1Public bool) (managementClient.Token, error) {
 	token := managementClient.Token{}
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -448,6 +457,9 @@ func samlAuth(client *http.Client, input *LoginInput) (managementClient.Token, e
 	}
 
 	tokenURL := fmt.Sprintf(authTokenURL, input.server, id)
+	if !useV1Public {
+		tokenURL = fmt.Sprintf(authTokenURLv3, input.server, id)
+	}
 
 	getReq, err := http.NewRequest(http.MethodGet, tokenURL, bytes.NewBuffer(nil))
 	if err != nil {
@@ -502,7 +514,7 @@ loop:
 			case http.StatusNotFound: // Token not yet created, continue polling.
 				continue
 			default:
-				return token, fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+				return token, fmt.Errorf("%d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 			}
 
 			err = json.Unmarshal(respBody, &token)
@@ -528,7 +540,7 @@ loop:
 				switch resp.StatusCode {
 				case http.StatusOK, http.StatusNoContent, http.StatusNotFound: // Do nothing.
 				default:
-					err = fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+					err = fmt.Errorf("%d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 				}
 			}
 			if err != nil {
@@ -555,11 +567,22 @@ type TypedProvider interface {
 	GetType() string
 }
 
-func getAuthProviders(client *http.Client, server string) ([]TypedProvider, error) {
+// getAuthProviders fetches the list of auth providers from the Rancher server.
+// Note: it should always be called with useV1Public=true first to avoid infinite recursion.
+// Returns:
+//   - A list of supported auth providers
+//   - A bool flag indicating whether the /v1-public endpoint was used (true)
+//     or if it had to fallback to /v3-public (false)
+//   - An error.
+func getAuthProviders(client *http.Client, server string, useV1Public bool) ([]TypedProvider, bool, error) {
 	authProvidersURL := fmt.Sprintf(authProviderURL, server)
+	if !useV1Public {
+		authProvidersURL = fmt.Sprintf(authProviderURLv3, server)
+	}
+
 	req, err := http.NewRequest(http.MethodGet, authProvidersURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
+		return nil, false, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, respBody, err := doRequest(client, req)
@@ -567,17 +590,21 @@ func getAuthProviders(client *http.Client, server string) ([]TypedProvider, erro
 		switch resp.StatusCode {
 		case http.StatusOK: // Proceed.
 		case http.StatusNotFound:
-			err = errors.New("/v1-public endpoints are not supported by this Rancher server version")
+			if useV1Public {
+				// Fallback to v3-public endpoint.
+				return getAuthProviders(client, server, !useV1Public)
+			}
+			fallthrough
 		default:
 			err = fmt.Errorf("%d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("error listing auth providers: %w", err)
+		return nil, false, fmt.Errorf("error listing auth providers: %w", err)
 	}
 
 	if !gjson.ValidBytes(respBody) {
-		return nil, errors.New("invalid JSON response")
+		return nil, false, errors.New("invalid JSON response")
 	}
 	data := gjson.GetBytes(respBody, "data").Array()
 
@@ -599,7 +626,7 @@ func getAuthProviders(client *http.Client, server string) ([]TypedProvider, erro
 
 			err = json.Unmarshal([]byte(provider.Raw), typedProvider)
 			if err != nil {
-				return nil, fmt.Errorf("error decoding the auth provider %s: %w", providerType, err)
+				return nil, false, fmt.Errorf("error decoding the auth provider %s: %w", providerType, err)
 			}
 
 			if typedProvider.GetType() == "localProvider" {
@@ -610,7 +637,7 @@ func getAuthProviders(client *http.Client, server string) ([]TypedProvider, erro
 		}
 	}
 
-	return supportedProviders, err
+	return supportedProviders, useV1Public, err
 }
 
 func selectAuthProvider(authProviders []TypedProvider, providerType string) (TypedProvider, error) {
