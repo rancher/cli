@@ -569,6 +569,11 @@ type TypedProvider interface {
 
 // getAuthProviders fetches the list of auth providers from the Rancher server.
 // Note: it should always be called with useV1Public=true first to avoid infinite recursion.
+// Returns:
+//   - A list of supported auth providers
+//   - A bool flag indicating whether the /v1-public endpoint was used (true)
+//     or if it had to fallback to /v3-public (false)
+//   - An error.
 func getAuthProviders(client *http.Client, server string, useV1Public bool) ([]TypedProvider, bool, error) {
 	authProvidersURL := fmt.Sprintf(authProviderURL, server)
 	if !useV1Public {
