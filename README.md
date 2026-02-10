@@ -1,5 +1,8 @@
 Rancher CLI
 ===========
+>[!NOTE]
+>We are currently not accepting feature contributions from the community
+
 
 The Rancher Command Line Interface (CLI) is a unified tool for interacting with your Rancher Server.
 
