@@ -43,6 +43,11 @@ Example:
 	$ rancher token delete all
 `
 
+const (
+	deviceAuthFlow = "devicecode"
+	authCodeFlow   = "authcode"
+)
+
 type LoginInput struct {
 	server       string
 	userID       string
@@ -50,6 +55,7 @@ type LoginInput struct {
 	authProvider string
 	caCerts      string
 	skipVerify   bool
+	authFlow     string // devicecode or authcode.
 }
 
 const (
@@ -121,6 +127,10 @@ func CredentialCommand() cli.Command {
 				Usage: "Name of Auth Provider to use for authentication",
 			},
 			cli.StringFlag{
+				Name:  "auth-flow",
+				Usage: "Auth flow to use for OAuth providers: 'devicecode' (default) or 'authcode'",
+			},
+			cli.StringFlag{
 				Name:  "cacerts",
 				Usage: "Location of CaCerts to use",
 			},
@@ -180,6 +190,7 @@ func runCredential(ctx *cli.Context) error {
 		authProvider: ctx.String("auth-provider"),
 		caCerts:      ctx.String("cacerts"),
 		skipVerify:   ctx.Bool("skip-verify"),
+		authFlow:     ctx.String("auth-flow"),
 	}
 
 	tlsConfig, err := getTLSConfig(input.skipVerify, input.caCerts)
@@ -492,6 +503,7 @@ func samlAuth(client *http.Client, input *LoginInput, useV1Public bool) (managem
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
+	defer signal.Stop(interrupt)
 
 	// Timeout for the login flow.
 	timeout := time.NewTimer(15 * time.Minute)
