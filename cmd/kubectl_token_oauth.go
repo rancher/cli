@@ -40,7 +40,7 @@ func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider, u
 
 	switch input.authFlow {
 	case authCodeFlow:
-		return oauthAuthCodeAuth(client, input, provider, oauthCodeFlowTimeout, useV1Public)
+		return oauthAuthCodeAuth(client, input, provider, oauthCodeFlowTimeout, useV1Public, openBrowser)
 	case deviceAuthFlow, "": // Default to device code flow if not specified.
 		return oauthDeviceCodeAuth(client, input, provider, useV1Public)
 	default:
@@ -48,31 +48,49 @@ func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider, u
 	}
 }
 
+func getCallbackPort() (int, error) {
+	env := os.Getenv("CATTLE_OAUTH_CALLBACK_PORT")
+	if env == "" {
+		return 0, nil // Use random port
+	}
+
+	port, err := strconv.Atoi(env)
+	if err != nil {
+		return 0, fmt.Errorf("invalid callback port value: %w", err)
+	}
+	if port < 0 || port > 65535 {
+		return 0, errors.New("callback port value must be between 0 and 65535")
+	}
+	if port > 0 && port < 1024 {
+		logrus.Warnf("Using privileged port %d may require elevated permissions", port)
+	}
+
+	return port, nil
+}
+
 // oauthAuthCodeAuth implements the authorization code flow for OAuth authentication.
-func oauthAuthCodeAuth(client *http.Client, input *LoginInput, provider TypedProvider, timeoutAfter time.Duration, useV1Public bool) (*managementClient.Token, error) {
+func oauthAuthCodeAuth(
+	client *http.Client,
+	input *LoginInput,
+	provider TypedProvider,
+	timeoutAfter time.Duration,
+	useV1Public bool,
+	openBrowser openBrowserFunc,
+) (*managementClient.Token, error) {
 	oauthConfig, err := newOauthConfig(provider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oauth config: %w", err)
 	}
 
+	callbackPort, err := getCallbackPort()
+	if err != nil {
+		return nil, err
+	}
+
 	// Generate PKCE verifier (43-128 chars, cryptographically random).
 	verifier := oauth2.GenerateVerifier()
 
-	var callbackPort int
-	if v := os.Getenv("CATTLE_OAUTH_CALLBACK_PORT"); v != "" {
-		callbackPort, err = strconv.Atoi(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid callback port value: %w", err)
-		}
-		if callbackPort < 0 || callbackPort > 65535 {
-			return nil, errors.New("callback port value must be between 0 and 65535")
-		}
-		if callbackPort > 0 && callbackPort < 1024 {
-			logrus.Warnf("Using privileged port %d may require elevated permissions", callbackPort)
-		}
-	}
-
-	// Start a local callback server on a random port.
+	// Start a local callback server.
 	// Note: RFC 8252 Section 7.3 explicitly allows HTTP for localhost
 	// https://datatracker.ietf.org/doc/html/rfc8252#section-7.3
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", callbackPort))
@@ -155,6 +173,8 @@ func generateState() (string, error) {
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
+
+type openBrowserFunc func(url string) error
 
 // openBrowser attempts to open the specified URL in the user's default browser, with support for Windows, macOS, and Linux.
 func openBrowser(url string) error {
