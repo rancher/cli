@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 
@@ -95,7 +94,7 @@ func TestStartCallbackServerStateValidation(t *testing.T) {
 			case result := <-resultCh:
 				if tt.shouldSucceed {
 					require.NoError(t, result.err)
-					assert.Equal(t, "valid-code-123", result.code)
+					assert.Equal(t, expectedCode, result.code)
 					assert.Equal(t, expectedState, result.state)
 				} else {
 					require.Error(t, result.err)
@@ -325,8 +324,6 @@ func TestOauthDeviceCodeAuth(t *testing.T) {
 }
 
 func TestOauthAuthCodeAuth(t *testing.T) {
-	t.Parallel()
-
 	// Fake OAuth server.
 	oauthServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -400,11 +397,9 @@ func TestOauthAuthCodeAuth(t *testing.T) {
 	}
 
 	t.Run("success", func(t *testing.T) {
-		err := os.Setenv("CATTLE_OAUTH_CALLBACK_PORT", "65535")
-		require.NoError(t, err)
-		defer os.Unsetenv("CATTLE_OAUTH_CALLBACK_PORT")
+		t.Setenv("CATTLE_OAUTH_CALLBACK_PORT", "65535")
 
-		_, err = oauthAuthCodeAuth(client, input, provider, time.Minute, true, openBrowser)
+		_, err := oauthAuthCodeAuth(client, input, provider, time.Minute, true, openBrowser)
 
 		require.NoError(t, err)
 
@@ -424,8 +419,6 @@ func TestOauthAuthCodeAuth(t *testing.T) {
 }
 
 func TestGetCallbackPort(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name        string
 		portEnv     string
@@ -471,8 +464,7 @@ func TestGetCallbackPort(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.portEnv != "" {
-				os.Setenv("CATTLE_OAUTH_CALLBACK_PORT", tt.portEnv)
-				defer os.Unsetenv("CATTLE_OAUTH_CALLBACK_PORT")
+				t.Setenv("CATTLE_OAUTH_CALLBACK_PORT", tt.portEnv)
 			}
 
 			port, err := getCallbackPort()
