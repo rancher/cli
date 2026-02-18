@@ -2,7 +2,7 @@ module github.com/rancher/cli
 
 go 1.24.0
 
-toolchain go1.24.11
+toolchain go1.24.12
 
 replace (
 	k8s.io/apiserver => k8s.io/apiserver v0.33.7
@@ -14,17 +14,17 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.6.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260129101144-bcfe9aa81a55
-	github.com/rancher/rancher/pkg/client v0.0.0-20260129101144-bcfe9aa81a55
-	github.com/sirupsen/logrus v1.9.3
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260213175854-29693de32e58
+	github.com/rancher/rancher/pkg/client v0.0.0-20260213175854-29693de32e58
+	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.14
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/oauth2 v0.33.0
-	golang.org/x/sync v0.17.0
-	golang.org/x/term v0.36.0
-	golang.org/x/text v0.30.0
+	golang.org/x/oauth2 v0.34.0
+	golang.org/x/sync v0.19.0
+	golang.org/x/term v0.39.0
+	golang.org/x/text v0.33.0
 	k8s.io/client-go v12.0.0+incompatible
 )
 
@@ -57,10 +57,10 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.12.4 // indirect
-	github.com/rancher/eks-operator v1.12.4 // indirect
+	github.com/rancher/aks-operator v1.12.6-rc.1 // indirect
+	github.com/rancher/eks-operator v1.12.6-rc.1 // indirect
 	github.com/rancher/fleet/pkg/apis v0.13.7 // indirect
-	github.com/rancher/gke-operator v1.12.4 // indirect
+	github.com/rancher/gke-operator v1.12.6-rc.1 // indirect
 	github.com/rancher/lasso v0.2.4 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
 	github.com/rancher/wrangler/v3 v3.2.4 // indirect
@@ -72,8 +72,8 @@ require (
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/net v0.46.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/time v0.13.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
