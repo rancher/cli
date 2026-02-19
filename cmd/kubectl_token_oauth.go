@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -177,20 +178,29 @@ func generateState() (string, error) {
 type openBrowserFunc func(url string) error
 
 // openBrowser attempts to open the specified URL in the user's default browser, with support for Windows, macOS, and Linux.
-func openBrowser(url string) error {
-	var cmd string
-	var args []string
+func openBrowser(openURL string) error {
+	URL, err := url.Parse(openURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if URL.Scheme != "http" && URL.Scheme != "https" {
+		return fmt.Errorf("unsupported URL scheme %s", URL.Scheme)
+	}
 
+	var (
+		cmd  string
+		args []string
+	)
 	switch runtime.GOOS {
 	case "darwin":
 		cmd = "open"
-		args = []string{url}
+		args = []string{openURL}
 	case "linux":
 		cmd = "xdg-open"
-		args = []string{url}
+		args = []string{openURL}
 	case "windows":
 		cmd = "cmd"
-		args = []string{"/c", "start", "", url}
+		args = []string{"/c", "start", "", openURL}
 	default:
 		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
@@ -243,7 +253,7 @@ func startCallbackServer(listener net.Listener, expectedState string, resultCh c
 				return
 			}
 
-			code := query.Get("code")
+			code := strings.TrimSpace(query.Get("code"))
 			if code == "" {
 				http.Error(w, "Missing authorization code", http.StatusBadRequest)
 				resultCh <- callbackResult{err: errors.New("missing authorization code in callback")}
