@@ -480,3 +480,35 @@ func TestGetCallbackPort(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenBrowserInvalidURL(t *testing.T) {
+	tests := []struct {
+		desc     string
+		url      string
+		errorMsg string
+	}{
+		{
+			desc:     "invalid URL format",
+			url:      "http://%41:8080/", // Invalid percent-encoding.
+			errorMsg: "invalid URL",
+		},
+		{
+			desc:     "unsupported URL scheme",
+			url:      "ftp://example.com/resource",
+			errorMsg: "unsupported URL scheme",
+		},
+		{
+			desc:     "empty string",
+			url:      "",
+			errorMsg: "unsupported URL scheme",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			err := openBrowser(tt.url)
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.errorMsg)
+		})
+	}
+}
