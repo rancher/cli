@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -24,6 +25,8 @@ type Config struct {
 	Path string `json:"path,omitempty"`
 	// CurrentServer the user has in focus
 	CurrentServer string
+	// Helper executable to store config
+	Helper string `json:"helper,omitempty"`
 }
 
 // ServerConfig holds the config for each server the user has setup
@@ -50,6 +53,7 @@ func LoadFromPath(path string) (Config, error) {
 	cf := Config{
 		Path:    path,
 		Servers: make(map[string]*ServerConfig),
+		Helper:  "built-in",
 	}
 
 	content, err := os.ReadFile(path)
@@ -68,6 +72,26 @@ func LoadFromPath(path string) (Config, error) {
 	cf.Path = path
 
 	return cf, nil
+}
+
+// fetch rancher cli config by executing an external helper
+func LoadWithHelper(helper string) (Config, error) {
+	cf := Config{
+		Path:    "",
+		Servers: make(map[string]*ServerConfig),
+		Helper:  helper,
+	}
+
+	cmd := exec.Command(helper, "get")
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	content, err := cmd.Output()
+	if err != nil {
+		return cf, err
+	}
+
+	err = json.Unmarshal(content, &cf)
+	return cf, err
 }
 
 // GetFilePermissionWarnings returns the following warnings based on the file permission:
@@ -102,6 +126,17 @@ func GetFilePermissionWarnings(path string) ([]string, error) {
 }
 
 func (c Config) Write() error {
+	switch c.Helper {
+	case "built-in":
+		return c.writeNative()
+	default:
+		// if rancher config was loaded by external helper
+		// use the same helper to persist the config
+		return c.writeWithHelper()
+	}
+}
+
+func (c Config) writeNative() error {
 	err := os.MkdirAll(filepath.Dir(c.Path), 0700)
 	if err != nil {
 		return err
@@ -116,6 +151,19 @@ func (c Config) Write() error {
 	defer output.Close()
 
 	return json.NewEncoder(output).Encode(c)
+}
+
+func (c Config) writeWithHelper() error {
+	logrus.Infof("Saving config with helper %s", c.Helper)
+	jsonConfig, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(c.Helper, "store", string(jsonConfig))
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	err = cmd.Run()
+	return err
 }
 
 func (c Config) FocusedServer() (*ServerConfig, error) {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -290,5 +292,57 @@ func TestNewHTTPClient(t *testing.T) {
 		proxyURL, err = transport.Proxy(req)
 		require.NoError(t, err)
 		require.Nil(t, proxyURL)
+	})
+}
+
+// TestConfigHelperIntegration tests that the config helper functionality
+// integrates properly with the CLI loading mechanism
+func TestConfigHelperIntegration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("loadConfig uses built-in helper by default", func(t *testing.T) {
+		t.Parallel()
+		assert := assert.New(t)
+		require := require.New(t)
+
+		// Create a temporary config file
+		dir, err := os.MkdirTemp("", "rancher-cli-test-*")
+		require.NoError(err)
+		defer os.RemoveAll(dir)
+
+		configPath := filepath.Join(dir, "cli2.json")
+		configContent := `{"Servers":{"test":{"url":"https://test.com"}},"CurrentServer":"test"}`
+		err = os.WriteFile(configPath, []byte(configContent), 0600)
+		require.NoError(err)
+
+		// Test that config.LoadFromPath works with built-in helper
+		conf, err := config.LoadFromPath(configPath)
+		require.NoError(err)
+		assert.Equal("built-in", conf.Helper)
+		assert.Equal("test", conf.CurrentServer)
+	})
+
+	t.Run("external helper integration works", func(t *testing.T) {
+		t.Parallel()
+		assert := assert.New(t)
+		require := require.New(t)
+
+		// Create a mock helper script
+		dir, err := os.MkdirTemp("", "rancher-cli-test-*")
+		require.NoError(err)
+		defer os.RemoveAll(dir)
+
+		helperScript := `#!/bin/bash
+echo '{"Servers":{"helper-test":{"url":"https://helper.com"}},"CurrentServer":"helper-test"}'`
+		helperPath := filepath.Join(dir, "test-helper")
+		err = os.WriteFile(helperPath, []byte(helperScript), 0755)
+		require.NoError(err)
+
+		// Test that config.LoadWithHelper works
+		conf, err := config.LoadWithHelper(helperPath)
+		require.NoError(err)
+		assert.Equal(helperPath, conf.Helper)
+		assert.Equal("helper-test", conf.CurrentServer)
+		assert.Empty(conf.Path) // Path should be empty for helper-loaded configs
 	})
 }

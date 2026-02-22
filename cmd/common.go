@@ -287,8 +287,15 @@ func GetConfigPath(ctx *cli.Context) string {
 }
 
 func loadConfig(ctx *cli.Context) (config.Config, error) {
-	path := GetConfigPath(ctx)
-	return config.LoadFromPath(path)
+	switch ctx.GlobalString("config-helper") {
+	case "built-in":
+		path := GetConfigPath(ctx)
+		return config.LoadFromPath(path)
+	default:
+		// allow loading of rancher config by triggering an
+		// external helper executable
+		return config.LoadWithHelper(ctx.GlobalString("config-helper"))
+	}
 }
 
 func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
