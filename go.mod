@@ -22,7 +22,7 @@ require (
 	github.com/urfave/cli v1.22.17
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/oauth2 v0.32.0
-	golang.org/x/sync v0.17.0
+	golang.org/x/sync v0.18.0
 	golang.org/x/term v0.36.0
 	golang.org/x/text v0.30.0
 	k8s.io/client-go v12.0.0+incompatible
