@@ -108,6 +108,7 @@ func mainErr() error {
 	app.Commands = []cli.Command{
 		cmd.ClusterCommand(),
 		cmd.ContextCommand(),
+		cmd.HelmCommand(),
 		cmd.InspectCommand(),
 		cmd.KubectlCommand(),
 		cmd.LoginCommand(),
