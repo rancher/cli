@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/rancher/norman/clientbase"
@@ -13,14 +14,54 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+// clusterIDRegexp matches valid cluster ID formats: c-xxxxx or c-m-xxxxxxxx
+var clusterIDRegexp = regexp.MustCompile(`^(c-[[:alnum:]]{5})|(c-m-[[:alnum:]]{8})$`)
+
 func KubectlCommand() cli.Command {
 	return cli.Command{
-		Name:            "kubectl",
-		Usage:           "Run kubectl commands",
-		Description:     "Use the current cluster context to run kubectl commands in the cluster",
+		Name:  "kubectl",
+		Usage: "Run kubectl commands",
+		Description: `Use the current cluster context to run kubectl commands in the cluster.
+
+Use --context to run commands in a different cluster without switching:
+    rancher kubectl --context c-xxxxx get pods`,
 		Action:          runKubectl,
 		SkipFlagParsing: true,
 	}
+}
+
+// extractContextFlag parses and removes the --context flag from args.
+// Returns the context value (empty if not provided) and the remaining args for kubectl.
+func extractContextFlag(args cli.Args) (contextOverride string, kubectlArgs []string) {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--context" && i+1 < len(args) {
+			contextOverride = args[i+1]
+			i++ // Skip the value
+		} else if val, found := strings.CutPrefix(arg, "--context="); found {
+			contextOverride = val
+		} else {
+			kubectlArgs = append(kubectlArgs, arg)
+		}
+	}
+	return contextOverride, kubectlArgs
+}
+
+// parseContextOverride validates and returns a cluster ID.
+// Accepts formats: "local", "c-xxxxx", or "c-m-xxxxxxxx".
+func parseContextOverride(context string) (string, error) {
+	if context == "" {
+		return "", fmt.Errorf("context cannot be empty")
+	}
+
+	if context == "local" {
+		return context, nil
+	}
+	if clusterIDRegexp.MatchString(context) {
+		return context, nil
+	}
+
+	return "", fmt.Errorf("invalid cluster ID format %q: expected local, c-xxxxx, or c-m-xxxxxxxx", context)
 }
 
 func runKubectl(ctx *cli.Context) error {
@@ -28,6 +69,9 @@ func runKubectl(ctx *cli.Context) error {
 	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
 		return cli.ShowCommandHelp(ctx, "kubectl")
 	}
+
+	// Extract --context flag from args before passing to kubectl
+	contextOverride, kubectlArgs := extractContextFlag(args)
 
 	path, err := exec.LookPath("kubectl")
 	if err != nil {
@@ -58,7 +102,19 @@ func runKubectl(ctx *cli.Context) error {
 	}
 
 	currentUser := t.UserID
-	kubeConfig, err := getKubeConfigForUser(ctx, currentUser)
+
+	// Determine target cluster ID
+	var targetClusterID string
+	if contextOverride != "" {
+		targetClusterID, err = parseContextOverride(contextOverride)
+		if err != nil {
+			return err
+		}
+	} else {
+		targetClusterID = c.UserConfig.FocusedCluster()
+	}
+
+	kubeConfig, err := getKubeConfigForUserAndCluster(ctx, currentUser, targetClusterID)
 	if err != nil {
 		return err
 	}
@@ -76,8 +132,11 @@ func runKubectl(ctx *cli.Context) error {
 	}
 
 	if kubeConfig == nil || !isTokenValid {
-		cluster, err := getClusterByID(c, c.UserConfig.FocusedCluster())
+		cluster, err := getClusterByID(c, targetClusterID)
 		if err != nil {
+			if contextOverride != "" {
+				return fmt.Errorf("invalid --context %q: %w", contextOverride, err)
+			}
 			return err
 		}
 
@@ -92,7 +151,7 @@ func runKubectl(ctx *cli.Context) error {
 			return err
 		}
 
-		if err := setKubeConfigForUser(ctx, currentUser, kubeConfig); err != nil {
+		if err := setKubeConfigForUserAndCluster(ctx, currentUser, targetClusterID, kubeConfig); err != nil {
 			return err
 		}
 	}
@@ -110,7 +169,7 @@ func runKubectl(ctx *cli.Context) error {
 		return err
 	}
 
-	cmd := exec.Command(path, ctx.Args()...)
+	cmd := exec.Command(path, kubectlArgs...)
 	cmd.Env = append(os.Environ(), "KUBECONFIG="+tmpfile.Name())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
