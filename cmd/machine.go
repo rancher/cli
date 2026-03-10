@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/rancher/cli/cliclient"
-	capiClient "github.com/rancher/rancher/pkg/client/generated/cluster/v1beta1"
+	capiClient "github.com/rancher/rancher/pkg/client/generated/cluster/v1beta2"
 	"github.com/urfave/cli"
 )
 
