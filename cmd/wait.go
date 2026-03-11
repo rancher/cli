@@ -67,7 +67,7 @@ func wait(ctx *cli.Context) error {
 	for {
 		select {
 		case <-timeout:
-			return fmt.Errorf("Timeout reached %v:%v transitioningMessage: %v", resource.Type, resource.ID, mapResource["transitioningMessage"])
+			return fmt.Errorf("timeout reached %v:%v transitioningMessage: %v", resource.Type, resource.ID, mapResource["transitioningMessage"])
 		case <-ticker.C:
 			err = c.ByID(resource, &mapResource)
 			if err != nil {
