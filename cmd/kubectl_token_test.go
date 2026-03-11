@@ -165,5 +165,5 @@ func TestCacheCredential(t *testing.T) {
 
 	expirationTimestamp := cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ExpirationTimestamp
 	require.NotNil(t, expirationTimestamp)
-	assert.True(t, expirationTimestamp.Time.Equal(expires.Time))
+	assert.True(t, expirationTimestamp.Equal(expires.Time))
 }

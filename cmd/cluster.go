@@ -742,7 +742,7 @@ func getClusterRAM(cluster managementClient.Cluster) string {
 // parseResourceString returns GB for Ki and Mi and CPU cores from 'm'
 func parseResourceString(mem string) string {
 	if strings.HasSuffix(mem, "Ki") {
-		num, err := strconv.ParseFloat(strings.Replace(mem, "Ki", "", -1), 64)
+		num, err := strconv.ParseFloat(strings.ReplaceAll(mem, "Ki", ""), 64)
 		if err != nil {
 			return mem
 		}
@@ -750,7 +750,7 @@ func parseResourceString(mem string) string {
 		return strings.TrimSuffix(fmt.Sprintf("%.2f", num), ".0")
 	}
 	if strings.HasSuffix(mem, "Mi") {
-		num, err := strconv.ParseFloat(strings.Replace(mem, "Mi", "", -1), 64)
+		num, err := strconv.ParseFloat(strings.ReplaceAll(mem, "Mi", ""), 64)
 		if err != nil {
 			return mem
 		}
@@ -758,7 +758,7 @@ func parseResourceString(mem string) string {
 		return strings.TrimSuffix(fmt.Sprintf("%.2f", num), ".0")
 	}
 	if strings.HasSuffix(mem, "m") {
-		num, err := strconv.ParseFloat(strings.Replace(mem, "m", "", -1), 64)
+		num, err := strconv.ParseFloat(strings.ReplaceAll(mem, "m", ""), 64)
 		if err != nil {
 			return mem
 		}
