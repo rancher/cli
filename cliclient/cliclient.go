@@ -8,7 +8,7 @@ import (
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
-	capiClient "github.com/rancher/rancher/pkg/client/generated/cluster/v1beta1"
+	capiClient "github.com/rancher/rancher/pkg/client/generated/cluster/v1beta2"
 	clusterClient "github.com/rancher/rancher/pkg/client/generated/cluster/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	projectClient "github.com/rancher/rancher/pkg/client/generated/project/v3"
