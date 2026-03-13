@@ -178,7 +178,7 @@ func parsePrincipalID(principalID string) *managementClient.Principal {
 	}
 }
 
-func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
+func getKubeConfigForUserAndCluster(ctx *cli.Context, user, clusterID string) (*api.Config, error) {
 	cf, err := loadConfig(ctx)
 	if err != nil {
 		return nil, err
@@ -189,11 +189,15 @@ func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
 		return nil, err
 	}
 
-	kubeConfig := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
+	if clusterID == "" {
+		clusterID = focusedServer.FocusedCluster()
+	}
+
+	kubeConfig := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, clusterID)]
 	return kubeConfig, nil
 }
 
-func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config) error {
+func setKubeConfigForUserAndCluster(ctx *cli.Context, user, clusterID string, kubeConfig *api.Config) error {
 	cf, err := loadConfig(ctx)
 	if err != nil {
 		return err
@@ -202,13 +206,17 @@ func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config)
 	focusedServer, err := cf.FocusedServer()
 	if err != nil {
 		return err
+	}
+
+	if clusterID == "" {
+		clusterID = focusedServer.FocusedCluster()
 	}
 
 	if focusedServer.KubeConfigs == nil {
 		focusedServer.KubeConfigs = make(map[string]*api.Config)
 	}
 
-	focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())] = kubeConfig
+	focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, clusterID)] = kubeConfig
 	return cf.Write()
 }
 
