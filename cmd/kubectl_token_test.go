@@ -241,6 +241,7 @@ func TestCacheCredential(t *testing.T) {
 	flagSet := flag.NewFlagSet("test", 0)
 	flagSet.String("server", "rancher.example.com", "doc")
 	flagSet.String("config", t.TempDir(), "doc")
+	flagSet.String("config-helper", "built-in", "")
 	cliCtx := cli.NewContext(nil, flagSet, nil)
 
 	serverConfig, err := lookupServerConfig(cliCtx)
