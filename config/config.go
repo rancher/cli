@@ -19,9 +19,10 @@ var ErrNoConfigurationFound = errors.New("no configuration found, run `login`")
 
 // Config holds the main config for the user
 type Config struct {
-	Servers map[string]*ServerConfig
-	//Path to the config file
-	Path string `json:"path,omitempty"`
+	// Servers is a map of server configs
+	Servers map[string]*ServerConfig `json:"Servers"`
+	// Path to the config file
+	Path string `json:"-"`
 	// CurrentServer is the name of the server the user is currently using
 	CurrentServer string `json:"CurrentServer"`
 }

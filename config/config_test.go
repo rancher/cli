@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	validFile = `
+	validConfigContent = `
 {
   "Servers": {
     "rancherDefault": {
@@ -25,7 +25,7 @@ const (
   },
   "CurrentServer": "rancherDefault"
 }`
-	invalidFile = `invalid config file`
+	invalidConfigContent = `invalid config file`
 )
 
 func TestGetFilePermissionWarnings(t *testing.T) {
@@ -68,7 +68,7 @@ func TestGetFilePermissionWarnings(t *testing.T) {
 			defer os.RemoveAll(dir)
 
 			path := filepath.Join(dir, "cli2.json")
-			err = os.WriteFile(path, []byte(validFile), tt.mode)
+			err = os.WriteFile(path, []byte(validConfigContent), tt.mode)
 			assert.NoError(err)
 
 			warnings, err := GetFilePermissionWarnings(path)
@@ -116,7 +116,7 @@ func TestPermission(t *testing.T) {
 		defer os.RemoveAll(dir)
 
 		path := filepath.Join(dir, "cli2.json")
-		err = os.WriteFile(path, []byte(validFile), 0700)
+		err = os.WriteFile(path, []byte(validConfigContent), 0700)
 		assert.NoError(err)
 
 		conf, err := LoadFromPath(path)
@@ -142,7 +142,7 @@ func TestLoadFromPath(t *testing.T) {
 	}{
 		{
 			name:    "valid config",
-			content: validFile,
+			content: validConfigContent,
 			expectedConf: Config{
 				Servers: map[string]*ServerConfig{
 					"rancherDefault": {
@@ -159,7 +159,7 @@ func TestLoadFromPath(t *testing.T) {
 		},
 		{
 			name:    "invalid config",
-			content: invalidFile,
+			content: invalidConfigContent,
 			expectedConf: Config{
 				Servers: map[string]*ServerConfig{},
 			},
