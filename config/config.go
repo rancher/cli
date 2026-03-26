@@ -22,8 +22,8 @@ type Config struct {
 	Servers map[string]*ServerConfig
 	//Path to the config file
 	Path string `json:"path,omitempty"`
-	// CurrentServer the user has in focus
-	CurrentServer string
+	// CurrentServer is the name of the server the user is currently using
+	CurrentServer string `json:"CurrentServer"`
 }
 
 // ServerConfig holds the config for each server the user has setup
@@ -118,15 +118,15 @@ func (c Config) Write() error {
 	return json.NewEncoder(output).Encode(c)
 }
 
-func (c Config) FocusedServer() (*ServerConfig, error) {
-	currentServer, found := c.Servers[c.CurrentServer]
-	if !found || currentServer == nil {
+func (c Config) GetCurrentServer() (*ServerConfig, error) {
+	server, found := c.Servers[c.CurrentServer]
+	if !found || server == nil {
 		return nil, ErrNoConfigurationFound
 	}
-	return currentServer, nil
+	return server, nil
 }
 
-func (c ServerConfig) FocusedCluster() string {
+func (c ServerConfig) GetCurrentCluster() string {
 	cluster, _, ok := strings.Cut(c.Project, ":")
 	if !ok {
 		return ""
@@ -134,7 +134,7 @@ func (c ServerConfig) FocusedCluster() string {
 	return cluster
 }
 
-func (c ServerConfig) FocusedProject() string {
+func (c ServerConfig) GetCurrentProject() string {
 	return c.Project
 }
 

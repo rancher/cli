@@ -21,7 +21,7 @@ func TestListProjectMembers(t *testing.T) {
 	now := time.Now()
 
 	userConfig := &fakeUserConfig{
-		FocusedProjectFunc: func() string {
+		GetCurrentProjectFunc: func() string {
 			return "c-fn7lc:p-9mdxl"
 		},
 	}

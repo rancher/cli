@@ -55,7 +55,7 @@ func nodeLs(ctx *cli.Context) error {
 		return err
 	}
 
-	collection, err := getNodesList(ctx, c, c.UserConfig.FocusedCluster())
+	collection, err := getNodesList(ctx, c, c.UserConfig.GetCurrentCluster())
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func getNodeByID(
 	c *cliclient.MasterClient,
 	nodeID string,
 ) (managementClient.Node, error) {
-	nodeCollection, err := getNodesList(ctx, c, c.UserConfig.FocusedCluster())
+	nodeCollection, err := getNodesList(ctx, c, c.UserConfig.GetCurrentCluster())
 	if err != nil {
 		return managementClient.Node{}, err
 	}
@@ -173,7 +173,7 @@ func getNodePools(
 	c *cliclient.MasterClient,
 ) (*managementClient.NodePoolCollection, error) {
 	filter := defaultListOpts(ctx)
-	filter.Filters["clusterId"] = c.UserConfig.FocusedCluster()
+	filter.Filters["clusterId"] = c.UserConfig.GetCurrentCluster()
 
 	collection, err := c.ManagementClient.NodePool.List(filter)
 	if err != nil {

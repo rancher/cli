@@ -164,7 +164,7 @@ func projectCreate(ctx *cli.Context) error {
 		return err
 	}
 
-	clusterID := c.UserConfig.FocusedCluster()
+	clusterID := c.UserConfig.GetCurrentCluster()
 	if ctx.String("cluster") != "" {
 		resource, err := Lookup(c, ctx.String("cluster"), "cluster")
 		if err != nil {
@@ -317,7 +317,7 @@ type prtbLister interface {
 }
 
 func listProjectMembers(ctx *cli.Context, out io.Writer, config userConfig, prtbs prtbLister, principals principalGetter) error {
-	projectID := config.FocusedProject()
+	projectID := config.GetCurrentProject()
 	if ctx.String("project-id") != "" {
 		projectID = ctx.String("project-id")
 	}
@@ -365,7 +365,7 @@ func getProjectList(
 	c *cliclient.MasterClient,
 ) (*managementClient.ProjectCollection, error) {
 	filter := defaultListOpts(ctx)
-	filter.Filters["clusterId"] = c.UserConfig.FocusedCluster()
+	filter.Filters["clusterId"] = c.UserConfig.GetCurrentCluster()
 
 	collection, err := c.ManagementClient.Project.List(filter)
 	if err != nil {

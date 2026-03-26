@@ -264,7 +264,7 @@ func TestCacheCredential(t *testing.T) {
 	err = cfg.Write()
 	require.NoError(t, err)
 
-	serverConfig, err = cfg.FocusedServer()
+	serverConfig, err = cfg.GetCurrentServer()
 	require.NoError(t, err)
 
 	cred = &config.ExecCredential{Status: &config.ExecCredentialStatus{Token: "new-token"}}

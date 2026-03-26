@@ -113,7 +113,7 @@ func (mc *MasterClient) newManagementClient() error {
 
 func (mc *MasterClient) newClusterClient() error {
 	options := createClientOpts(mc.UserConfig)
-	options.URL = options.URL + "/clusters/" + mc.UserConfig.FocusedCluster()
+	options.URL = options.URL + "/clusters/" + mc.UserConfig.GetCurrentCluster()
 
 	// Setup the cluster client
 	cc, err := clusterClient.NewClient(options)
