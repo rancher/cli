@@ -115,7 +115,7 @@ func (mc *MasterClient) newClusterClient() error {
 	options := createClientOpts(mc.UserConfig)
 	options.URL = options.URL + "/clusters/" + mc.UserConfig.FocusedCluster()
 
-	// Setup the project client
+	// Setup the cluster client
 	cc, err := clusterClient.NewClient(options)
 	if err != nil {
 		if clientbase.IsNotFound(err) {
@@ -136,7 +136,7 @@ func (mc *MasterClient) newProjectClient() error {
 	pc, err := projectClient.NewClient(options)
 	if err != nil {
 		if clientbase.IsNotFound(err) {
-			err = fmt.Errorf("current project not available, try running `rancher context switch: %w", err)
+			err = fmt.Errorf("current project not available, try running `rancher context switch`: %w", err)
 		}
 		return err
 	}

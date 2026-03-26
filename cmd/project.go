@@ -333,7 +333,7 @@ func listProjectMembers(ctx *cli.Context, out io.Writer, config userConfig, prtb
 	rtbs := make([]RoleTemplateBinding, 0, len(bindings.Data))
 
 	for _, binding := range bindings.Data {
-		parsedTime, err := createdTimetoHuman(binding.Created)
+		parsedTime, err := createdTimeToHuman(binding.Created)
 		if err != nil {
 			return err
 		}

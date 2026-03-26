@@ -93,7 +93,7 @@ func getMachineByNodeName(
 		}
 	}
 
-	return capiClient.Machine{}, fmt.Errorf("no machine found with associated to node [%s], run "+
+	return capiClient.Machine{}, fmt.Errorf("no machine found associated with node [%s], run "+
 		"`rancher machines` to see available nodes", nodeName)
 }
 

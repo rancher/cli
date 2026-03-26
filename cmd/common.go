@@ -47,9 +47,9 @@ const (
 var (
 	// ManagementResourceTypes lists the types we use the management client for
 	ManagementResourceTypes = []string{"cluster", "node", "project"}
-	// ProjectResourceTypes lists the types we use the cluster client for
+	// ProjectResourceTypes lists the types we use the project client for
 	ProjectResourceTypes = []string{"secret", "namespacedSecret", "workload"}
-	// ClusterResourceTypes lists the types we use the project client for
+	// ClusterResourceTypes lists the types we use the cluster client for
 	ClusterResourceTypes = []string{"persistentVolume", "storageClass", "namespace"}
 
 	formatFlag = cli.StringFlag{
@@ -612,7 +612,7 @@ func getClusterName(cluster *managementClient.Cluster) string {
 
 const humanTimeFormat = "02 Jan 2006 15:04:05 MST"
 
-func createdTimetoHuman(t string) (string, error) {
+func createdTimeToHuman(t string) (string, error) {
 	parsedTime, err := time.Parse(time.RFC3339, t)
 	if err != nil {
 		return "", err
