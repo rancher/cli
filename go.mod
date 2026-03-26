@@ -16,14 +16,14 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.5.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260309190128-6d4efe6e469e
-	github.com/rancher/rancher/pkg/client v0.0.0-20260309190128-6d4efe6e469e
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260326010809-ad43b17fff90
+	github.com/rancher/rancher/pkg/client v0.0.0-20260326010809-ad43b17fff90
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.14
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/oauth2 v0.33.0
+	golang.org/x/oauth2 v0.35.0
 	golang.org/x/sync v0.19.0
 	golang.org/x/term v0.39.0
 	golang.org/x/text v0.33.0
@@ -62,12 +62,12 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.11.10 // indirect
-	github.com/rancher/eks-operator v1.11.10 // indirect
+	github.com/rancher/aks-operator v1.11.11 // indirect
+	github.com/rancher/eks-operator v1.11.11 // indirect
 	github.com/rancher/fleet/pkg/apis v0.12.3 // indirect
-	github.com/rancher/gke-operator v1.11.10 // indirect
+	github.com/rancher/gke-operator v1.11.11 // indirect
 	github.com/rancher/lasso v0.2.3 // indirect
-	github.com/rancher/rke v1.8.5 // indirect
+	github.com/rancher/rke v1.8.12 // indirect
 	github.com/rancher/wrangler/v3 v3.2.4 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
