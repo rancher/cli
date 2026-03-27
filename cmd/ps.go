@@ -10,7 +10,7 @@ import (
 )
 
 type PSHolder struct {
-	NameSpace string
+	Namespace string
 	Name      string
 	Type      string
 	State     string
@@ -76,7 +76,7 @@ func psLs(ctx *cli.Context) error {
 	}
 
 	wlWriter := NewTableWriter([][]string{
-		{"NAMESPACE", "NameSpace"},
+		{"NAMESPACE", "Namespace"},
 		{"NAME", "Name"},
 		{"TYPE", "Type"},
 		{"STATE", "State"},
@@ -100,7 +100,7 @@ func psLs(ctx *cli.Context) error {
 		item.Type = titleCaser.String(item.Type)
 
 		wlWriter.Write(&PSHolder{
-			NameSpace: item.NamespaceId,
+			Namespace: item.NamespaceId,
 			Name:      item.Name,
 			Type:      item.Type,
 			State:     item.State,
@@ -121,7 +121,7 @@ func psLs(ctx *cli.Context) error {
 		for _, item := range orphanPods.Data {
 			item.Type = titleCaser.String(item.Type)
 			wlWriter.Write(&PSHolder{
-				NameSpace: item.NamespaceId,
+				Namespace: item.NamespaceId,
 				Name:      item.Name,
 				Type:      item.Type,
 				State:     item.State,

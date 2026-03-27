@@ -39,7 +39,7 @@ func contextSwitch(ctx *cli.Context) error {
 		return err
 	}
 
-	server, err := cf.FocusedServer()
+	server, err := cf.GetCurrentServer()
 	if err != nil {
 		return err
 	}

@@ -47,9 +47,9 @@ const (
 var (
 	// ManagementResourceTypes lists the types we use the management client for
 	ManagementResourceTypes = []string{"cluster", "node", "project"}
-	// ProjectResourceTypes lists the types we use the cluster client for
+	// ProjectResourceTypes lists the types we use the project client for
 	ProjectResourceTypes = []string{"secret", "namespacedSecret", "workload"}
-	// ClusterResourceTypes lists the types we use the project client for
+	// ClusterResourceTypes lists the types we use the cluster client for
 	ClusterResourceTypes = []string{"persistentVolume", "storageClass", "namespace"}
 
 	formatFlag = cli.StringFlag{
@@ -184,12 +184,12 @@ func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
 		return nil, err
 	}
 
-	focusedServer, err := cf.FocusedServer()
+	currentServer, err := cf.GetCurrentServer()
 	if err != nil {
 		return nil, err
 	}
 
-	kubeConfig := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
+	kubeConfig := currentServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, currentServer.GetCurrentCluster())]
 	return kubeConfig, nil
 }
 
@@ -199,16 +199,16 @@ func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config)
 		return err
 	}
 
-	focusedServer, err := cf.FocusedServer()
+	currentServer, err := cf.GetCurrentServer()
 	if err != nil {
 		return err
 	}
 
-	if focusedServer.KubeConfigs == nil {
-		focusedServer.KubeConfigs = make(map[string]*api.Config)
+	if currentServer.KubeConfigs == nil {
+		currentServer.KubeConfigs = make(map[string]*api.Config)
 	}
 
-	focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())] = kubeConfig
+	currentServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, currentServer.GetCurrentCluster())] = kubeConfig
 	return cf.Write()
 }
 
@@ -297,7 +297,7 @@ func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 		return nil, err
 	}
 
-	cs, err := cf.FocusedServer()
+	cs, err := cf.GetCurrentServer()
 	if err != nil {
 		return nil, err
 	}
@@ -612,7 +612,7 @@ func getClusterName(cluster *managementClient.Cluster) string {
 
 const humanTimeFormat = "02 Jan 2006 15:04:05 MST"
 
-func createdTimetoHuman(t string) (string, error) {
+func createdTimeToHuman(t string) (string, error) {
 	parsedTime, err := time.Parse(time.RFC3339, t)
 	if err != nil {
 		return "", err

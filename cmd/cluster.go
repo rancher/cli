@@ -243,7 +243,7 @@ func clusterLs(ctx *cli.Context) error {
 
 	for _, item := range collection.Data {
 		var current string
-		if item.ID == c.UserConfig.FocusedCluster() {
+		if item.ID == c.UserConfig.GetCurrentCluster() {
 			current = "*"
 		}
 
@@ -529,7 +529,7 @@ func addClusterMemberRoles(ctx *cli.Context) error {
 		return err
 	}
 
-	clusterID := c.UserConfig.FocusedCluster()
+	clusterID := c.UserConfig.GetCurrentCluster()
 	if ctx.String("cluster-id") != "" {
 		clusterID = ctx.String("cluster-id")
 	}
@@ -572,7 +572,7 @@ func deleteClusterMemberRoles(ctx *cli.Context) error {
 		return err
 	}
 
-	clusterID := c.UserConfig.FocusedCluster()
+	clusterID := c.UserConfig.GetCurrentCluster()
 	if ctx.String("cluster-id") != "" {
 		clusterID = ctx.String("cluster-id")
 	}
@@ -612,12 +612,12 @@ type crtbLister interface {
 }
 
 type userConfig interface {
-	FocusedCluster() string
-	FocusedProject() string
+	GetCurrentCluster() string
+	GetCurrentProject() string
 }
 
 func listClusterMembers(ctx *cli.Context, out io.Writer, config userConfig, crtbs crtbLister, principals principalGetter) error {
-	clusterID := config.FocusedCluster()
+	clusterID := config.GetCurrentCluster()
 	if ctx.String("cluster-id") != "" {
 		clusterID = ctx.String("cluster-id")
 	}
@@ -633,7 +633,7 @@ func listClusterMembers(ctx *cli.Context, out io.Writer, config userConfig, crtb
 	rtbs := make([]RoleTemplateBinding, 0, len(bindings.Data))
 
 	for _, binding := range bindings.Data {
-		parsedTime, err := createdTimetoHuman(binding.Created)
+		parsedTime, err := createdTimeToHuman(binding.Created)
 		if err != nil {
 			return err
 		}

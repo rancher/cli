@@ -21,7 +21,7 @@ func TestListClusterMembers(t *testing.T) {
 	now := time.Now()
 
 	userConfig := &fakeUserConfig{
-		FocusedClusterFunc: func() string {
+		GetCurrentClusterFunc: func() string {
 			return "c-fn7lc"
 		},
 	}

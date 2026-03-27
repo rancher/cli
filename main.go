@@ -133,7 +133,7 @@ func mainErr() error {
 	return app.Run(parsed)
 }
 
-var singleAlphaLetterRegxp = regexp.MustCompile("[a-zA-Z]")
+var singleAlphaLetterRegexp = regexp.MustCompile("[a-zA-Z]")
 
 func parseArgs(args []string) ([]string, error) {
 	result := []string{}
@@ -146,7 +146,7 @@ func parseArgs(args []string) ([]string, error) {
 					}
 					result[len(result)-1] = result[len(result)-1] + arg[i+1:]
 					break
-				} else if singleAlphaLetterRegxp.MatchString(string(c)) {
+				} else if singleAlphaLetterRegexp.MatchString(string(c)) {
 					result = append(result, "-"+string(c))
 				} else {
 					return nil, fmt.Errorf("invalid input %s in flag", string(c))

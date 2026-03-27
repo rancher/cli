@@ -45,7 +45,7 @@ func NamespaceCommand() cli.Command {
 				Name:        "create",
 				Usage:       "Create a namespace",
 				Description: "\nCreates a namespace in the current cluster.",
-				ArgsUsage:   "[NEWPROJECTNAME...]",
+				ArgsUsage:   "[NEWNAMESPACENAME...]",
 				Action:      namespaceCreate,
 				Flags: []cli.Flag{
 					cli.StringFlag{

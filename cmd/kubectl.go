@@ -46,7 +46,7 @@ func runKubectl(ctx *cli.Context) error {
 		return err
 	}
 
-	currentRancherServer, err := config.FocusedServer()
+	currentRancherServer, err := config.GetCurrentServer()
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func runKubectl(ctx *cli.Context) error {
 	}
 
 	if kubeConfig == nil || !isTokenValid {
-		cluster, err := getClusterByID(c, c.UserConfig.FocusedCluster())
+		cluster, err := getClusterByID(c, c.UserConfig.GetCurrentCluster())
 		if err != nil {
 			return err
 		}

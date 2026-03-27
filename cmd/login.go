@@ -239,7 +239,7 @@ func loginContext(ctx *cli.Context) error {
 		return err
 	}
 
-	cluster, err := getClusterByID(c, c.UserConfig.FocusedCluster())
+	cluster, err := getClusterByID(c, c.UserConfig.GetCurrentCluster())
 	if err != nil {
 		return err
 	}
