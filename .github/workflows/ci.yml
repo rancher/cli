@@ -5,6 +5,13 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
 
   build:
@@ -13,6 +20,8 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      with:
+        persist-credentials: false
 
     - name: Set up Go
       uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
@@ -45,6 +54,7 @@ jobs:
       run: ./scripts/build
 
     - name: Package
+      id: package
       run: |
         ./scripts/package
         ls -lR dist/artifacts
@@ -54,11 +64,11 @@ jobs:
         # Export the tag for the next step
         source ./scripts/version
         echo "VERSION=$VERSION"
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Docker Build
       uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
       with:
         push: false
         context: package
-        tags: rancher/cli2:${{ env.VERSION }}
+        tags: rancher/cli2:${{ steps.package.outputs.VERSION }}
