@@ -15,6 +15,8 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      with:
+        persist-credentials: false
 
     - name: Load Secrets from Vault
       uses: rancher-eio/read-vault-secrets@0da85151ad1f19ed7986c41587e45aac1ace74b6 # v3
@@ -66,6 +68,7 @@ jobs:
       run: ./scripts/build
 
     - name: Package
+      id: package
       run: |
         ./scripts/package
         ls -lR dist/artifacts
@@ -75,23 +78,24 @@ jobs:
         # Export the tag for the next step
         source ./scripts/version
         echo "VERSION=$VERSION"
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Upload Release assets
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VERSION: ${{ steps.package.outputs.VERSION }}
       run: |
-        cd dist/artifacts/$VERSION
+        cd dist/artifacts/"$VERSION"
         ls -lR
         # generate sha256sum file
         find . -maxdepth 1 -type f ! -name sha256sum.txt -printf '%P\0' | xargs -0 sha256sum > sha256sum.txt
-        gh release upload $VERSION *.txt *.xz *.gz *.zip
+        gh release upload "$VERSION" *.txt *.xz *.gz *.zip
 
     - name: Upload Release assets to Google Cloud
       uses: google-github-actions/upload-cloud-storage@c0f6160ff80057923ff50e5e567695cea181ec23 # v2
       with:
-        path: dist/artifacts/${{ env.VERSION }}
-        destination: releases.rancher.com/cli2/${{ env.VERSION }}
+        path: dist/artifacts/${{ steps.package.outputs.VERSION }}
+        destination: releases.rancher.com/cli2/${{ steps.package.outputs.VERSION }}
         glob: '*.*' # copy only the files in the path folder
         parent: false
         process_gcloudignore: false
@@ -103,4 +107,4 @@ jobs:
       with:
         push: true
         context: package
-        tags: rancher/cli2:${{ env.VERSION }}
+        tags: rancher/cli2:${{ steps.package.outputs.VERSION }}
