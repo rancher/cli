@@ -16,8 +16,8 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.5.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260326010809-ad43b17fff90
-	github.com/rancher/rancher/pkg/client v0.0.0-20260326010809-ad43b17fff90
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260417183004-d2078d1c23b9
+	github.com/rancher/rancher/pkg/client v0.0.0-20260417183004-d2078d1c23b9
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
@@ -91,7 +91,7 @@ require (
 	k8s.io/component-base v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
-	k8s.io/kubernetes v1.32.11 // indirect
+	k8s.io/kubernetes v1.32.13 // indirect
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
