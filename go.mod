@@ -5,10 +5,10 @@ go 1.25.0
 toolchain go1.25.7
 
 replace (
-	k8s.io/apiserver => k8s.io/apiserver v0.33.7
-	k8s.io/client-go => k8s.io/client-go v0.33.7
-	k8s.io/component-base => k8s.io/component-base v0.33.7
-	k8s.io/kubernetes => k8s.io/kubernetes v1.33.7
+	k8s.io/apiserver => k8s.io/apiserver v0.33.10
+	k8s.io/client-go => k8s.io/client-go v0.33.10
+	k8s.io/component-base => k8s.io/component-base v0.33.10
+	k8s.io/kubernetes => k8s.io/kubernetes v1.33.10
 )
 
 require (
@@ -79,10 +79,10 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.33.7 // indirect
-	k8s.io/apimachinery v0.33.7 // indirect
+	k8s.io/api v0.33.10 // indirect
+	k8s.io/apimachinery v0.33.10 // indirect
 	k8s.io/apiserver v0.33.7 // indirect
-	k8s.io/component-base v0.33.7 // indirect
+	k8s.io/component-base v0.33.10 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/kubernetes v1.33.7 // indirect
