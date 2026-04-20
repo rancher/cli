@@ -5,17 +5,17 @@ go 1.25.0
 toolchain go1.25.7
 
 replace (
-	k8s.io/apiserver => k8s.io/apiserver v0.33.7
-	k8s.io/client-go => k8s.io/client-go v0.33.7
-	k8s.io/component-base => k8s.io/component-base v0.33.7
-	k8s.io/kubernetes => k8s.io/kubernetes v1.33.7
+	k8s.io/apiserver => k8s.io/apiserver v0.33.10
+	k8s.io/client-go => k8s.io/client-go v0.33.10
+	k8s.io/component-base => k8s.io/component-base v0.33.10
+	k8s.io/kubernetes => k8s.io/kubernetes v1.33.10
 )
 
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.6.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260325203238-fc88b11c7f6e
-	github.com/rancher/rancher/pkg/client v0.0.0-20260325203238-fc88b11c7f6e
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260417115337-cf0cf7dd2764
+	github.com/rancher/rancher/pkg/client v0.0.0-20260417115337-cf0cf7dd2764
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
@@ -57,10 +57,10 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.12.7 // indirect
-	github.com/rancher/eks-operator v1.12.7 // indirect
+	github.com/rancher/aks-operator v1.12.8-rc.1 // indirect
+	github.com/rancher/eks-operator v1.12.8-rc.1 // indirect
 	github.com/rancher/fleet/pkg/apis v0.13.7 // indirect
-	github.com/rancher/gke-operator v1.12.7 // indirect
+	github.com/rancher/gke-operator v1.12.8-rc.1 // indirect
 	github.com/rancher/lasso v0.2.4 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
 	github.com/rancher/wrangler/v3 v3.2.4 // indirect
@@ -69,8 +69,8 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.opentelemetry.io/otel v1.37.0 // indirect
-	go.opentelemetry.io/otel/trace v1.37.0 // indirect
+	go.opentelemetry.io/otel v1.39.0 // indirect
+	go.opentelemetry.io/otel/trace v1.39.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
@@ -79,13 +79,13 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.33.7 // indirect
-	k8s.io/apimachinery v0.33.7 // indirect
-	k8s.io/apiserver v0.33.7 // indirect
-	k8s.io/component-base v0.33.7 // indirect
+	k8s.io/api v0.33.10 // indirect
+	k8s.io/apimachinery v0.33.10 // indirect
+	k8s.io/apiserver v0.33.10 // indirect
+	k8s.io/component-base v0.33.10 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
-	k8s.io/kubernetes v1.33.7 // indirect
+	k8s.io/kubernetes v1.33.10 // indirect
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
