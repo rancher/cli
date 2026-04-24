@@ -52,7 +52,7 @@ func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider, u
 func getCallbackPort() (int, error) {
 	env := os.Getenv("CATTLE_OAUTH_CALLBACK_PORT")
 	if env == "" {
-		return 0, nil // Use random port
+		return 8888, nil // Default port
 	}
 
 	port, err := strconv.Atoi(env)
