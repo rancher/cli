@@ -74,6 +74,10 @@ func mainErr() error {
 		Usage:                         "Rancher CLI, managing containers one UTF-8 character at a time",
 		Version:                       VERSION,
 		CustomRootCommandHelpTemplate: AppHelpTemplate,
+		EnableShellCompletion:         true,
+		ConfigureShellCompletionCommand: func(cmd *cli.Command) {
+			cmd.Hidden = false
+		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
 			if c.Bool("debug") {
 				logrus.SetLevel(logrus.DebugLevel)
