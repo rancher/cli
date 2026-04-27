@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -31,7 +32,7 @@ import (
 	"github.com/rancher/norman/types/convert"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -52,14 +53,16 @@ var (
 	// ClusterResourceTypes lists the types we use the cluster client for
 	ClusterResourceTypes = []string{"persistentVolume", "storageClass", "namespace"}
 
-	formatFlag = cli.StringFlag{
-		Name:  "format,o",
-		Usage: "'json', 'yaml' or custom format",
+	formatFlag = &cli.StringFlag{
+		Name:    "format",
+		Aliases: []string{"o"},
+		Usage:   "'json', 'yaml' or custom format",
 	}
 
-	quietFlag = cli.BoolFlag{
-		Name:  "quiet,q",
-		Usage: "Only display IDs or suppress help text",
+	quietFlag = &cli.BoolFlag{
+		Name:    "quiet",
+		Aliases: []string{"q"},
+		Usage:   "Only display IDs or suppress help text",
 	}
 )
 
@@ -90,15 +93,15 @@ func listAllRoles() []string {
 	return roles
 }
 
-func listRoles(ctx *cli.Context, context string) error {
-	c, err := GetClient(ctx)
+func listRoles(cmd *cli.Command, roleContext string) error {
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	filter := defaultListOpts(ctx)
+	filter := defaultListOpts(cmd)
 	filter.Filters["hidden"] = false
-	filter.Filters["context"] = context
+	filter.Filters["context"] = roleContext
 
 	templates, err := c.ManagementClient.RoleTemplate.List(filter)
 	if err != nil {
@@ -109,7 +112,7 @@ func listRoles(ctx *cli.Context, context string) error {
 		{"ID", "ID"},
 		{"NAME", "Name"},
 		{"DESCRIPTION", "Description"},
-	}, ctx)
+	}, cmd)
 
 	defer writer.Close()
 
@@ -178,8 +181,8 @@ func parsePrincipalID(principalID string) *managementClient.Principal {
 	}
 }
 
-func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
-	cf, err := loadConfig(ctx)
+func getKubeConfigForUser(cmd *cli.Command, user string) (*api.Config, error) {
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -193,8 +196,8 @@ func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
 	return kubeConfig, nil
 }
 
-func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config) error {
-	cf, err := loadConfig(ctx)
+func setKubeConfigForUser(cmd *cli.Command, user string, kubeConfig *api.Config) error {
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return err
 	}
@@ -212,8 +215,8 @@ func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config)
 	return cf.Write()
 }
 
-func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (*managementClient.Principal, error) {
-	filter := defaultListOpts(ctx)
+func searchForMember(cmd *cli.Command, c *cliclient.MasterClient, name string) (*managementClient.Principal, error) {
+	filter := defaultListOpts(cmd)
 	filter.Filters["ID"] = "thisisnotathingIhope"
 
 	// A collection is needed to get the action link
@@ -280,19 +283,19 @@ func verifyCert(caCert []byte) (string, error) {
 	return string(caCert), nil
 }
 
-func GetConfigPath(ctx *cli.Context) string {
+func GetConfigPath(cmd *cli.Command) string {
 	// path will always be set by the global flag default
-	path := ctx.GlobalString("config")
+	path := cmd.String("config")
 	return filepath.Join(path, cfgFile)
 }
 
-func loadConfig(ctx *cli.Context) (config.Config, error) {
-	path := GetConfigPath(ctx)
+func loadConfig(cmd *cli.Command) (config.Config, error) {
+	path := GetConfigPath(cmd)
 	return config.LoadFromPath(path)
 }
 
-func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
-	cf, err := loadConfig(ctx)
+func lookupConfig(cmd *cli.Command) (*config.ServerConfig, error) {
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -305,8 +308,8 @@ func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 	return cs, nil
 }
 
-func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
-	cf, err := lookupConfig(ctx)
+func GetClient(cmd *cli.Command) (*cliclient.MasterClient, error) {
+	cf, err := lookupConfig(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -475,12 +478,12 @@ func SimpleFormat(values [][]string) (string, string) {
 	return headerBuffer.String(), valueBuffer.String()
 }
 
-func defaultAction(fn func(ctx *cli.Context) error) func(ctx *cli.Context) error {
-	return func(ctx *cli.Context) error {
-		if ctx.Bool("help") {
-			return cli.ShowAppHelp(ctx)
+func defaultAction(fn func(ctx context.Context, cmd *cli.Command) error) func(ctx context.Context, cmd *cli.Command) error {
+	return func(ctx context.Context, cmd *cli.Command) error {
+		if cmd.Bool("help") {
+			return cli.ShowSubcommandHelp(cmd)
 		}
-		return fn(ctx)
+		return fn(ctx, cmd)
 	}
 }
 
@@ -586,9 +589,9 @@ func hasPrefix(buf []byte, prefix []byte) bool {
 }
 
 // getClusterNames maps cluster ID to name and defaults to ID if name is blank
-func getClusterNames(ctx *cli.Context, c *cliclient.MasterClient) (map[string]string, error) {
+func getClusterNames(cmd *cli.Command, c *cliclient.MasterClient) (map[string]string, error) {
 	clusterNames := make(map[string]string)
-	clusterCollection, err := c.ManagementClient.Cluster.List(defaultListOpts(ctx))
+	clusterCollection, err := c.ManagementClient.Cluster.List(defaultListOpts(cmd))
 	if err != nil {
 		return clusterNames, err
 	}

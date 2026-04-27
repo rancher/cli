@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -13,7 +14,7 @@ import (
 	"github.com/rancher/cli/config"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type LoginData struct {
@@ -27,27 +28,28 @@ type CACertResponse struct {
 	Value string `json:"value"`
 }
 
-func LoginCommand() cli.Command {
-	return cli.Command{
+func LoginCommand() *cli.Command {
+	return &cli.Command{
 		Name:      "login",
 		Aliases:   []string{"l"},
 		Usage:     "Login to a Rancher server",
 		Action:    loginSetup,
 		ArgsUsage: "[SERVERURL]",
 		Flags: []cli.Flag{
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "context",
 				Usage: "Set the context during login",
 			},
-			cli.StringFlag{
-				Name:  "token,t",
-				Usage: "Token from the Rancher UI",
+			&cli.StringFlag{
+				Name:    "token",
+				Aliases: []string{"t"},
+				Usage:   "Token from the Rancher UI",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "cacert",
 				Usage: "Location of the CACerts to use",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "name",
 				Usage: "Name of the Server",
 			},
@@ -55,17 +57,17 @@ func LoginCommand() cli.Command {
 	}
 }
 
-func loginSetup(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "login")
+func loginSetup(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowCommandHelp(ctx, cmd, "login")
 	}
 
-	cf, err := loadConfig(ctx)
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return err
 	}
 
-	serverName := ctx.String("name")
+	serverName := cmd.String("name")
 	if serverName == "" {
 		serverName = "rancherDefault"
 	}
@@ -73,29 +75,29 @@ func loginSetup(ctx *cli.Context) error {
 	serverConfig := &config.ServerConfig{}
 
 	// Validate the url and drop the path
-	u, err := url.ParseRequestURI(ctx.Args().First())
+	u, err := url.ParseRequestURI(cmd.Args().First())
 	if err != nil {
-		return fmt.Errorf("failed to parse SERVERURL (%s), make sure it is a valid HTTPS URL (e.g. https://rancher.yourdomain.com or https://1.1.1.1). Error: %s", ctx.Args().First(), err)
+		return fmt.Errorf("failed to parse SERVERURL (%s), make sure it is a valid HTTPS URL (e.g. https://rancher.yourdomain.com or https://1.1.1.1). Error: %s", cmd.Args().First(), err)
 	}
 
 	u.Path = ""
 	serverConfig.URL = u.String()
 
-	if ctx.String("token") != "" {
-		auth := SplitOnColon(ctx.String("token"))
+	if cmd.String("token") != "" {
+		auth := SplitOnColon(cmd.String("token"))
 		if len(auth) != 2 {
 			return errors.New("invalid token")
 		}
 		serverConfig.AccessKey = auth[0]
 		serverConfig.SecretKey = auth[1]
-		serverConfig.TokenKey = ctx.String("token")
+		serverConfig.TokenKey = cmd.String("token")
 	} else {
 		// This can be removed once username and password is accepted
 		return errors.New("token flag is required")
 	}
 
-	if ctx.String("cacert") != "" {
-		cert, err := loadAndVerifyCert(ctx.String("cacert"))
+	if cmd.String("cacert") != "" {
+		cert, err := loadAndVerifyCert(cmd.String("cacert"))
 		if err != nil {
 			return err
 		}
@@ -108,7 +110,7 @@ func loginSetup(ctx *cli.Context) error {
 		return err
 	}
 
-	proj, err := getProjectContext(ctx, c)
+	proj, err := getProjectContext(cmd, c)
 	if err != nil {
 		return err
 	}
@@ -126,10 +128,10 @@ func loginSetup(ctx *cli.Context) error {
 	return nil
 }
 
-func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, error) {
+func getProjectContext(cmd *cli.Command, c *cliclient.MasterClient) (string, error) {
 	// If context is given
-	if ctx.String("context") != "" {
-		context := ctx.String("context")
+	if cmd.String("context") != "" {
+		context := cmd.String("context")
 		// Check if given context is in valid format
 		_, _, err := parseClusterAndProjectID(context)
 		if err != nil {
@@ -143,7 +145,7 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 		return context, nil
 	}
 
-	projectCollection, err := c.ManagementClient.Project.List(defaultListOpts(ctx))
+	projectCollection, err := c.ManagementClient.Project.List(defaultListOpts(cmd))
 	if err != nil {
 		return "", err
 	}
@@ -176,7 +178,7 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 		}
 	}
 
-	clusterNames, err := getClusterNames(ctx, c)
+	clusterNames, err := getClusterNames(cmd, c)
 	if err != nil {
 		return "", err
 	}
@@ -187,7 +189,7 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 		{"PROJECT ID", "Project.ID"},
 		{"PROJECT NAME", "Project.Name"},
 		{"PROJECT DESCRIPTION", "Project.Description"},
-	}, ctx)
+	}, cmd)
 
 	for i, item := range projectCollection.Data {
 		writer.Write(&LoginData{
@@ -233,8 +235,8 @@ func getProjectContext(ctx *cli.Context, c *cliclient.MasterClient) (string, err
 	return projectCollection.Data[selection].ID, nil
 }
 
-func loginContext(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
+func loginContext(ctx context.Context, cmd *cli.Command) error {
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}

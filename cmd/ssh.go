@@ -3,6 +3,7 @@ package cmd
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -17,7 +18,7 @@ import (
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 const sshDescription = `
@@ -34,38 +35,40 @@ Examples:
 	$ rancher ssh login1@nodeFoo -- netstat -p tcp
 `
 
-func SSHCommand() cli.Command {
-	return cli.Command{
+func SSHCommand() *cli.Command {
+	return &cli.Command{
 		Name:        "ssh",
 		Usage:       "SSH into a node",
 		Description: sshDescription,
 		Action:      nodeSSH,
 		ArgsUsage:   "[NODE_ID/NODE_NAME]",
 		Flags: []cli.Flag{
-			cli.BoolFlag{
-				Name:  "external,e",
-				Usage: "Use the external ip address of the node",
+			&cli.BoolFlag{
+				Name:    "external",
+				Aliases: []string{"e"},
+				Usage:   "Use the external ip address of the node",
 			},
-			cli.StringFlag{
-				Name:  "login,l",
-				Usage: "The login name",
+			&cli.StringFlag{
+				Name:    "login",
+				Aliases: []string{"l"},
+				Usage:   "The login name",
 			},
 		},
 	}
 }
 
-func nodeSSH(ctx *cli.Context) error {
-	args := ctx.Args()
+func nodeSSH(ctx context.Context, cmd *cli.Command) error {
+	args := cmd.Args().Slice()
 	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
-		return cli.ShowCommandHelp(ctx, "ssh")
+		return cli.ShowCommandHelp(ctx, cmd, "ssh")
 	}
 
-	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "ssh")
+	if cmd.NArg() == 0 {
+		return cli.ShowCommandHelp(ctx, cmd, "ssh")
 	}
 
-	user := ctx.String("login")
-	nodeName := ctx.Args().First()
+	user := cmd.String("login")
+	nodeName := cmd.Args().First()
 
 	if strings.Contains(nodeName, "@") {
 		user = strings.Split(nodeName, "@")[0]
@@ -74,12 +77,12 @@ func nodeSSH(ctx *cli.Context) error {
 
 	args = args[1:]
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	sshNode, key, err := getNodeAndKey(ctx, c, nodeName)
+	sshNode, key, err := getNodeAndKey(cmd, c, nodeName)
 	if err != nil {
 		return err
 	}
@@ -88,21 +91,21 @@ func nodeSSH(ctx *cli.Context) error {
 		user = sshNode.SshUser
 	}
 	ipAddress := sshNode.IPAddress
-	if ctx.Bool("external") {
+	if cmd.Bool("external") {
 		ipAddress = sshNode.ExternalIPAddress
 	}
 
 	return processExitCode(callSSH(key, ipAddress, user, args))
 }
 
-func getNodeAndKey(ctx *cli.Context, c *cliclient.MasterClient, nodeName string) (managementClient.Node, []byte, error) {
+func getNodeAndKey(cmd *cli.Command, c *cliclient.MasterClient, nodeName string) (managementClient.Node, []byte, error) {
 	sshNode := managementClient.Node{}
 	resource, err := Lookup(c, nodeName, "node")
 	if err != nil {
 		return sshNode, nil, err
 	}
 
-	sshNode, err = getNodeByID(ctx, c, resource.ID)
+	sshNode, err = getNodeByID(cmd, c, resource.ID)
 	if err != nil {
 		return sshNode, nil, err
 	}
@@ -110,7 +113,7 @@ func getNodeAndKey(ctx *cli.Context, c *cliclient.MasterClient, nodeName string)
 	link := sshNode.Links["nodeConfig"]
 	if link == "" {
 		// Get the machine and use that instead.
-		machine, err := getMachineByNodeName(ctx, c, sshNode.NodeName)
+		machine, err := getMachineByNodeName(cmd, c, sshNode.NodeName)
 		if err != nil {
 			return sshNode, nil, fmt.Errorf("failed to find SSH key for node [%s]", nodeName)
 		}

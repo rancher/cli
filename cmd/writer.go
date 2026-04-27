@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/ghodss/yaml"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type TableWriter struct {
@@ -24,11 +24,11 @@ type TableWriterConfig struct {
 	Writer io.Writer
 }
 
-func NewTableWriter(values [][]string, ctx *cli.Context) *TableWriter {
+func NewTableWriter(values [][]string, cmd *cli.Command) *TableWriter {
 	cfg := &TableWriterConfig{
 		Writer: os.Stdout,
-		Quiet:  ctx.Bool("quiet"),
-		Format: ctx.String("format"),
+		Quiet:  cmd.Bool("quiet"),
+		Format: cmd.String("format"),
 	}
 
 	return NewTableWriterWithConfig(values, cfg)

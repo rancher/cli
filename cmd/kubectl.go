@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,13 +9,13 @@ import (
 
 	"github.com/rancher/norman/clientbase"
 	client "github.com/rancher/rancher/pkg/client/generated/management/v3"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-func KubectlCommand() cli.Command {
-	return cli.Command{
+func KubectlCommand() *cli.Command {
+	return &cli.Command{
 		Name:            "kubectl",
 		Usage:           "Run kubectl commands",
 		Description:     "Use the current cluster context to run kubectl commands in the cluster",
@@ -23,10 +24,10 @@ func KubectlCommand() cli.Command {
 	}
 }
 
-func runKubectl(ctx *cli.Context) error {
-	args := ctx.Args()
+func runKubectl(ctx context.Context, cmd *cli.Command) error {
+	args := cmd.Args().Slice()
 	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
-		return cli.ShowCommandHelp(ctx, "kubectl")
+		return cli.ShowCommandHelp(ctx, cmd, "kubectl")
 	}
 
 	path, err := exec.LookPath("kubectl")
@@ -36,12 +37,12 @@ func runKubectl(ctx *cli.Context) error {
 			"for more info. Error: %s", err.Error())
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	config, err := loadConfig(ctx)
+	config, err := loadConfig(cmd)
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func runKubectl(ctx *cli.Context) error {
 	}
 
 	currentUser := t.UserID
-	kubeConfig, err := getKubeConfigForUser(ctx, currentUser)
+	kubeConfig, err := getKubeConfigForUser(cmd, currentUser)
 	if err != nil {
 		return err
 	}
@@ -92,7 +93,7 @@ func runKubectl(ctx *cli.Context) error {
 			return err
 		}
 
-		if err := setKubeConfigForUser(ctx, currentUser, kubeConfig); err != nil {
+		if err := setKubeConfigForUser(cmd, currentUser, kubeConfig); err != nil {
 			return err
 		}
 	}
@@ -110,12 +111,12 @@ func runKubectl(ctx *cli.Context) error {
 		return err
 	}
 
-	cmd := exec.Command(path, ctx.Args()...)
-	cmd.Env = append(os.Environ(), "KUBECONFIG="+tmpfile.Name())
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	err = cmd.Run()
+	execCmd := exec.Command(path, cmd.Args().Slice()...)
+	execCmd.Env = append(os.Environ(), "KUBECONFIG="+tmpfile.Name())
+	execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr
+	execCmd.Stdin = os.Stdin
+	err = execCmd.Run()
 	if err != nil {
 		return err
 	}

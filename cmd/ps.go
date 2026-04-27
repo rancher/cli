@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/rancher/cli/cliclient"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -18,8 +19,8 @@ type PSHolder struct {
 	Scale     string
 }
 
-func PsCommand() cli.Command {
-	return cli.Command{
+func PsCommand() *cli.Command {
+	return &cli.Command{
 		Name:  "ps",
 		Usage: "Show workloads in a project",
 		Description: `Show information on the workloads in a project. Defaults to the current context.
@@ -32,11 +33,11 @@ Examples:
 `,
 		Action: psLs,
 		Flags: []cli.Flag{
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "project",
 				Usage: "Optional project to show workloads for",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "format",
 				Usage: "'json', 'yaml' or Custom format: '{{.Name}} {{.Image}}'",
 			},
@@ -44,20 +45,20 @@ Examples:
 	}
 }
 
-func psLs(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
+func psLs(ctx context.Context, cmd *cli.Command) error {
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	if ctx.String("project") != "" {
+	if cmd.String("project") != "" {
 		//Verify the project given is valid
-		resource, err := Lookup(c, ctx.String("project"), "project")
+		resource, err := Lookup(c, cmd.String("project"), "project")
 		if err != nil {
 			return err
 		}
 
-		sc, err := lookupConfig(ctx)
+		sc, err := lookupConfig(cmd)
 		if err != nil {
 			return err
 		}
@@ -70,7 +71,7 @@ func psLs(ctx *cli.Context) error {
 		c.ProjectClient = projClient.ProjectClient
 	}
 
-	workLoads, err := c.ProjectClient.Workload.List(defaultListOpts(ctx))
+	workLoads, err := c.ProjectClient.Workload.List(defaultListOpts(cmd))
 	if err != nil {
 		return err
 	}
@@ -82,7 +83,7 @@ func psLs(ctx *cli.Context) error {
 		{"STATE", "State"},
 		{"IMAGE", "Image"},
 		{"SCALE", "Scale"},
-	}, ctx)
+	}, cmd)
 
 	defer wlWriter.Close()
 
@@ -109,7 +110,7 @@ func psLs(ctx *cli.Context) error {
 		})
 	}
 
-	opts := defaultListOpts(ctx)
+	opts := defaultListOpts(cmd)
 	opts.Filters["workloadId"] = ""
 
 	orphanPods, err := c.ProjectClient.Pod.List(opts)

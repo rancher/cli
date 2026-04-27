@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"context"
+
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type settingHolder struct {
@@ -11,8 +13,8 @@ type settingHolder struct {
 	Setting managementClient.Setting
 }
 
-func SettingsCommand() cli.Command {
-	return cli.Command{
+func SettingsCommand() *cli.Command {
+	return &cli.Command{
 		Name:        "settings",
 		Aliases:     []string{"setting"},
 		Usage:       "Show settings for the current server",
@@ -21,7 +23,7 @@ func SettingsCommand() cli.Command {
 		Flags: []cli.Flag{
 			formatFlag,
 		},
-		Subcommands: []cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:        "ls",
 				Usage:       "List settings",
@@ -48,7 +50,7 @@ func SettingsCommand() cli.Command {
 				ArgsUsage: "[SETTINGNAME VALUE]",
 				Flags: []cli.Flag{
 					formatFlag,
-					cli.BoolFlag{
+					&cli.BoolFlag{
 						Name:  "default",
 						Usage: "Reset the setting back to it's default value. If the default value is (blank) it will be set to that.",
 					},
@@ -58,13 +60,13 @@ func SettingsCommand() cli.Command {
 	}
 }
 
-func settingsLs(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
+func settingsLs(ctx context.Context, cmd *cli.Command) error {
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	settings, err := c.ManagementClient.Setting.List(defaultListOpts(ctx))
+	settings, err := c.ManagementClient.Setting.List(defaultListOpts(cmd))
 	if err != nil {
 		return err
 	}
@@ -73,7 +75,7 @@ func settingsLs(ctx *cli.Context) error {
 		{"ID", "ID"},
 		{"NAME", "Setting.Name"},
 		{"VALUE", "Setting.Value"},
-	}, ctx)
+	}, cmd)
 
 	defer writer.Close()
 
@@ -86,17 +88,17 @@ func settingsLs(ctx *cli.Context) error {
 	return writer.Err()
 }
 
-func settingGet(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "settings")
+func settingGet(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowCommandHelp(ctx, cmd, "settings")
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "setting")
+	resource, err := Lookup(c, cmd.Args().First(), "setting")
 	if err != nil {
 		return err
 	}
@@ -112,7 +114,7 @@ func settingGet(ctx *cli.Context) error {
 		{"VALUE", "Setting.Value"},
 		{"DEFAULT", "Setting.Default"},
 		{"CUSTOMIZED", "Setting.Customized"},
-	}, ctx)
+	}, cmd)
 
 	defer writer.Close()
 
@@ -124,17 +126,17 @@ func settingGet(ctx *cli.Context) error {
 	return writer.Err()
 }
 
-func settingSet(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "settings")
+func settingSet(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowCommandHelp(ctx, cmd, "settings")
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "setting")
+	resource, err := Lookup(c, cmd.Args().First(), "setting")
 	if err != nil {
 		return err
 	}
@@ -145,10 +147,10 @@ func settingSet(ctx *cli.Context) error {
 	}
 
 	update := make(map[string]string)
-	if ctx.Bool("default") {
+	if cmd.Bool("default") {
 		update["value"] = setting.Default
 	} else {
-		update["value"] = ctx.Args().Get(1)
+		update["value"] = cmd.Args().Get(1)
 	}
 
 	updatedSetting, err := c.ManagementClient.Setting.Update(setting, update)

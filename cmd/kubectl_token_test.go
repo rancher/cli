@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"flag"
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +12,7 @@ import (
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 func TestGetAuthProviders(t *testing.T) {
@@ -238,22 +238,33 @@ var authProvidersResponseV3 = `{
 }`
 
 func TestCacheCredential(t *testing.T) {
-	flagSet := flag.NewFlagSet("test", 0)
-	flagSet.String("server", "rancher.example.com", "doc")
-	flagSet.String("config", t.TempDir(), "doc")
-	cliCtx := cli.NewContext(nil, flagSet, nil)
+	configDir := t.TempDir()
 
-	serverConfig, err := lookupServerConfig(cliCtx)
+	var cliCmd *cli.Command
+	app := &cli.Command{
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "server"},
+			&cli.StringFlag{Name: "config"},
+		},
+		Action: func(_ context.Context, c *cli.Command) error {
+			cliCmd = c
+			return nil
+		},
+	}
+	err := app.Run(context.Background(), []string{"test", "--server=rancher.example.com", "--config=" + configDir})
+	require.NoError(t, err)
+
+	serverConfig, err := lookupServerConfig(cliCmd)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	cred := &config.ExecCredential{Status: &config.ExecCredentialStatus{Token: "test-token"}}
 
-	err = cacheCredential(cliCtx, serverConfig, "dev-server", cred)
+	err = cacheCredential(cliCmd, serverConfig, "dev-server", cred)
 	require.NoError(t, err)
 
-	cfg, err := loadConfig(cliCtx)
+	cfg, err := loadConfig(cliCmd)
 	require.NoError(t, err)
 
 	expires := &config.Time{Time: time.Now().Add(time.Hour * 2)}
@@ -269,10 +280,10 @@ func TestCacheCredential(t *testing.T) {
 
 	cred = &config.ExecCredential{Status: &config.ExecCredentialStatus{Token: "new-token"}}
 
-	err = cacheCredential(cliCtx, serverConfig, "local", cred)
+	err = cacheCredential(cliCmd, serverConfig, "local", cred)
 	require.NoError(t, err)
 
-	cfg, err = loadConfig(cliCtx)
+	cfg, err = loadConfig(cliCmd)
 	require.NoError(t, err)
 
 	clientKeyData := cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ClientKeyData
