@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/norman/types"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type ProjectData struct {
@@ -15,13 +16,13 @@ type ProjectData struct {
 	Project managementClient.Project
 }
 
-func ProjectCommand() cli.Command {
-	return cli.Command{
+func ProjectCommand() *cli.Command {
+	return &cli.Command{
 		Name:    "projects",
 		Aliases: []string{"project"},
 		Usage:   "Operations on projects",
 		Action:  defaultAction(projectLs),
-		Subcommands: []cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:        "ls",
 				Usage:       "List projects",
@@ -29,7 +30,7 @@ func ProjectCommand() cli.Command {
 				ArgsUsage:   "None",
 				Action:      projectLs,
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.Project.ID}} {{.Project.Name}}'",
 					},
@@ -43,11 +44,11 @@ func ProjectCommand() cli.Command {
 				ArgsUsage:   "[NEWPROJECTNAME...]",
 				Action:      projectCreate,
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "cluster",
 						Usage: "Cluster ID to create the project in",
 					},
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "description",
 						Usage: "Description to apply to the project",
 					},
@@ -67,7 +68,7 @@ func ProjectCommand() cli.Command {
 				Description: "Examples:\n #Create the roles of 'create-ns' and 'services-manage' for a user named 'user1'\n rancher project add-member-role user1 create-ns services-manage\n",
 				ArgsUsage:   "[USERNAME, ROLE...]",
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "project-id",
 						Usage: "Optional project ID to apply this change to, defaults to the current context",
 					},
@@ -80,7 +81,7 @@ func ProjectCommand() cli.Command {
 				Description: "Examples:\n #Delete the roles of 'create-ns' and 'services-manage' for a user named 'user1'\n rancher project delete-member-role user1 create-ns services-manage\n",
 				ArgsUsage:   "[USERNAME, ROLE...]",
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "project-id",
 						Usage: "Optional project ID to apply this change to, defaults to the current context",
 					},
@@ -94,26 +95,26 @@ func ProjectCommand() cli.Command {
 			{
 				Name:  "list-members",
 				Usage: "List current members of the project",
-				Action: func(cctx *cli.Context) error {
-					client, err := GetClient(cctx)
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					client, err := GetClient(cmd)
 					if err != nil {
 						return err
 					}
 
 					return listProjectMembers(
-						cctx,
-						cctx.App.Writer,
+						cmd,
+						cmd.Root().Writer,
 						client.UserConfig,
 						client.ManagementClient.ProjectRoleTemplateBinding,
 						client.ManagementClient.Principal,
 					)
 				},
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "project-id",
 						Usage: "Optional project ID to list members for, defaults to the current context",
 					},
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.ID }} {{.Member }}'",
 					},
@@ -124,13 +125,13 @@ func ProjectCommand() cli.Command {
 	}
 }
 
-func projectLs(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
+func projectLs(ctx context.Context, cmd *cli.Command) error {
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	collection, err := getProjectList(ctx, c)
+	collection, err := getProjectList(cmd, c)
 	if err != nil {
 		return err
 	}
@@ -140,7 +141,7 @@ func projectLs(ctx *cli.Context) error {
 		{"NAME", "Project.Name"},
 		{"STATE", "Project.State"},
 		{"DESCRIPTION", "Project.Description"},
-	}, ctx)
+	}, cmd)
 
 	defer writer.Close()
 
@@ -154,19 +155,19 @@ func projectLs(ctx *cli.Context) error {
 	return writer.Err()
 }
 
-func projectCreate(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowSubcommandHelp(ctx)
+func projectCreate(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
 	clusterID := c.UserConfig.GetCurrentCluster()
-	if ctx.String("cluster") != "" {
-		resource, err := Lookup(c, ctx.String("cluster"), "cluster")
+	if cmd.String("cluster") != "" {
+		resource, err := Lookup(c, cmd.String("cluster"), "cluster")
 		if err != nil {
 			return err
 		}
@@ -174,9 +175,9 @@ func projectCreate(ctx *cli.Context) error {
 	}
 
 	newProj := &managementClient.Project{
-		Name:        ctx.Args().First(),
+		Name:        cmd.Args().First(),
 		ClusterID:   clusterID,
-		Description: ctx.String("description"),
+		Description: cmd.String("description"),
 	}
 
 	_, err = c.ManagementClient.Project.Create(newProj)
@@ -186,17 +187,17 @@ func projectCreate(ctx *cli.Context) error {
 	return nil
 }
 
-func projectDelete(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowSubcommandHelp(ctx)
+func projectDelete(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	for _, arg := range ctx.Args() {
+	for _, arg := range cmd.Args().Slice() {
 		resource, err := Lookup(c, arg, "project")
 		if err != nil {
 			return err
@@ -216,28 +217,28 @@ func projectDelete(ctx *cli.Context) error {
 	return nil
 }
 
-func addProjectMemberRoles(ctx *cli.Context) error {
-	if len(ctx.Args()) < 2 {
-		return cli.ShowSubcommandHelp(ctx)
+func addProjectMemberRoles(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() < 2 {
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	memberName := ctx.Args().First()
+	memberName := cmd.Args().First()
 
-	roles := ctx.Args()[1:]
+	roles := cmd.Args().Slice()[1:]
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	member, err := searchForMember(ctx, c, memberName)
+	member, err := searchForMember(cmd, c, memberName)
 	if err != nil {
 		return err
 	}
 
 	projectID := c.UserConfig.Project
-	if ctx.String("project-id") != "" {
-		projectID = ctx.String("project-id")
+	if cmd.String("project-id") != "" {
+		projectID = cmd.String("project-id")
 	}
 
 	for _, role := range roles {
@@ -258,32 +259,32 @@ func addProjectMemberRoles(ctx *cli.Context) error {
 	return nil
 }
 
-func deleteProjectMemberRoles(ctx *cli.Context) error {
-	if len(ctx.Args()) < 2 {
-		return cli.ShowSubcommandHelp(ctx)
+func deleteProjectMemberRoles(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() < 2 {
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	memberName := ctx.Args().First()
+	memberName := cmd.Args().First()
 
-	roles := ctx.Args()[1:]
+	roles := cmd.Args().Slice()[1:]
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	member, err := searchForMember(ctx, c, memberName)
+	member, err := searchForMember(cmd, c, memberName)
 	if err != nil {
 		return err
 	}
 
 	projectID := c.UserConfig.Project
-	if ctx.String("project-id") != "" {
-		projectID = ctx.String("project-id")
+	if cmd.String("project-id") != "" {
+		projectID = cmd.String("project-id")
 	}
 
 	for _, role := range roles {
-		filter := defaultListOpts(ctx)
+		filter := defaultListOpts(cmd)
 		filter.Filters["projectId"] = projectID
 		filter.Filters["roleTemplateId"] = role
 
@@ -308,21 +309,21 @@ func deleteProjectMemberRoles(ctx *cli.Context) error {
 	return nil
 }
 
-func listProjectRoles(ctx *cli.Context) error {
-	return listRoles(ctx, "project")
+func listProjectRoles(ctx context.Context, cmd *cli.Command) error {
+	return listRoles(cmd, "project")
 }
 
 type prtbLister interface {
 	List(opts *types.ListOpts) (*managementClient.ProjectRoleTemplateBindingCollection, error)
 }
 
-func listProjectMembers(ctx *cli.Context, out io.Writer, config userConfig, prtbs prtbLister, principals principalGetter) error {
+func listProjectMembers(cmd *cli.Command, out io.Writer, config userConfig, prtbs prtbLister, principals principalGetter) error {
 	projectID := config.GetCurrentProject()
-	if ctx.String("project-id") != "" {
-		projectID = ctx.String("project-id")
+	if cmd.String("project-id") != "" {
+		projectID = cmd.String("project-id")
 	}
 
-	filter := defaultListOpts(ctx)
+	filter := defaultListOpts(cmd)
 	filter.Filters["projectId"] = projectID
 
 	bindings, err := prtbs.List(filter)
@@ -352,8 +353,8 @@ func listProjectMembers(ctx *cli.Context, out io.Writer, config userConfig, prtb
 	}
 
 	writerConfig := &TableWriterConfig{
-		Format: ctx.String("format"),
-		Quiet:  ctx.Bool("quiet"),
+		Format: cmd.String("format"),
+		Quiet:  cmd.Bool("quiet"),
 		Writer: out,
 	}
 
@@ -361,10 +362,10 @@ func listProjectMembers(ctx *cli.Context, out io.Writer, config userConfig, prtb
 }
 
 func getProjectList(
-	ctx *cli.Context,
+	cmd *cli.Command,
 	c *cliclient.MasterClient,
 ) (*managementClient.ProjectCollection, error) {
-	filter := defaultListOpts(ctx)
+	filter := defaultListOpts(cmd)
 	filter.Filters["clusterId"] = c.UserConfig.GetCurrentCluster()
 
 	collection, err := c.ManagementClient.Project.List(filter)

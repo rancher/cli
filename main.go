@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -10,7 +11,7 @@ import (
 	"github.com/rancher/cli/cmd"
 	"github.com/rancher/cli/config"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 var VERSION = "dev"
@@ -20,12 +21,12 @@ var AppHelpTemplate = `{{.Usage}}
 Usage: {{.Name}} {{if .Flags}}[OPTIONS] {{end}}COMMAND [arg...]
 
 Version: {{.Version}}
-{{if .Flags}}
+{{if .VisibleFlags}}
 Options:
-  {{range .Flags}}{{if .Hidden}}{{else}}{{.}}
-  {{end}}{{end}}{{end}}
+  {{range .VisibleFlags}}{{.}}
+  {{end}}{{end}}
 Commands:
-  {{range .Commands}}{{.Name}}{{with .Aliases}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
+  {{range .VisibleCommands}}{{.Name}}{{with .Aliases}}, {{join . ", "}}{{end}}{{ "\t" }}{{.Usage}}
   {{end}}
 Run '{{.Name}} COMMAND --help' for more information on a command.
 `
@@ -33,16 +34,16 @@ Run '{{.Name}} COMMAND --help' for more information on a command.
 var CommandHelpTemplate = `{{.Usage}}
 {{if .Description}}{{.Description}}{{end}}
 Usage: 
-	{{.HelpName}} {{if .Flags}}[OPTIONS] {{end}}{{if ne "None" .ArgsUsage}}{{if ne "" .ArgsUsage}}{{.ArgsUsage}}{{else}}[arg...]{{end}}{{end}}
+	{{.FullName}} {{if .Flags}}[OPTIONS] {{end}}{{if ne "None" .ArgsUsage}}{{if ne "" .ArgsUsage}}{{.ArgsUsage}}{{else}}[arg...]{{end}}{{end}}
 
-{{if .Flags}}Options:{{range .Flags}}
+{{if .VisibleFlags}}Options:{{range .VisibleFlags}}
 	 {{.}}{{end}}{{end}}
 `
 
 var SubcommandHelpTemplate = `{{.Usage}}
 {{if .Description}}{{.Description}}{{end}}
 Usage:
-   {{.HelpName}} command{{if .VisibleFlags}} [command options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}
+   {{.FullName}} command{{if .VisibleFlags}} [command options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}
 
 Commands:{{range .VisibleCategories}}{{if .Name}}
    {{.Name}}:{{end}}{{range .VisibleCommands}}
@@ -60,68 +61,71 @@ func main() {
 }
 
 func mainErr() error {
-	cli.AppHelpTemplate = AppHelpTemplate
 	cli.CommandHelpTemplate = CommandHelpTemplate
 	cli.SubcommandHelpTemplate = SubcommandHelpTemplate
-
-	app := cli.NewApp()
-	app.Name = "rancher"
-	app.Usage = "Rancher CLI, managing containers one UTF-8 character at a time"
-	app.Before = func(ctx *cli.Context) error {
-		if ctx.GlobalBool("debug") {
-			logrus.SetLevel(logrus.DebugLevel)
-		}
-
-		path := cmd.GetConfigPath(ctx)
-		warnings, err := config.GetFilePermissionWarnings(path)
-		if err != nil {
-			// We don't want to block the execution of the CLI in that case
-			logrus.Errorf("Unable to verify config file permission: %s. Continuing.", err)
-		}
-		for _, warning := range warnings {
-			logrus.Warning(warning)
-		}
-
-		return nil
-	}
-	app.Version = VERSION
-	app.Author = "Rancher Labs, Inc."
-	app.Email = ""
 
 	configDir, err := cmd.ConfigDir()
 	if err != nil {
 		return err
 	}
 
-	app.Flags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "debug",
-			Usage: "Debug logging",
+	rootCmd := &cli.Command{
+		Name:                          "rancher",
+		Usage:                         "Rancher CLI, managing containers one UTF-8 character at a time",
+		Version:                       VERSION,
+		CustomRootCommandHelpTemplate: AppHelpTemplate,
+		EnableShellCompletion:         true,
+		ConfigureShellCompletionCommand: func(cmd *cli.Command) {
+			cmd.Hidden = false
 		},
-		cli.StringFlag{
-			Name:   "config, c",
-			Usage:  "Path to rancher config",
-			EnvVar: "RANCHER_CONFIG_DIR",
-			Value:  configDir,
+		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
+			if c.Bool("debug") {
+				logrus.SetLevel(logrus.DebugLevel)
+			}
+
+			path := cmd.GetConfigPath(c)
+			warnings, err := config.GetFilePermissionWarnings(path)
+			if err != nil {
+				// We don't want to block the execution of the CLI in that case
+				logrus.Errorf("Unable to verify config file permission: %s. Continuing.", err)
+			}
+			for _, warning := range warnings {
+				logrus.Warning(warning)
+			}
+
+			return ctx, nil
 		},
-	}
-	app.Commands = []cli.Command{
-		cmd.ClusterCommand(),
-		cmd.ContextCommand(),
-		cmd.InspectCommand(),
-		cmd.KubectlCommand(),
-		cmd.LoginCommand(),
-		cmd.MachineCommand(),
-		cmd.NamespaceCommand(),
-		cmd.NodeCommand(),
-		cmd.ProjectCommand(),
-		cmd.PsCommand(),
-		cmd.ServerCommand(),
-		cmd.SettingsCommand(),
-		cmd.SSHCommand(),
-		cmd.UpCommand(),
-		cmd.WaitCommand(),
-		cmd.CredentialCommand(),
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "debug",
+				Usage: "Debug logging",
+			},
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Usage:   "Path to rancher config",
+				Sources: cli.EnvVars("RANCHER_CONFIG_DIR"),
+				Value:   configDir,
+			},
+		},
+		Commands: []*cli.Command{
+			cmd.ClusterCommand(),
+			cmd.ContextCommand(),
+			cmd.InspectCommand(),
+			cmd.KubectlCommand(),
+			cmd.LoginCommand(),
+			cmd.MachineCommand(),
+			cmd.NamespaceCommand(),
+			cmd.NodeCommand(),
+			cmd.ProjectCommand(),
+			cmd.PsCommand(),
+			cmd.ServerCommand(),
+			cmd.SettingsCommand(),
+			cmd.SSHCommand(),
+			cmd.UpCommand(),
+			cmd.WaitCommand(),
+			cmd.CredentialCommand(),
+		},
 	}
 
 	parsed, err := parseArgs(os.Args)
@@ -130,7 +134,7 @@ func mainErr() error {
 		os.Exit(1)
 	}
 
-	return app.Run(parsed)
+	return rootCmd.Run(context.Background(), parsed)
 }
 
 var singleAlphaLetterRegexp = regexp.MustCompile("[a-zA-Z]")

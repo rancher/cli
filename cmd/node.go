@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/rancher/cli/cliclient"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type NodeData struct {
@@ -17,13 +18,13 @@ type NodeData struct {
 	Pool string
 }
 
-func NodeCommand() cli.Command {
-	return cli.Command{
+func NodeCommand() *cli.Command {
+	return &cli.Command{
 		Name:    "nodes",
 		Aliases: []string{"node"},
 		Usage:   "Operations on nodes",
 		Action:  defaultAction(nodeLs),
-		Subcommands: []cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:        "ls",
 				Usage:       "List nodes",
@@ -31,7 +32,7 @@ func NodeCommand() cli.Command {
 				ArgsUsage:   "None",
 				Action:      nodeLs,
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.Node.ID}} {{.Node.Name}}'",
 					},
@@ -49,18 +50,18 @@ func NodeCommand() cli.Command {
 	}
 }
 
-func nodeLs(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
+func nodeLs(ctx context.Context, cmd *cli.Command) error {
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	collection, err := getNodesList(ctx, c, c.UserConfig.GetCurrentCluster())
+	collection, err := getNodesList(cmd, c, c.UserConfig.GetCurrentCluster())
 	if err != nil {
 		return err
 	}
 
-	nodePools, err := getNodePools(ctx, c)
+	nodePools, err := getNodePools(cmd, c)
 	if err != nil {
 		return err
 	}
@@ -71,7 +72,7 @@ func nodeLs(ctx *cli.Context) error {
 		{"STATE", "Node.State"},
 		{"POOL", "Pool"},
 		{"DESCRIPTION", "Node.Description"},
-	}, ctx)
+	}, cmd)
 
 	defer writer.Close()
 
@@ -87,23 +88,23 @@ func nodeLs(ctx *cli.Context) error {
 	return writer.Err()
 }
 
-func nodeDelete(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowSubcommandHelp(ctx)
+func nodeDelete(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	for _, arg := range ctx.Args() {
+	for _, arg := range cmd.Args().Slice() {
 		resource, err := Lookup(c, arg, "node")
 		if err != nil {
 			return err
 		}
 
-		node, err := getNodeByID(ctx, c, resource.ID)
+		node, err := getNodeByID(cmd, c, resource.ID)
 		if err != nil {
 			return err
 		}
@@ -123,11 +124,11 @@ func nodeDelete(ctx *cli.Context) error {
 }
 
 func getNodesList(
-	ctx *cli.Context,
+	cmd *cli.Command,
 	c *cliclient.MasterClient,
 	clusterID string,
 ) (*managementClient.NodeCollection, error) {
-	filter := defaultListOpts(ctx)
+	filter := defaultListOpts(cmd)
 	filter.Filters["clusterId"] = clusterID
 
 	collection, err := c.ManagementClient.Node.List(filter)
@@ -138,11 +139,11 @@ func getNodesList(
 }
 
 func getNodeByID(
-	ctx *cli.Context,
+	cmd *cli.Command,
 	c *cliclient.MasterClient,
 	nodeID string,
 ) (managementClient.Node, error) {
-	nodeCollection, err := getNodesList(ctx, c, c.UserConfig.GetCurrentCluster())
+	nodeCollection, err := getNodesList(cmd, c, c.UserConfig.GetCurrentCluster())
 	if err != nil {
 		return managementClient.Node{}, err
 	}
@@ -169,10 +170,10 @@ func getNodeName(node managementClient.Node) string {
 }
 
 func getNodePools(
-	ctx *cli.Context,
+	cmd *cli.Command,
 	c *cliclient.MasterClient,
 ) (*managementClient.NodePoolCollection, error) {
-	filter := defaultListOpts(ctx)
+	filter := defaultListOpts(cmd)
 	filter.Filters["clusterId"] = c.UserConfig.GetCurrentCluster()
 
 	collection, err := c.ManagementClient.NodePool.List(filter)

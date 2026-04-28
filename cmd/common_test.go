@@ -57,7 +57,6 @@ func TestParseClusterAndProjectID(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.id, func(t *testing.T) {
 			t.Parallel()
 
@@ -100,7 +99,6 @@ func TestConvertSnakeCaseKeysToCamelCase(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		test := test
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 
@@ -138,7 +136,6 @@ func TestParsePrincipalID(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.id, func(t *testing.T) {
 			t.Parallel()
 
@@ -195,7 +192,6 @@ func TestGetMemberNameFromPrincipal(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.id, func(t *testing.T) {
 			t.Parallel()
 

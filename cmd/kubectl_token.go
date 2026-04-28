@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -27,7 +28,7 @@ import (
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/tidwall/gjson"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/term"
 )
 
@@ -96,7 +97,7 @@ var supportedAuthProviders = map[string]bool{
 	"azureADProvider": true,
 }
 
-func CredentialCommand() cli.Command {
+func CredentialCommand() *cli.Command {
 	configDir, err := ConfigDir()
 	if err != nil {
 		if runtime.GOOS == "windows" {
@@ -105,41 +106,41 @@ func CredentialCommand() cli.Command {
 			configDir = "${HOME}/.rancher"
 		}
 	}
-	return cli.Command{
+	return &cli.Command{
 		Name:   "token",
 		Usage:  "Authenticate and generate new kubeconfig token",
 		Action: runCredential,
 		Flags: []cli.Flag{
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "server",
 				Usage: "Name of rancher server",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "user",
 				Usage: "user-id",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "cluster",
 				Usage: "cluster-id",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "auth-provider",
 				Usage: "Name of Auth Provider to use for authentication",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "auth-flow",
 				Usage: "Auth flow to use for OAuth providers: 'devicecode' (default) or 'authcode'",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "cacerts",
 				Usage: "Location of CaCerts to use",
 			},
-			cli.BoolFlag{
+			&cli.BoolFlag{
 				Name:  "skip-verify",
 				Usage: "Skip verification of the CACerts presented by the Server",
 			},
 		},
-		Subcommands: []cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:   "delete",
 				Usage:  fmt.Sprintf("Delete cached token used for kubectl login at [%s] \n %s", configDir, deleteExample),
@@ -149,8 +150,8 @@ func CredentialCommand() cli.Command {
 	}
 }
 
-func runCredential(ctx *cli.Context) error {
-	server := ctx.String("server")
+func runCredential(ctx context.Context, cmd *cli.Command) error {
+	server := cmd.String("server")
 	if server == "" {
 		return errors.New("name of rancher server is required")
 	}
@@ -163,19 +164,19 @@ func runCredential(ctx *cli.Context) error {
 		server = fmt.Sprintf("https://%s", server)
 	}
 
-	userID := ctx.String("user")
+	userID := cmd.String("user")
 	if userID == "" {
 		return errors.New("user-id is required")
 	}
-	clusterID := ctx.String("cluster")
+	clusterID := cmd.String("cluster")
 
-	serverConfig, err := lookupServerConfig(ctx)
+	serverConfig, err := lookupServerConfig(cmd)
 	if err != nil {
 		return fmt.Errorf("error looking up server config: %w", err)
 	}
 
 	cachedCredName := fmt.Sprintf("%s_%s", userID, clusterID)
-	cachedCred, err := loadCachedCredential(ctx, serverConfig, cachedCredName)
+	cachedCred, err := loadCachedCredential(cmd, serverConfig, cachedCredName)
 	if err != nil {
 		customPrint(fmt.Errorf("LoadToken: %v", err))
 	}
@@ -187,10 +188,10 @@ func runCredential(ctx *cli.Context) error {
 		server:       server,
 		userID:       userID,
 		clusterID:    clusterID,
-		authProvider: ctx.String("auth-provider"),
-		caCerts:      ctx.String("cacerts"),
-		skipVerify:   ctx.Bool("skip-verify"),
-		authFlow:     ctx.String("auth-flow"),
+		authProvider: cmd.String("auth-provider"),
+		caCerts:      cmd.String("cacerts"),
+		skipVerify:   cmd.Bool("skip-verify"),
+		authFlow:     cmd.String("auth-flow"),
 	}
 
 	tlsConfig, err := getTLSConfig(input.skipVerify, input.caCerts)
@@ -208,32 +209,32 @@ func runCredential(ctx *cli.Context) error {
 		return err
 	}
 
-	if err := cacheCredential(ctx, serverConfig, cachedCredName, newCred); err != nil {
+	if err := cacheCredential(cmd, serverConfig, cachedCredName, newCred); err != nil {
 		customPrint(fmt.Errorf("CacheToken: %v", err))
 	}
 
 	return json.NewEncoder(os.Stdout).Encode(newCred)
 }
 
-func deleteCachedCredential(ctx *cli.Context) error {
-	if len(ctx.Args()) == 0 {
-		return cli.ShowSubcommandHelp(ctx)
+func deleteCachedCredential(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	cf, err := loadConfig(ctx)
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return err
 	}
 
 	// dir is always set by global default.
-	dir := ctx.GlobalString("config")
+	dir := cmd.String("config")
 
 	if len(cf.Servers) == 0 {
 		customPrint(fmt.Sprintf("there are no cached tokens in [%s]", dir))
 		return nil
 	}
 
-	if ctx.Args().First() == "all" {
+	if cmd.Args().First() == "all" {
 		customPrint(fmt.Sprintf("removing cached tokens in [%s]", dir))
 		for _, server := range cf.Servers {
 			server.KubeCredentials = make(map[string]*config.ExecCredential)
@@ -241,7 +242,7 @@ func deleteCachedCredential(ctx *cli.Context) error {
 		return cf.Write()
 	}
 
-	for _, key := range ctx.Args() {
+	for _, key := range cmd.Args().Slice() {
 		customPrint(fmt.Sprintf("removing [%s]", key))
 		for _, server := range cf.Servers {
 			delete(server.KubeCredentials, key)
@@ -251,18 +252,18 @@ func deleteCachedCredential(ctx *cli.Context) error {
 	return cf.Write()
 }
 
-func loadCachedCredential(ctx *cli.Context, serverConfig *config.ServerConfig, key string) (*config.ExecCredential, error) {
+func loadCachedCredential(cmd *cli.Command, serverConfig *config.ServerConfig, key string) (*config.ExecCredential, error) {
 	cred := serverConfig.KubeToken(key)
 	if cred == nil {
 		return cred, nil
 	}
 	ts := cred.Status.ExpirationTimestamp
 	if ts != nil && ts.Before(time.Now()) {
-		cf, err := loadConfig(ctx)
+		cf, err := loadConfig(cmd)
 		if err != nil {
 			return nil, err
 		}
-		cf.Servers[ctx.String("server")].KubeCredentials[key] = nil
+		cf.Servers[cmd.String("server")].KubeCredentials[key] = nil
 		if err := cf.Write(); err != nil {
 			return nil, err
 		}
@@ -276,13 +277,13 @@ func loadCachedCredential(ctx *cli.Context, serverConfig *config.ServerConfig, k
 // a server to be previously set in the Config, which might not be the case if rancher token
 // is run before rancher login. Perhaps we can depricate rancher token down the line and defer
 // all it does to login.
-func lookupServerConfig(ctx *cli.Context) (*config.ServerConfig, error) {
-	server := ctx.String("server")
+func lookupServerConfig(cmd *cli.Command) (*config.ServerConfig, error) {
+	server := cmd.String("server")
 	if server == "" {
 		return nil, errors.New("name of rancher server is required")
 	}
 
-	cf, err := loadConfig(ctx)
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -300,18 +301,18 @@ func lookupServerConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 	return sc, nil
 }
 
-func cacheCredential(ctx *cli.Context, serverConfig *config.ServerConfig, key string, cred *config.ExecCredential) error {
+func cacheCredential(cmd *cli.Command, serverConfig *config.ServerConfig, key string, cred *config.ExecCredential) error {
 	// cache only if valid
 	if cred.Status.Token == "" {
 		return nil
 	}
 
-	server := ctx.String("server")
+	server := cmd.String("server")
 	if server == "" {
 		return errors.New("name of rancher server is required")
 	}
 
-	cf, err := loadConfig(ctx)
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return err
 	}

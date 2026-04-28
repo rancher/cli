@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/rancher/cli/cliclient"
 	capiClient "github.com/rancher/rancher/pkg/client/generated/cluster/v1beta2"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type MachineData struct {
@@ -14,13 +15,13 @@ type MachineData struct {
 	Name    string
 }
 
-func MachineCommand() cli.Command {
-	return cli.Command{
+func MachineCommand() *cli.Command {
+	return &cli.Command{
 		Name:    "machines",
 		Aliases: []string{"machine"},
 		Usage:   "Operations on machines",
 		Action:  defaultAction(machineLs),
-		Subcommands: []cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:        "ls",
 				Usage:       "List machines",
@@ -28,7 +29,7 @@ func MachineCommand() cli.Command {
 				ArgsUsage:   "None",
 				Action:      machineLs,
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.Machine.ID}} {{.Machine.Name}}'",
 					},
@@ -39,13 +40,13 @@ func MachineCommand() cli.Command {
 	}
 }
 
-func machineLs(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
+func machineLs(ctx context.Context, cmd *cli.Command) error {
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	collection, err := getMachinesList(ctx, c)
+	collection, err := getMachinesList(cmd, c)
 	if err != nil {
 		return err
 	}
@@ -54,7 +55,7 @@ func machineLs(ctx *cli.Context) error {
 		{"ID", "ID"},
 		{"NAME", "Name"},
 		{"PHASE", "Machine.Status.Phase"},
-	}, ctx)
+	}, cmd)
 
 	defer writer.Close()
 
@@ -70,19 +71,19 @@ func machineLs(ctx *cli.Context) error {
 }
 
 func getMachinesList(
-	ctx *cli.Context,
+	cmd *cli.Command,
 	c *cliclient.MasterClient,
 ) (*capiClient.MachineCollection, error) {
-	filter := defaultListOpts(ctx)
+	filter := defaultListOpts(cmd)
 	return c.CAPIClient.Machine.List(filter)
 }
 
 func getMachineByNodeName(
-	ctx *cli.Context,
+	cmd *cli.Command,
 	c *cliclient.MasterClient,
 	nodeName string,
 ) (capiClient.Machine, error) {
-	machineCollection, err := getMachinesList(ctx, c)
+	machineCollection, err := getMachinesList(cmd, c)
 	if err != nil {
 		return capiClient.Machine{}, err
 	}

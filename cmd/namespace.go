@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/rancher/cli/cliclient"
 	clusterClient "github.com/rancher/rancher/pkg/client/generated/cluster/v3"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type NamespaceData struct {
@@ -13,8 +14,8 @@ type NamespaceData struct {
 	Namespace clusterClient.Namespace
 }
 
-func NamespaceCommand() cli.Command {
-	return cli.Command{
+func NamespaceCommand() *cli.Command {
+	return &cli.Command{
 		Name:    "namespaces",
 		Aliases: []string{"namespace"},
 		Usage:   "Operations on namespaces",
@@ -22,7 +23,7 @@ func NamespaceCommand() cli.Command {
 		Flags: []cli.Flag{
 			quietFlag,
 		},
-		Subcommands: []cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:        "ls",
 				Usage:       "List namespaces",
@@ -30,11 +31,11 @@ func NamespaceCommand() cli.Command {
 				ArgsUsage:   "None",
 				Action:      namespaceLs,
 				Flags: []cli.Flag{
-					cli.BoolFlag{
+					&cli.BoolFlag{
 						Name:  "all-namespaces",
 						Usage: "List all namespaces in the current cluster",
 					},
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.Namespace.ID}} {{.Namespace.Name}}'",
 					},
@@ -48,7 +49,7 @@ func NamespaceCommand() cli.Command {
 				ArgsUsage:   "[NEWNAMESPACENAME...]",
 				Action:      namespaceCreate,
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "description",
 						Usage: "Description to apply to the namespace",
 					},
@@ -71,18 +72,18 @@ func NamespaceCommand() cli.Command {
 	}
 }
 
-func namespaceLs(ctx *cli.Context) error {
-	c, err := GetClient(ctx)
+func namespaceLs(ctx context.Context, cmd *cli.Command) error {
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	collection, err := getNamespaceList(ctx, c)
+	collection, err := getNamespaceList(cmd, c)
 	if err != nil {
 		return err
 	}
 
-	if !ctx.Bool("all-namespaces") {
+	if !cmd.Bool("all-namespaces") {
 		var projectNamespaces []clusterClient.Namespace
 
 		for _, namespace := range collection.Data {
@@ -100,7 +101,7 @@ func namespaceLs(ctx *cli.Context) error {
 		{"STATE", "Namespace.State"},
 		{"PROJECT", "Namespace.ProjectID"},
 		{"DESCRIPTION", "Namespace.Description"},
-	}, ctx)
+	}, cmd)
 
 	defer writer.Close()
 
@@ -114,20 +115,20 @@ func namespaceLs(ctx *cli.Context) error {
 	return writer.Err()
 }
 
-func namespaceCreate(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowSubcommandHelp(ctx)
+func namespaceCreate(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
 	newNamespace := &clusterClient.Namespace{
-		Name:        ctx.Args().First(),
+		Name:        cmd.Args().First(),
 		ProjectID:   c.UserConfig.Project,
-		Description: ctx.String("description"),
+		Description: cmd.String("description"),
 	}
 
 	_, err = c.ClusterClient.Namespace.Create(newNamespace)
@@ -138,17 +139,17 @@ func namespaceCreate(ctx *cli.Context) error {
 	return nil
 }
 
-func namespaceDelete(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowSubcommandHelp(ctx)
+func namespaceDelete(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	for _, arg := range ctx.Args() {
+	for _, arg := range cmd.Args().Slice() {
 		resource, err := Lookup(c, arg, "namespace")
 		if err != nil {
 			return err
@@ -168,17 +169,17 @@ func namespaceDelete(ctx *cli.Context) error {
 	return nil
 }
 
-func namespaceMove(ctx *cli.Context) error {
-	if ctx.NArg() < 2 {
-		return cli.ShowSubcommandHelp(ctx)
+func namespaceMove(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() < 2 {
+		return cli.ShowSubcommandHelp(cmd)
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), "namespace")
+	resource, err := Lookup(c, cmd.Args().First(), "namespace")
 	if err != nil {
 		return err
 	}
@@ -188,7 +189,7 @@ func namespaceMove(ctx *cli.Context) error {
 		return err
 	}
 
-	projResource, err := Lookup(c, ctx.Args().Get(1), "project")
+	projResource, err := Lookup(c, cmd.Args().Get(1), "project")
 	if err != nil {
 		return err
 	}
@@ -221,10 +222,10 @@ func namespaceMove(ctx *cli.Context) error {
 }
 
 func getNamespaceList(
-	ctx *cli.Context,
+	cmd *cli.Command,
 	c *cliclient.MasterClient,
 ) (*clusterClient.NamespaceCollection, error) {
-	collection, err := c.ClusterClient.Namespace.List(defaultListOpts(ctx))
+	collection, err := c.ClusterClient.Namespace.List(defaultListOpts(cmd))
 	if err != nil {
 		return nil, err
 	}

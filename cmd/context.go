@@ -1,24 +1,26 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/rancher/cli/cliclient"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-func ContextCommand() cli.Command {
-	return cli.Command{
+func ContextCommand() *cli.Command {
+	return &cli.Command{
 		Name:  "context",
 		Usage: "Operations for the context",
 		Description: `Switch or view context. A context is the server->cluster->project currently in focus.
 `,
-		Subcommands: []cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:  "switch",
 				Usage: "Switch to a new context",
 				Description: `
-The project arg is optional, if not passed in a list of available projects will 
-be displayed and one can be selected. If only one project is available it will 
+The project arg is optional, if not passed in a list of available projects will
+be displayed and one can be selected. If only one project is available it will
 be automatically selected.
 `,
 				ArgsUsage: "[PROJECT_ID/PROJECT_NAME]",
@@ -33,8 +35,8 @@ be automatically selected.
 	}
 }
 
-func contextSwitch(ctx *cli.Context) error {
-	cf, err := loadConfig(ctx)
+func contextSwitch(ctx context.Context, cmd *cli.Command) error {
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return err
 	}
@@ -51,13 +53,13 @@ func contextSwitch(ctx *cli.Context) error {
 
 	var projectID string
 
-	if ctx.NArg() == 0 {
-		projectID, err = getProjectContext(ctx, c)
+	if cmd.NArg() == 0 {
+		projectID, err = getProjectContext(cmd, c)
 		if err != nil {
 			return nil
 		}
 	} else {
-		resource, err := Lookup(c, ctx.Args().First(), "project")
+		resource, err := Lookup(c, cmd.Args().First(), "project")
 		if err != nil {
 			return err
 		}
