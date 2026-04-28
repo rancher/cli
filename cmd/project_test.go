@@ -34,8 +34,8 @@ func TestListProjectMembers(t *testing.T) {
 						Resource: types.Resource{
 							ID: "p-9mdxl:creator-project-owner",
 						},
-						Created:        created,
-						RoleTemplateID: "project-owner",
+						Created:         created,
+						RoleTemplateID:  "project-owner",
 						UserPrincipalID: "local://user-2p7w6",
 					},
 					{
