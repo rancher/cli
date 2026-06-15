@@ -72,6 +72,33 @@ func TestGetAuthProviders(t *testing.T) {
 		assert.Equal(t, expectedProviders, providers)
 	})
 
+	t.Run("local provider hidden when hide-local-auth-provider is set", func(t *testing.T) {
+		// This is to make sure getAuthProviders doesn't hardcode the local provider.
+		expected := []TypedProvider{
+			&apiv3.AuthProvider{
+				Type: "openLdapProvider",
+			},
+		}
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Contains(t, r.URL.Path, "/v1-public/authproviders")
+			// Simulate the /v1-public/authproviders response
+			// when the hide-local-auth-provider feature flag is set:
+			// the localProvider is hidden.
+			fmt.Fprint(w, `{"data": [{"id": "openldap", "type": "openLdapProvider"}]}`)
+		}))
+		t.Cleanup(server.Close)
+
+		providers, useV1Public, err := getAuthProviders(client, server.URL, true)
+
+		require.NoError(t, err)
+		assert.True(t, useV1Public)
+		assert.Equal(t, expected, providers)
+		for _, p := range providers {
+			assert.NotEqual(t, "localProvider", p.GetType(), "localProvider should be hidden")
+		}
+	})
+
 	t.Run("fallback from v1-public to v3-public on 404", func(t *testing.T) {
 		callCount := 0
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -236,6 +263,71 @@ var authProvidersResponseV3 = `{
         }
     ]
 }`
+
+func TestSelectAuthProvider(t *testing.T) {
+	t.Parallel()
+
+	ldapProvider := &apiv3.AuthProvider{Type: "openLdapProvider"}
+	localProvider := &apiv3.LocalProvider{
+		AuthProvider: apiv3.AuthProvider{Type: "localProvider"},
+	}
+
+	tests := []struct {
+		name         string
+		providers    []TypedProvider
+		providerType string
+		expected     TypedProvider
+		expectedErr  string
+	}{
+		{
+			name:        "no providers configured",
+			providers:   nil,
+			expectedErr: "no auth provider configured",
+		},
+		{
+			name:         "localProvider not found when hidden",
+			providers:    []TypedProvider{ldapProvider},
+			providerType: "localProvider",
+			expectedErr:  "provider localProvider not found",
+		},
+		{
+			name:      "single external provider auto-selected",
+			providers: []TypedProvider{ldapProvider},
+			expected:  ldapProvider,
+		},
+		{
+			name:         "local selected when both local and external present",
+			providers:    []TypedProvider{localProvider, ldapProvider},
+			providerType: "localProvider",
+			expected:     localProvider,
+		},
+		{
+			name:         "external selected when both local and external present",
+			providers:    []TypedProvider{localProvider, ldapProvider},
+			providerType: "openLdapProvider",
+			expected:     ldapProvider,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			provider, err := selectAuthProvider(tc.providers, tc.providerType)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tc.expectedErr)
+				assert.Nil(t, provider)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, provider)
+		})
+	}
+}
 
 func TestCacheCredential(t *testing.T) {
 	configDir := t.TempDir()
