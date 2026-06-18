@@ -19,7 +19,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
-	github.com/urfave/cli/v3 v3.6.2
+	github.com/urfave/cli/v3 v3.8.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/oauth2 v0.35.0
 	golang.org/x/sync v0.20.0
