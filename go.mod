@@ -1,21 +1,19 @@
 module github.com/rancher/cli
 
-go 1.25.0
-
-toolchain go1.25.7
+go 1.25.11
 
 replace (
-	k8s.io/apiserver => k8s.io/apiserver v0.34.6
-	k8s.io/client-go => k8s.io/client-go v0.34.6
-	k8s.io/component-base => k8s.io/component-base v0.34.6
-	k8s.io/kubernetes => k8s.io/kubernetes v1.34.6
+	k8s.io/apiserver => k8s.io/apiserver v0.34.8
+	k8s.io/client-go => k8s.io/client-go v0.34.8
+	k8s.io/component-base => k8s.io/component-base v0.34.8
+	k8s.io/kubernetes => k8s.io/kubernetes v1.34.8
 )
 
 require (
 	github.com/ghodss/yaml v1.0.0
-	github.com/rancher/norman v0.7.3
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260527192536-93a5abcbed0d
-	github.com/rancher/rancher/pkg/client v0.0.0-20260527192536-93a5abcbed0d
+	github.com/rancher/norman v0.7.4
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260623053810-668313934d5d
+	github.com/rancher/rancher/pkg/client v0.0.0-20260623053810-668313934d5d
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
@@ -57,11 +55,11 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rancher/aks-operator v1.13.6 // indirect
-	github.com/rancher/ali-operator v1.13.3 // indirect
-	github.com/rancher/eks-operator v1.13.6 // indirect
+	github.com/rancher/aks-operator v1.13.7 // indirect
+	github.com/rancher/ali-operator v1.13.4 // indirect
+	github.com/rancher/eks-operator v1.13.7 // indirect
 	github.com/rancher/fleet/pkg/apis v0.14.6 // indirect
-	github.com/rancher/gke-operator v1.13.6 // indirect
+	github.com/rancher/gke-operator v1.13.7 // indirect
 	github.com/rancher/lasso v0.2.5 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
 	github.com/rancher/wrangler/v3 v3.3.5 // indirect
@@ -70,8 +68,8 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.opentelemetry.io/otel v1.39.0 // indirect
-	go.opentelemetry.io/otel/trace v1.39.0 // indirect
+	go.opentelemetry.io/otel v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.49.0 // indirect
@@ -82,12 +80,12 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.34.8 // indirect
-	k8s.io/apimachinery v0.34.8 // indirect
-	k8s.io/apiserver v0.34.6 // indirect
-	k8s.io/component-base v0.34.6 // indirect
+	k8s.io/apimachinery v0.34.9 // indirect
+	k8s.io/apiserver v0.34.8 // indirect
+	k8s.io/component-base v0.34.8 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
-	k8s.io/kubernetes v1.34.6 // indirect
+	k8s.io/kubernetes v1.34.8 // indirect
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
