@@ -550,7 +550,6 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 	return "", "", fmt.Errorf("unable to extract clusterid and projectid from [%s]", id)
 }
 
-
 // renameKeys renames the keys in a given map of arbitrary depth with a provided function for string keys.
 func renameKeys(input map[string]interface{}, f func(string) string) {
 	for k, v := range input {
@@ -567,7 +566,6 @@ func renameKeys(input map[string]interface{}, f func(string) string) {
 func convertSnakeCaseKeysToCamelCase(input map[string]interface{}) {
 	renameKeys(input, convert.ToJSONKey)
 }
-
 
 // getClusterNames maps cluster ID to name and defaults to ID if name is blank
 func getClusterNames(cmd *cli.Command, c *cliclient.MasterClient) (map[string]string, error) {

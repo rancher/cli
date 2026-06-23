@@ -160,4 +160,3 @@ func getNodeName(node managementClient.Node) string {
 	}
 	return node.ID
 }
-

@@ -723,7 +723,6 @@ func getClusterPods(cluster managementClient.Cluster) string {
 	return cluster.Requested["pods"] + "/" + cluster.Allocatable["pods"]
 }
 
-
 func getClusterConfig(cmd *cli.Command) (*managementClient.Cluster, error) {
 	config := managementClient.Cluster{}
 	config.Name = cmd.Args().First()
