@@ -2,8 +2,6 @@ module github.com/rancher/cli
 
 go 1.25.11
 
-toolchain go1.25.11
-
 replace (
 	k8s.io/api => k8s.io/api v0.32.13
 	k8s.io/apimachinery => k8s.io/apimachinery v0.32.13
@@ -16,8 +14,8 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.5.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260527190831-b20a30f2921e
-	github.com/rancher/rancher/pkg/client v0.0.0-20260527190831-b20a30f2921e
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260623053821-5f84b72ad8d8
+	github.com/rancher/rancher/pkg/client v0.0.0-20260623053821-5f84b72ad8d8
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
