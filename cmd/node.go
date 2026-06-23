@@ -15,7 +15,6 @@ type NodeData struct {
 	ID   string
 	Node managementClient.Node
 	Name string
-	Pool string
 }
 
 func NodeCommand() *cli.Command {
@@ -61,16 +60,10 @@ func nodeLs(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	nodePools, err := getNodePools(cmd, c)
-	if err != nil {
-		return err
-	}
-
 	writer := NewTableWriter([][]string{
 		{"ID", "ID"},
 		{"NAME", "Name"},
 		{"STATE", "Node.State"},
-		{"POOL", "Pool"},
 		{"DESCRIPTION", "Node.Description"},
 	}, cmd)
 
@@ -81,7 +74,6 @@ func nodeLs(ctx context.Context, cmd *cli.Command) error {
 			ID:   item.ID,
 			Node: item,
 			Name: getNodeName(item),
-			Pool: getNodePoolName(item, nodePools),
 		})
 	}
 
@@ -169,25 +161,3 @@ func getNodeName(node managementClient.Node) string {
 	return node.ID
 }
 
-func getNodePools(
-	cmd *cli.Command,
-	c *cliclient.MasterClient,
-) (*managementClient.NodePoolCollection, error) {
-	filter := defaultListOpts(cmd)
-	filter.Filters["clusterId"] = c.UserConfig.GetCurrentCluster()
-
-	collection, err := c.ManagementClient.NodePool.List(filter)
-	if err != nil {
-		return nil, err
-	}
-	return collection, nil
-}
-
-func getNodePoolName(node managementClient.Node, pools *managementClient.NodePoolCollection) string {
-	for _, pool := range pools.Data {
-		if node.NodePoolID == pool.ID {
-			return pool.HostnamePrefix
-		}
-	}
-	return ""
-}
