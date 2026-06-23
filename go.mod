@@ -1,8 +1,6 @@
 module github.com/rancher/cli
 
-go 1.25.0
-
-toolchain go1.25.7
+go 1.25.11
 
 replace (
 	k8s.io/api => k8s.io/api v0.32.13
@@ -16,17 +14,17 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.5.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260527190831-b20a30f2921e
-	github.com/rancher/rancher/pkg/client v0.0.0-20260527190831-b20a30f2921e
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260623053821-5f84b72ad8d8
+	github.com/rancher/rancher/pkg/client v0.0.0-20260623053821-5f84b72ad8d8
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.14
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/oauth2 v0.35.0
-	golang.org/x/sync v0.19.0
-	golang.org/x/term v0.39.0
-	golang.org/x/text v0.33.0
+	golang.org/x/sync v0.20.0
+	golang.org/x/term v0.43.0
+	golang.org/x/text v0.37.0
 	k8s.io/client-go v12.0.0+incompatible
 )
 
@@ -78,8 +76,8 @@ require (
 	go.opentelemetry.io/otel v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
