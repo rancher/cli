@@ -2,13 +2,11 @@ module github.com/rancher/cli
 
 go 1.25.11
 
-toolchain go1.25.11
-
 replace (
-	k8s.io/apiserver => k8s.io/apiserver v0.33.10
-	k8s.io/client-go => k8s.io/client-go v0.33.10
-	k8s.io/component-base => k8s.io/component-base v0.33.10
-	k8s.io/kubernetes => k8s.io/kubernetes v1.33.10
+	k8s.io/apiserver => k8s.io/apiserver v0.33.12
+	k8s.io/client-go => k8s.io/client-go v0.33.12
+	k8s.io/component-base => k8s.io/component-base v0.33.12
+	k8s.io/kubernetes => k8s.io/kubernetes v1.33.12
 )
 
 require (
@@ -69,8 +67,8 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.opentelemetry.io/otel v1.39.0 // indirect
-	go.opentelemetry.io/otel/trace v1.39.0 // indirect
+	go.opentelemetry.io/otel v1.41.0 // indirect
+	go.opentelemetry.io/otel/trace v1.41.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
@@ -82,7 +80,7 @@ require (
 	k8s.io/api v0.33.12 // indirect
 	k8s.io/apimachinery v0.33.12 // indirect
 	k8s.io/apiserver v0.33.10 // indirect
-	k8s.io/component-base v0.33.10 // indirect
+	k8s.io/component-base v0.33.12 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/kubernetes v1.33.10 // indirect
