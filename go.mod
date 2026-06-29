@@ -14,8 +14,8 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.5.2
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260623053821-5f84b72ad8d8
-	github.com/rancher/rancher/pkg/client v0.0.0-20260623053821-5f84b72ad8d8
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260629211553-9127393c926e
+	github.com/rancher/rancher/pkg/client v0.0.0-20260629211553-9127393c926e
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
@@ -62,7 +62,7 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rancher/aks-operator v1.11.11 // indirect
 	github.com/rancher/eks-operator v1.11.11 // indirect
-	github.com/rancher/fleet/pkg/apis v0.12.15 // indirect
+	github.com/rancher/fleet/pkg/apis v0.12.17 // indirect
 	github.com/rancher/gke-operator v1.11.11 // indirect
 	github.com/rancher/lasso v0.2.3 // indirect
 	github.com/rancher/rke v1.8.12 // indirect
@@ -77,7 +77,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
