@@ -12,17 +12,17 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.6.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260623053815-5e751ad20a48
-	github.com/rancher/rancher/pkg/client v0.0.0-20260623053815-5e751ad20a48
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260629212121-e2755334ece4
+	github.com/rancher/rancher/pkg/client v0.0.0-20260629212121-e2755334ece4
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.14
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/oauth2 v0.35.0
-	golang.org/x/sync v0.20.0
-	golang.org/x/term v0.43.0
-	golang.org/x/text v0.37.0
+	golang.org/x/sync v0.21.0
+	golang.org/x/term v0.44.0
+	golang.org/x/text v0.38.0
 	k8s.io/client-go v12.0.0+incompatible
 )
 
@@ -57,7 +57,7 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rancher/aks-operator v1.12.10 // indirect
 	github.com/rancher/eks-operator v1.12.10 // indirect
-	github.com/rancher/fleet/pkg/apis v0.13.11 // indirect
+	github.com/rancher/fleet/pkg/apis v0.13.13 // indirect
 	github.com/rancher/gke-operator v1.12.10 // indirect
 	github.com/rancher/lasso v0.2.4 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
@@ -70,20 +70,20 @@ require (
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/time v0.13.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.33.12 // indirect
+	k8s.io/api v0.33.13 // indirect
 	k8s.io/apimachinery v0.33.13 // indirect
-	k8s.io/apiserver v0.33.12 // indirect
-	k8s.io/component-base v0.33.12 // indirect
+	k8s.io/apiserver v0.33.13 // indirect
+	k8s.io/component-base v0.33.13 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
-	k8s.io/kubernetes v1.33.12 // indirect
+	k8s.io/kubernetes v1.33.13 // indirect
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
