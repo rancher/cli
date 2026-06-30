@@ -339,24 +339,31 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 	}
 	input.authProvider = selectedProvider.GetType()
 
-	token := managementClient.Token{}
-	if samlProviders[input.authProvider] {
-		token, err = samlAuth(client, input, useV1Public)
+	var token loginToken
+	switch {
+	case samlProviders[input.authProvider]:
+		samlTok, err := samlAuth(client, input, useV1Public)
 		if err != nil {
 			return nil, err
 		}
-	} else if oauthProviders[input.authProvider] {
+		token = loginToken{
+			BearerToken: samlTok.Token,
+			ExpiresAt:   samlTok.ExpiresAt,
+			UserID:      samlTok.UserID,
+		}
+	case oauthProviders[input.authProvider]:
 		tokenPtr, err := oauthAuth(client, input, selectedProvider, useV1Public)
 		if err != nil {
 			return nil, err
 		}
 		token = *tokenPtr
-	} else {
+	default:
 		customPrint(fmt.Sprintf("Enter credentials for %s \n", input.authProvider))
-		token, err = basicAuth(client, input, useV1Public)
+		tok, err := basicAuth(client, input, useV1Public)
 		if err != nil {
 			return nil, err
 		}
+		token = tok
 	}
 
 	cred := &config.ExecCredential{
@@ -366,7 +373,7 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 		},
 		Status: &config.ExecCredentialStatus{},
 	}
-	cred.Status.Token = token.Token
+	cred.Status.Token = token.BearerToken
 	if token.ExpiresAt == "" {
 		return cred, nil
 	}
@@ -377,19 +384,16 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 	}
 	cred.Status.ExpirationTimestamp = &config.Time{Time: ts}
 	return cred, nil
-
 }
 
-func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (managementClient.Token, error) {
-	token := managementClient.Token{}
-
+func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (loginToken, error) {
 	prompt := "Enter username"
 	if input.userID != "" {
 		prompt += " [" + input.userID + "]"
 	}
 	username, err := customPrompt(prompt+": ", true)
 	if err != nil {
-		return token, err
+		return loginToken{}, err
 	}
 
 	if username == "" && input.userID != "" {
@@ -398,7 +402,7 @@ func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (manage
 
 	password, err := customPrompt("Enter password: ", false)
 	if err != nil {
-		return token, err
+		return loginToken{}, err
 	}
 
 	responseType := "kubeconfig"
@@ -413,7 +417,7 @@ func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (manage
 		"password":     password,
 	})
 	if err != nil {
-		return token, fmt.Errorf("failed to marshal request body: %w", err)
+		return loginToken{}, fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
 	reqURL := fmt.Sprintf(loginURL, input.server)
@@ -424,7 +428,7 @@ func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (manage
 
 	req, err := http.NewRequest(http.MethodPost, reqURL, bytes.NewReader(reqBody))
 	if err != nil {
-		return token, fmt.Errorf("error creating request: %w", err)
+		return loginToken{}, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, respBody, err := doRequest(client, req)
@@ -432,12 +436,12 @@ func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (manage
 		err = fmt.Errorf("%d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 	if err != nil {
-		return token, fmt.Errorf("error logging user in: %w", err)
+		return loginToken{}, fmt.Errorf("error logging user in: %w", err)
 	}
 
-	err = json.Unmarshal(respBody, &token)
+	token, err := parseLoginResponse(respBody)
 	if err != nil {
-		return token, fmt.Errorf("error unmarshaling login response: %w", err)
+		return loginToken{}, err
 	}
 
 	return token, nil
