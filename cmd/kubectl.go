@@ -70,7 +70,7 @@ func runKubectl(ctx context.Context, cmd *cli.Command) error {
 		if err != nil {
 			return err
 		}
-		isTokenValid, err = validateToken(tokenID, c.ManagementClient.Token)
+		isTokenValid, err = validateTokenV3(tokenID, c.ManagementClient.Token)
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func extractKubeconfigTokenID(kubeconfig api.Config) (string, error) {
 	return parts[0], nil
 }
 
-func validateToken(tokenID string, tokenClient client.TokenOperations) (bool, error) {
+func validateTokenV3(tokenID string, tokenClient client.TokenOperations) (bool, error) {
 	token, err := tokenClient.ByID(tokenID)
 	if err != nil {
 		if !clientbase.IsNotFound(err) {
