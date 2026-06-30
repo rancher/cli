@@ -5,6 +5,13 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
 
   build:
@@ -12,16 +19,23 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      with:
+        persist-credentials: false
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
       with:
         go-version-file: go.mod
         cache: false
+    # https://github.com/golang/go/issues/75031
+    - name: Set toolchain version
+      run: go env -w GOTOOLCHAIN=go1.26.1+auto
 
     - name: Lint
-      uses: golangci/golangci-lint-action@v4
+      uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
+      with:
+        version: v2.11.3
 
     - name: Validate Go modules
       run: ./scripts/validate
@@ -39,6 +53,7 @@ jobs:
       run: ./scripts/build
 
     - name: Package
+      id: package
       run: |
         ./scripts/package
         ls -lR dist/artifacts
@@ -48,11 +63,11 @@ jobs:
         # Export the tag for the next step
         source ./scripts/version
         echo "VERSION=$VERSION"
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Docker Build
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
       with:
         push: false
         context: package
-        tags: rancher/cli2:${{ env.VERSION }}
+        tags: rancher/cli2:${{ steps.package.outputs.VERSION }}

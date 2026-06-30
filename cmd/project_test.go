@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"net/url"
 	"testing"
@@ -12,7 +11,7 @@ import (
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 func TestListProjectMembers(t *testing.T) {
@@ -21,7 +20,7 @@ func TestListProjectMembers(t *testing.T) {
 	now := time.Now()
 
 	userConfig := &fakeUserConfig{
-		FocusedProjectFunc: func() string {
+		GetCurrentProjectFunc: func() string {
 			return "c-fn7lc:p-9mdxl"
 		},
 	}
@@ -78,8 +77,7 @@ func TestListProjectMembers(t *testing.T) {
 		},
 	}
 
-	flagSet := flag.NewFlagSet("test", flag.ContinueOnError)
-	cctx := cli.NewContext(nil, flagSet, nil)
+	cctx := &cli.Command{}
 
 	var out bytes.Buffer
 

@@ -1,27 +1,28 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	ntypes "github.com/rancher/norman/types"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 var (
 	waitTypes = []string{"cluster", "project"}
 )
 
-func WaitCommand() cli.Command {
-	return cli.Command{
+func WaitCommand() *cli.Command {
+	return &cli.Command{
 		Name:      "wait",
 		Usage:     "Wait for resources " + strings.Join(waitTypes, ", "),
 		ArgsUsage: "[ID/NAME]",
 		Action:    defaultAction(wait),
 		Flags: []cli.Flag{
-			cli.IntFlag{
+			&cli.IntFlag{
 				Name:  "timeout",
 				Usage: "Time in seconds to wait for a resource",
 				Value: 120,
@@ -30,17 +31,17 @@ func WaitCommand() cli.Command {
 	}
 }
 
-func wait(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "wait")
+func wait(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowCommandHelp(ctx, cmd, "wait")
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), waitTypes...)
+	resource, err := Lookup(c, cmd.Args().First(), waitTypes...)
 	if err != nil {
 		return err
 	}
@@ -61,13 +62,13 @@ func wait(ctx *cli.Context) error {
 		return nil
 	}
 
-	timeout := time.After(time.Duration(ctx.Int("timeout")) * time.Second)
+	timeout := time.After(time.Duration(cmd.Int("timeout")) * time.Second)
 	ticker := time.NewTicker(time.Second)
 
 	for {
 		select {
 		case <-timeout:
-			return fmt.Errorf("Timeout reached %v:%v transitioningMessage: %v", resource.Type, resource.ID, mapResource["transitioningMessage"])
+			return fmt.Errorf("timeout reached %v:%v transitioningMessage: %v", resource.Type, resource.ID, mapResource["transitioningMessage"])
 		case <-ticker.C:
 			err = c.ByID(resource, &mapResource)
 			if err != nil {

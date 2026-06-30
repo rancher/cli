@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/ghodss/yaml"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 type TableWriter struct {
@@ -24,11 +24,11 @@ type TableWriterConfig struct {
 	Writer io.Writer
 }
 
-func NewTableWriter(values [][]string, ctx *cli.Context) *TableWriter {
+func NewTableWriter(values [][]string, cmd *cli.Command) *TableWriter {
 	cfg := &TableWriterConfig{
 		Writer: os.Stdout,
-		Quiet:  ctx.Bool("quiet"),
-		Format: ctx.String("format"),
+		Quiet:  cmd.Bool("quiet"),
+		Format: cmd.String("format"),
 	}
 
 	return NewTableWriterWithConfig(values, cfg)
@@ -93,21 +93,22 @@ func (t *TableWriter) Write(obj interface{}) {
 		return
 	}
 
-	if t.ValueFormat == "json" {
+	switch t.ValueFormat {
+	case "json":
 		content, err := json.Marshal(obj)
 		t.err = err
 		if t.err != nil {
 			return
 		}
 		_, t.err = t.Writer.Write(append(content, byte('\n')))
-	} else if t.ValueFormat == "yaml" {
+	case "yaml":
 		content, err := yaml.Marshal(obj)
 		t.err = err
 		if t.err != nil {
 			return
 		}
 		_, t.err = t.Writer.Write(append(content, byte('\n')))
-	} else {
+	default:
 		t.err = printTemplate(t.Writer, t.ValueFormat, obj)
 	}
 }

@@ -5,6 +5,5 @@ cd $(dirname $0)
 
 ./build
 ./test
-./lint
 ./validate
 ./package

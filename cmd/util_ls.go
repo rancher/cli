@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/rancher/norman/types"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
 func baseListOpts() *types.ListOpts {
@@ -14,9 +14,9 @@ func baseListOpts() *types.ListOpts {
 	}
 }
 
-func defaultListOpts(ctx *cli.Context) *types.ListOpts {
+func defaultListOpts(cmd *cli.Command) *types.ListOpts {
 	listOpts := baseListOpts()
-	if ctx != nil && !ctx.Bool("all") {
+	if cmd != nil && !cmd.Bool("all") {
 		listOpts.Filters["removed_null"] = "1"
 		listOpts.Filters["state_ne"] = []string{
 			"inactive",
@@ -25,7 +25,7 @@ func defaultListOpts(ctx *cli.Context) *types.ListOpts {
 		}
 		delete(listOpts.Filters, "all")
 	}
-	if ctx != nil && ctx.Bool("system") {
+	if cmd != nil && cmd.Bool("system") {
 		delete(listOpts.Filters, "system")
 	} else {
 		listOpts.Filters["system"] = "false"
