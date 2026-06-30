@@ -7,8 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/rancher/norman/clientbase"
-	client "github.com/rancher/rancher/pkg/client/generated/management/v3"
+	extv1 "github.com/rancher/rancher/pkg/apis/ext.cattle.io/v1"
 	"github.com/urfave/cli/v3"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -53,12 +52,29 @@ func runKubectl(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	currentToken := currentRancherServer.AccessKey
-	t, err := c.ManagementClient.Token.ByID(currentToken)
+	bearerToken := currentRancherServer.AccessKey + ":" + currentRancherServer.SecretKey
+
+	tlsConf, err := getTLSConfig(false, currentRancherServer.CACerts)
+	if err != nil {
+		return fmt.Errorf("error creating TLS config: %w", err)
+	}
+	httpClient, err := newHTTPClient(currentRancherServer, tlsConf)
+	if err != nil {
+		return fmt.Errorf("error creating HTTP client: %w", err)
+	}
+	baseURL, err := currentRancherServer.EnvironmentURL()
+	if err != nil {
+		return fmt.Errorf("error resolving server base URL: %w", err)
+	}
+	extGetter := func(ctx context.Context, id string) (*extv1.Token, error) {
+		return getExtToken(ctx, id, baseURL, bearerToken, httpClient)
+	}
+	v3ByID := c.ManagementClient.Token.ByID
+
+	currentUser, err := getTokenUserID(ctx, currentToken, v3ByID, extGetter)
 	if err != nil {
 		return err
 	}
-
-	currentUser := t.UserID
 	kubeConfig, err := getKubeConfigForUser(cmd, currentUser)
 	if err != nil {
 		return err
@@ -70,7 +86,7 @@ func runKubectl(ctx context.Context, cmd *cli.Command) error {
 		if err != nil {
 			return err
 		}
-		isTokenValid, err = validateTokenV3(tokenID, c.ManagementClient.Token)
+		isTokenValid, err = validateToken(ctx, tokenID, v3ByID, extGetter)
 		if err != nil {
 			return err
 		}
@@ -138,13 +154,3 @@ func extractKubeconfigTokenID(kubeconfig api.Config) (string, error) {
 	return parts[0], nil
 }
 
-func validateTokenV3(tokenID string, tokenClient client.TokenOperations) (bool, error) {
-	token, err := tokenClient.ByID(tokenID)
-	if err != nil {
-		if !clientbase.IsNotFound(err) {
-			return false, err
-		}
-		return false, nil
-	}
-	return !token.Expired, nil
-}
