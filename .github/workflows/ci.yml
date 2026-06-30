@@ -19,12 +19,12 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       with:
         persist-credentials: false
 
     - name: Set up Go
-      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+      uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
       with:
         go-version-file: go.mod
         cache: false
@@ -33,7 +33,7 @@ jobs:
       run: go env -w GOTOOLCHAIN=go1.26.1+auto
 
     - name: Lint
-      uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
+      uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
       with:
         version: v2.11.3
 
@@ -66,7 +66,7 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Docker Build
-      uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
       with:
         push: false
         context: package
