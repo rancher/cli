@@ -257,6 +257,47 @@ func TestValidateToken_ExtPrefixSkipsV3(t *testing.T) {
 	assert.True(t, ok)
 }
 
+func TestValidateToken_V3NotFound_ExtUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
+	ext := func(_ context.Context, _ string) (*extv1.Token, error) {
+		return nil, &clientbase.APIError{StatusCode: http.StatusUnauthorized, Status: "401 Unauthorized", Msg: "unauthorized"}
+	}
+
+	ok, err := validateToken(context.Background(), "token-abc", v3, ext)
+
+	require.NoError(t, err)
+	assert.False(t, ok)
+}
+
+func TestValidateToken_V3NotFound_ExtForbidden(t *testing.T) {
+	t.Parallel()
+
+	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
+	ext := func(_ context.Context, _ string) (*extv1.Token, error) {
+		return nil, &clientbase.APIError{StatusCode: http.StatusForbidden, Status: "403 Forbidden", Msg: "forbidden"}
+	}
+
+	ok, err := validateToken(context.Background(), "token-abc", v3, ext)
+
+	require.NoError(t, err)
+	assert.False(t, ok)
+}
+
+func TestValidateToken_V3NotFound_ExtOtherError(t *testing.T) {
+	t.Parallel()
+
+	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
+	ext := func(_ context.Context, _ string) (*extv1.Token, error) {
+		return nil, &clientbase.APIError{StatusCode: http.StatusInternalServerError, Status: "500", Msg: "boom"}
+	}
+
+	_, err := validateToken(context.Background(), "token-abc", v3, ext)
+
+	require.Error(t, err)
+}
+
 func TestGetTokenUserID_V3(t *testing.T) {
 	t.Parallel()
 

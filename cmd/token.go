@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -130,7 +131,7 @@ func getTokenUserID(ctx context.Context, tokenID string, v3ByID tokenByIDFunc, e
 
 	extToken, err := extGetter(ctx, strings.TrimPrefix(tokenID, extTokenIDPrefix))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error resolving user id for token %q: %w", tokenID, err)
 	}
 	return extToken.Spec.UserID, nil
 }
@@ -152,10 +153,23 @@ func validateToken(ctx context.Context, tokenID string, v3ByID tokenByIDFunc, ex
 
 	extToken, err := extGetter(ctx, strings.TrimPrefix(tokenID, extTokenIDPrefix))
 	if err != nil {
-		if clientbase.IsNotFound(err) {
+		// 404/401/403 from the ext API are all "could not determine validity":
+		// the token isn't there, or the bearer format isn't accepted by this
+		// server. Fall through to kubeconfig regeneration in either case rather
+		// than surfacing an opaque error to the user.
+		if clientbase.IsNotFound(err) || isUnauthorized(err) {
 			return false, nil
 		}
 		return false, err
 	}
 	return !extToken.Status.Expired, nil
+}
+
+// isUnauthorized reports whether err is a *clientbase.APIError with status 401 or 403.
+func isUnauthorized(err error) bool {
+	var apiErr *clientbase.APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode == http.StatusUnauthorized || apiErr.StatusCode == http.StatusForbidden
+	}
+	return false
 }

@@ -52,8 +52,12 @@ func runKubectl(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	currentToken := currentRancherServer.AccessKey
+	// bearerToken intentionally keeps any "ext/" prefix on AccessKey because
+	// the ext API authenticator parses the prefix back out of the Bearer header.
 	bearerToken := currentRancherServer.AccessKey + ":" + currentRancherServer.SecretKey
 
+	// Norman's MasterClient does not expose its underlying http.Client, so
+	// build a parallel one here for the direct ext API call.
 	tlsConf, err := getTLSConfig(false, currentRancherServer.CACerts)
 	if err != nil {
 		return fmt.Errorf("error creating TLS config: %w", err)
