@@ -15,6 +15,27 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+// buildExecCredential replicates the loginToken→ExecCredential conversion in loginAndGenerateCred.
+func buildExecCredential(tok loginToken) (*config.ExecCredential, error) {
+	cred := &config.ExecCredential{
+		TypeMeta: config.TypeMeta{
+			Kind:       "ExecCredential",
+			APIVersion: "client.authentication.k8s.io/v1beta1",
+		},
+		Status: &config.ExecCredentialStatus{},
+	}
+	cred.Status.Token = tok.BearerToken
+	if tok.ExpiresAt == "" {
+		return cred, nil
+	}
+	ts, err := time.Parse(time.RFC3339, tok.ExpiresAt)
+	if err != nil {
+		return nil, err
+	}
+	cred.Status.ExpirationTimestamp = &config.Time{Time: ts}
+	return cred, nil
+}
+
 func TestGetAuthProviders(t *testing.T) {
 	t.Parallel()
 
@@ -325,6 +346,94 @@ func TestSelectAuthProvider(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, provider)
+		})
+	}
+}
+
+func TestLoginToken_ExtFormat(t *testing.T) {
+	t.Parallel()
+
+	expiresAt := time.Now().UTC().Add(time.Hour).Truncate(time.Second)
+	expiresAtStr := expiresAt.Format(time.RFC3339)
+
+	tests := []struct {
+		name            string
+		responseBody    string
+		wantBearer      string
+		wantExpiresAt   bool
+		wantExpiresTime time.Time
+	}{
+		{
+			name: "v3 token response",
+			responseBody: fmt.Sprintf(`{
+				"token": "v3-bearer-token",
+				"expiresAt": "%s",
+				"type": "token"
+			}`, expiresAtStr),
+			wantBearer:      "v3-bearer-token",
+			wantExpiresAt:   true,
+			wantExpiresTime: expiresAt,
+		},
+		{
+			name: "ext token response",
+			responseBody: fmt.Sprintf(`{
+				"apiVersion": "ext.cattle.io/v1",
+				"kind": "Token",
+				"metadata": {"name": "token-abc"},
+				"spec": {"userID": "user-456"},
+				"status": {
+					"bearerToken": "ext/token-abc:ext-bearer-value",
+					"expiresAt": "%s"
+				}
+			}`, expiresAtStr),
+			wantBearer:      "ext/token-abc:ext-bearer-value",
+			wantExpiresAt:   true,
+			wantExpiresTime: expiresAt,
+		},
+		{
+			name: "v3 token response without expiresAt",
+			responseBody: `{
+				"token": "v3-no-expiry-token",
+				"type": "token"
+			}`,
+			wantBearer:    "v3-no-expiry-token",
+			wantExpiresAt: false,
+		},
+		{
+			name: "ext token response without expiresAt",
+			responseBody: `{
+				"apiVersion": "ext.cattle.io/v1",
+				"kind": "Token",
+				"metadata": {"name": "token-noexp"},
+				"spec": {"userID": "user-789"},
+				"status": {
+					"bearerToken": "ext/token-noexp:no-expiry-value"
+				}
+			}`,
+			wantBearer:    "ext/token-noexp:no-expiry-value",
+			wantExpiresAt: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tok, err := parseLoginResponse([]byte(tt.responseBody))
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantBearer, tok.BearerToken)
+
+			cred, err := buildExecCredential(tok)
+			require.NoError(t, err)
+			require.NotNil(t, cred)
+			assert.Equal(t, tt.wantBearer, cred.Status.Token)
+
+			if tt.wantExpiresAt {
+				require.NotNil(t, cred.Status.ExpirationTimestamp)
+				assert.True(t, tt.wantExpiresTime.Equal(cred.Status.ExpirationTimestamp.Time))
+			} else {
+				assert.Nil(t, cred.Status.ExpirationTimestamp)
+			}
 		})
 	}
 }
