@@ -157,4 +157,3 @@ func extractKubeconfigTokenID(kubeconfig api.Config) (string, error) {
 
 	return parts[0], nil
 }
-
