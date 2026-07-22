@@ -20,9 +20,9 @@ require (
 	github.com/urfave/cli/v3 v3.6.2
 	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.21.0
 	golang.org/x/term v0.43.0
-	golang.org/x/text v0.37.0
+	golang.org/x/text v0.39.0
 	k8s.io/client-go v12.0.0+incompatible
 )
 
