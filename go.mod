@@ -2,18 +2,20 @@ module github.com/rancher/cli
 
 go 1.25.11
 
+toolchain go1.25.12
+
 replace (
-	k8s.io/apiserver => k8s.io/apiserver v0.35.5
-	k8s.io/client-go => k8s.io/client-go v0.35.5
-	k8s.io/component-base => k8s.io/component-base v0.35.5
-	k8s.io/kubernetes => k8s.io/kubernetes v1.35.5
+	k8s.io/apiserver => k8s.io/apiserver v0.35.6
+	k8s.io/client-go => k8s.io/client-go v0.35.6
+	k8s.io/component-base => k8s.io/component-base v0.35.6
+	k8s.io/kubernetes => k8s.io/kubernetes v1.35.6
 )
 
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.8.8
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260629201752-4603afd27648
-	github.com/rancher/rancher/pkg/client v0.0.0-20260629201752-4603afd27648
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260730152724-2b16899cac68
+	github.com/rancher/rancher/pkg/client v0.0.0-20260730152724-2b16899cac68
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
@@ -22,7 +24,7 @@ require (
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.21.0
 	golang.org/x/term v0.44.0
-	golang.org/x/text v0.38.0
+	golang.org/x/text v0.39.0
 	k8s.io/client-go v12.0.0+incompatible
 )
 
@@ -54,11 +56,11 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	github.com/rancher/aks-operator v1.14.3 // indirect
-	github.com/rancher/ali-operator v1.14.2 // indirect
-	github.com/rancher/eks-operator v1.14.3 // indirect
-	github.com/rancher/fleet/pkg/apis v0.15.4 // indirect
-	github.com/rancher/gke-operator v1.14.3 // indirect
+	github.com/rancher/aks-operator v1.14.4 // indirect
+	github.com/rancher/ali-operator v1.14.3 // indirect
+	github.com/rancher/eks-operator v1.14.4 // indirect
+	github.com/rancher/fleet/pkg/apis v0.15.5 // indirect
+	github.com/rancher/gke-operator v1.14.4 // indirect
 	github.com/rancher/lasso v0.2.8 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
 	github.com/rancher/wrangler/v3 v3.6.0 // indirect
