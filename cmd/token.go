@@ -117,7 +117,7 @@ func getExtToken(ctx context.Context, id, baseURL, bearerToken string, client *h
 // getTokenUserID returns the user id associated with the given token id.
 // It tries the v3 Management API first and falls back to ext.cattle.io/v1.
 // Ids prefixed with "ext/" skip the v3 attempt entirely. The prefix is stripped
-// before the ext lookup so callers receive a clean token name.
+// before the ext lookup so callees receive a clean token name.
 func getTokenUserID(ctx context.Context, tokenID string, v3ByID tokenByIDFunc, extGetter extTokenGetterFunc) (string, error) {
 	if !strings.HasPrefix(tokenID, extTokenIDPrefix) {
 		token, err := v3ByID(tokenID)
@@ -139,7 +139,7 @@ func getTokenUserID(ctx context.Context, tokenID string, v3ByID tokenByIDFunc, e
 // validateToken reports whether the token with the given id exists and is not expired.
 // It tries the v3 Management API first and falls back to ext.cattle.io/v1.
 // Ids prefixed with "ext/" skip the v3 attempt entirely. The prefix is stripped
-// before the ext lookup so callers receive a clean token name.
+// before the ext lookup so callees receive a clean token name.
 func validateToken(ctx context.Context, tokenID string, v3ByID tokenByIDFunc, extGetter extTokenGetterFunc) (bool, error) {
 	if !strings.HasPrefix(tokenID, extTokenIDPrefix) {
 		token, err := v3ByID(tokenID)
