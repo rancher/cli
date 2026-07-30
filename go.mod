@@ -1,14 +1,14 @@
 module github.com/rancher/cli
 
-go 1.25.8
+go 1.25.11
 
 toolchain go1.25.12
 
 replace (
-	k8s.io/apiserver => k8s.io/apiserver v0.35.5
-	k8s.io/client-go => k8s.io/client-go v0.35.5
-	k8s.io/component-base => k8s.io/component-base v0.35.5
-	k8s.io/kubernetes => k8s.io/kubernetes v1.35.5
+	k8s.io/apiserver => k8s.io/apiserver v0.35.6
+	k8s.io/client-go => k8s.io/client-go v0.35.6
+	k8s.io/component-base => k8s.io/component-base v0.35.6
+	k8s.io/kubernetes => k8s.io/kubernetes v1.35.6
 )
 
 require (
