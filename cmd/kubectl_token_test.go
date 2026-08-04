@@ -350,7 +350,7 @@ func TestSelectAuthProvider(t *testing.T) {
 	}
 }
 
-func TestLoginToken_ExtFormat(t *testing.T) {
+func TestLoginTokenExtFormat(t *testing.T) {
 	t.Parallel()
 
 	expiresAt := time.Now().UTC().Add(time.Hour).Truncate(time.Second)

@@ -19,7 +19,7 @@ func newNotFound() error {
 	return &clientbase.APIError{StatusCode: http.StatusNotFound, Status: "404 Not Found", Msg: "not found"}
 }
 
-func TestParseLoginResponse_V3(t *testing.T) {
+func TestParseLoginResponseV3(t *testing.T) {
 	t.Parallel()
 
 	expiresAt := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
@@ -38,7 +38,7 @@ func TestParseLoginResponse_V3(t *testing.T) {
 	assert.Equal(t, "user-123", got.UserID)
 }
 
-func TestParseLoginResponse_Ext(t *testing.T) {
+func TestParseLoginResponseExt(t *testing.T) {
 	t.Parallel()
 
 	expiresAt := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
@@ -61,7 +61,7 @@ func TestParseLoginResponse_Ext(t *testing.T) {
 	assert.Equal(t, "user-456", got.UserID)
 }
 
-func TestParseLoginResponse_LooksLikeExtButWrongKind(t *testing.T) {
+func TestParseLoginResponseLooksLikeExtButWrongKind(t *testing.T) {
 	t.Parallel()
 
 	// Stray apiVersion field on a v3 response must not route to ext parser.
@@ -80,7 +80,7 @@ func TestParseLoginResponse_LooksLikeExtButWrongKind(t *testing.T) {
 	assert.Equal(t, "u", got.UserID)
 }
 
-func TestParseLoginResponse_InvalidJSON(t *testing.T) {
+func TestParseLoginResponseInvalidJSON(t *testing.T) {
 	t.Parallel()
 
 	_, err := parseLoginResponse([]byte("not json"))
@@ -89,7 +89,7 @@ func TestParseLoginResponse_InvalidJSON(t *testing.T) {
 	assert.ErrorContains(t, err, "error unmarshaling login response")
 }
 
-func TestParseLoginResponse_ExtInvalidJSON(t *testing.T) {
+func TestParseLoginResponseExtInvalidJSON(t *testing.T) {
 	t.Parallel()
 
 	body := []byte(`{"apiVersion": "ext.cattle.io/v1", "kind": "Token", "spec": "not-an-object"}`)
@@ -100,7 +100,7 @@ func TestParseLoginResponse_ExtInvalidJSON(t *testing.T) {
 	assert.ErrorContains(t, err, "error unmarshaling ext token response")
 }
 
-func TestGetExtToken_Success(t *testing.T) {
+func TestGetExtTokenSuccess(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -116,14 +116,14 @@ func TestGetExtToken_Success(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	token, err := getExtToken(context.Background(), "token-abc", server.URL, "ext/token-abc:secret", server.Client())
+	token, err := getExtToken(t.Context(), "token-abc", server.URL, "ext/token-abc:secret", server.Client())
 
 	require.NoError(t, err)
 	assert.Equal(t, "user-789", token.Spec.UserID)
 	assert.False(t, token.Status.Expired)
 }
 
-func TestGetExtToken_StripsExtPrefix(t *testing.T) {
+func TestGetExtTokenStripsExtPrefix(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -133,11 +133,11 @@ func TestGetExtToken_StripsExtPrefix(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	_, err := getExtToken(context.Background(), "ext/token-abc", server.URL, "ext/token-abc:secret", server.Client())
+	_, err := getExtToken(t.Context(), "ext/token-abc", server.URL, "ext/token-abc:secret", server.Client())
 	require.NoError(t, err)
 }
 
-func TestGetExtToken_NotFound(t *testing.T) {
+func TestGetExtTokenNotFound(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -145,13 +145,13 @@ func TestGetExtToken_NotFound(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	_, err := getExtToken(context.Background(), "token-abc", server.URL, "token-abc:secret", server.Client())
+	_, err := getExtToken(t.Context(), "token-abc", server.URL, "token-abc:secret", server.Client())
 
 	require.Error(t, err)
 	assert.True(t, clientbase.IsNotFound(err), "expected clientbase.IsNotFound to be true")
 }
 
-func TestGetExtToken_ServerError(t *testing.T) {
+func TestGetExtTokenServerError(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -159,13 +159,13 @@ func TestGetExtToken_ServerError(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	_, err := getExtToken(context.Background(), "token-abc", server.URL, "token-abc:secret", server.Client())
+	_, err := getExtToken(t.Context(), "token-abc", server.URL, "token-abc:secret", server.Client())
 
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "500")
 }
 
-func TestValidateToken_V3Valid(t *testing.T) {
+func TestValidateTokenV3Valid(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) {
@@ -176,13 +176,13 @@ func TestValidateToken_V3Valid(t *testing.T) {
 		return nil, nil
 	}
 
-	ok, err := validateToken(context.Background(), "token-abc", v3, ext)
+	ok, err := validateToken(t.Context(), "token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.True(t, ok)
 }
 
-func TestValidateToken_V3Expired(t *testing.T) {
+func TestValidateTokenV3Expired(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) {
@@ -193,13 +193,13 @@ func TestValidateToken_V3Expired(t *testing.T) {
 		return nil, nil
 	}
 
-	ok, err := validateToken(context.Background(), "token-abc", v3, ext)
+	ok, err := validateToken(t.Context(), "token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
 
-func TestValidateToken_V3NotFound_ExtValid(t *testing.T) {
+func TestValidateTokenV3NotFoundExtValid(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
@@ -207,13 +207,13 @@ func TestValidateToken_V3NotFound_ExtValid(t *testing.T) {
 		return &extv1.Token{Status: extv1.TokenStatus{Expired: false}}, nil
 	}
 
-	ok, err := validateToken(context.Background(), "token-abc", v3, ext)
+	ok, err := validateToken(t.Context(), "token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.True(t, ok)
 }
 
-func TestValidateToken_V3NotFound_ExtExpired(t *testing.T) {
+func TestValidateTokenV3NotFoundExtExpired(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
@@ -221,25 +221,25 @@ func TestValidateToken_V3NotFound_ExtExpired(t *testing.T) {
 		return &extv1.Token{Status: extv1.TokenStatus{Expired: true}}, nil
 	}
 
-	ok, err := validateToken(context.Background(), "token-abc", v3, ext)
+	ok, err := validateToken(t.Context(), "token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
 
-func TestValidateToken_V3NotFound_ExtNotFound(t *testing.T) {
+func TestValidateTokenV3NotFoundExtNotFound(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
 	ext := func(_ context.Context, id string) (*extv1.Token, error) { return nil, newNotFound() }
 
-	ok, err := validateToken(context.Background(), "token-abc", v3, ext)
+	ok, err := validateToken(t.Context(), "token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
 
-func TestValidateToken_ExtPrefixSkipsV3(t *testing.T) {
+func TestValidateTokenExtPrefixSkipsV3(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) {
@@ -251,13 +251,13 @@ func TestValidateToken_ExtPrefixSkipsV3(t *testing.T) {
 		return &extv1.Token{Status: extv1.TokenStatus{Expired: false}}, nil
 	}
 
-	ok, err := validateToken(context.Background(), "ext/token-abc", v3, ext)
+	ok, err := validateToken(t.Context(), "ext/token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.True(t, ok)
 }
 
-func TestValidateToken_V3NotFound_ExtUnauthorized(t *testing.T) {
+func TestValidateTokenV3NotFoundExtUnauthorized(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
@@ -265,13 +265,13 @@ func TestValidateToken_V3NotFound_ExtUnauthorized(t *testing.T) {
 		return nil, &clientbase.APIError{StatusCode: http.StatusUnauthorized, Status: "401 Unauthorized", Msg: "unauthorized"}
 	}
 
-	ok, err := validateToken(context.Background(), "token-abc", v3, ext)
+	ok, err := validateToken(t.Context(), "token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
 
-func TestValidateToken_V3NotFound_ExtForbidden(t *testing.T) {
+func TestValidateTokenV3NotFoundExtForbidden(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
@@ -279,13 +279,13 @@ func TestValidateToken_V3NotFound_ExtForbidden(t *testing.T) {
 		return nil, &clientbase.APIError{StatusCode: http.StatusForbidden, Status: "403 Forbidden", Msg: "forbidden"}
 	}
 
-	ok, err := validateToken(context.Background(), "token-abc", v3, ext)
+	ok, err := validateToken(t.Context(), "token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
 
-func TestValidateToken_V3NotFound_ExtOtherError(t *testing.T) {
+func TestValidateTokenV3NotFoundExtOtherError(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
@@ -293,12 +293,12 @@ func TestValidateToken_V3NotFound_ExtOtherError(t *testing.T) {
 		return nil, &clientbase.APIError{StatusCode: http.StatusInternalServerError, Status: "500", Msg: "boom"}
 	}
 
-	_, err := validateToken(context.Background(), "token-abc", v3, ext)
+	_, err := validateToken(t.Context(), "token-abc", v3, ext)
 
 	require.Error(t, err)
 }
 
-func TestGetTokenUserID_V3(t *testing.T) {
+func TestGetTokenUserIDV3(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) {
@@ -309,13 +309,13 @@ func TestGetTokenUserID_V3(t *testing.T) {
 		return nil, nil
 	}
 
-	uid, err := getTokenUserID(context.Background(), "token-abc", v3, ext)
+	uid, err := getTokenUserID(t.Context(), "token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.Equal(t, "user-v3", uid)
 }
 
-func TestGetTokenUserID_ExtFallback(t *testing.T) {
+func TestGetTokenUserIDExtFallback(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) { return nil, newNotFound() }
@@ -325,13 +325,13 @@ func TestGetTokenUserID_ExtFallback(t *testing.T) {
 		return tok, nil
 	}
 
-	uid, err := getTokenUserID(context.Background(), "token-abc", v3, ext)
+	uid, err := getTokenUserID(t.Context(), "token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.Equal(t, "user-ext", uid)
 }
 
-func TestGetTokenUserID_ExtPrefixSkipsV3(t *testing.T) {
+func TestGetTokenUserIDExtPrefixSkipsV3(t *testing.T) {
 	t.Parallel()
 
 	v3 := func(id string) (*managementClient.Token, error) {
@@ -345,7 +345,7 @@ func TestGetTokenUserID_ExtPrefixSkipsV3(t *testing.T) {
 		return tok, nil
 	}
 
-	uid, err := getTokenUserID(context.Background(), "ext/token-abc", v3, ext)
+	uid, err := getTokenUserID(t.Context(), "ext/token-abc", v3, ext)
 
 	require.NoError(t, err)
 	assert.Equal(t, "user-ext", uid)
