@@ -7,8 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/rancher/norman/clientbase"
-	client "github.com/rancher/rancher/pkg/client/generated/management/v3"
+	extv1 "github.com/rancher/rancher/pkg/apis/ext.cattle.io/v1"
 	"github.com/urfave/cli/v3"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -53,12 +52,33 @@ func runKubectl(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	currentToken := currentRancherServer.AccessKey
-	t, err := c.ManagementClient.Token.ByID(currentToken)
+	// bearerToken intentionally keeps any "ext/" prefix on AccessKey because
+	// the ext API authenticator parses the prefix back out of the Bearer header.
+	bearerToken := currentRancherServer.AccessKey + ":" + currentRancherServer.SecretKey
+
+	// Norman's MasterClient does not expose its underlying http.Client, so
+	// build a parallel one here for the direct ext API call.
+	tlsConf, err := getTLSConfig(false, currentRancherServer.CACerts)
+	if err != nil {
+		return fmt.Errorf("error creating TLS config: %w", err)
+	}
+	httpClient, err := newHTTPClient(currentRancherServer, tlsConf)
+	if err != nil {
+		return fmt.Errorf("error creating HTTP client: %w", err)
+	}
+	baseURL, err := currentRancherServer.EnvironmentURL()
+	if err != nil {
+		return fmt.Errorf("error resolving server base URL: %w", err)
+	}
+	extGetter := func(ctx context.Context, id string) (*extv1.Token, error) {
+		return getExtToken(ctx, id, baseURL, bearerToken, httpClient)
+	}
+	v3ByID := c.ManagementClient.Token.ByID
+
+	currentUser, err := getTokenUserID(ctx, currentToken, v3ByID, extGetter)
 	if err != nil {
 		return err
 	}
-
-	currentUser := t.UserID
 	kubeConfig, err := getKubeConfigForUser(cmd, currentUser)
 	if err != nil {
 		return err
@@ -70,7 +90,7 @@ func runKubectl(ctx context.Context, cmd *cli.Command) error {
 		if err != nil {
 			return err
 		}
-		isTokenValid, err = validateToken(tokenID, c.ManagementClient.Token)
+		isTokenValid, err = validateToken(ctx, tokenID, v3ByID, extGetter)
 		if err != nil {
 			return err
 		}
@@ -136,15 +156,4 @@ func extractKubeconfigTokenID(kubeconfig api.Config) (string, error) {
 	}
 
 	return parts[0], nil
-}
-
-func validateToken(tokenID string, tokenClient client.TokenOperations) (bool, error) {
-	token, err := tokenClient.ByID(tokenID)
-	if err != nil {
-		if !clientbase.IsNotFound(err) {
-			return false, err
-		}
-		return false, nil
-	}
-	return !token.Expired, nil
 }

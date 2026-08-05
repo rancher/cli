@@ -153,12 +153,13 @@ func TestRancherLogin(t *testing.T) {
 	expiresAt := time.Now().Add(time.Hour).Format(time.RFC3339)
 
 	tests := []struct {
-		name         string
-		useV1Public  bool
-		statusCode   int
-		responseBody string
-		shouldError  bool
-		errorMsg     string
+		name           string
+		useV1Public    bool
+		statusCode     int
+		responseBody   string
+		shouldError    bool
+		errorMsg       string
+		expectedBearer string // when empty, the assertion falls back to expectedToken
 	}{
 		{
 			name:        "successful login with v1-public",
@@ -198,10 +199,29 @@ func TestRancherLogin(t *testing.T) {
 			shouldError:  true,
 			errorMsg:     "error unmarshaling",
 		},
+		{
+			name:        "successful login with ext token response",
+			useV1Public: true,
+			statusCode:  http.StatusCreated,
+			responseBody: fmt.Sprintf(`{
+				"apiVersion": "ext.cattle.io/v1",
+				"kind": "Token",
+				"metadata": {"name": "token-xyz"},
+				"spec": { "userID": "user-123" },
+				"status": {
+					"bearerToken": "ext/token-xyz:%s",
+					"expiresAt": "%s"
+				}
+			}`, expectedToken, expiresAt),
+			shouldError:    false,
+			expectedBearer: "ext/token-xyz:" + expectedToken,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodPost, r.Method)
 
@@ -252,7 +272,11 @@ func TestRancherLogin(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.NotNil(t, token)
-				assert.Equal(t, expectedToken, token.Token)
+				want := tt.expectedBearer
+				if want == "" {
+					want = expectedToken
+				}
+				assert.Equal(t, want, token.BearerToken)
 			}
 		})
 	}
@@ -320,7 +344,7 @@ func TestOauthDeviceCodeAuth(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotNil(t, token)
-	assert.Equal(t, "rancher-token-123", token.Token)
+	assert.Equal(t, "rancher-token-123", token.BearerToken)
 }
 
 func TestOauthAuthCodeAuth(t *testing.T) {
