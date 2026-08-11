@@ -10,7 +10,6 @@ replace (
 )
 
 require (
-	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.9.7
 	github.com/rancher/rancher/pkg/apis v0.0.0-20260623174132-bf30ccd1cf8b
 	github.com/rancher/rancher/pkg/client v0.0.0-20260623174132-bf30ccd1cf8b
@@ -24,6 +23,7 @@ require (
 	golang.org/x/term v0.43.0
 	golang.org/x/text v0.37.0
 	k8s.io/client-go v12.0.0+incompatible
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
@@ -32,6 +32,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -79,5 +80,4 @@ require (
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.0 // indirect
-	sigs.k8s.io/yaml v1.6.0 // indirect
 )
