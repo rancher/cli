@@ -30,7 +30,7 @@ jobs:
         cache: false
     # https://github.com/golang/go/issues/75031
     - name: Set toolchain version
-      run: go env -w GOTOOLCHAIN=go1.26.1+auto
+      run: go env -w GOTOOLCHAIN=go1.26.6+auto
 
     - name: Lint
       uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
