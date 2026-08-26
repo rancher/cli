@@ -5,6 +5,8 @@ go 1.25.11
 toolchain go1.25.12
 
 replace (
+	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.44.0
+	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.44.0
 	k8s.io/apiserver => k8s.io/apiserver v0.34.1
 	k8s.io/client-go => k8s.io/client-go v0.34.1
 	k8s.io/component-base => k8s.io/component-base v0.34.1
