@@ -7,9 +7,11 @@ toolchain go1.25.14
 replace (
 	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.44.0
-	k8s.io/apiserver => k8s.io/apiserver v0.34.1
-	k8s.io/client-go => k8s.io/client-go v0.34.1
-	k8s.io/component-base => k8s.io/component-base v0.34.1
+	k8s.io/api => k8s.io/api v0.33.13
+	k8s.io/apimachinery => k8s.io/apimachinery v0.33.13
+	k8s.io/apiserver => k8s.io/apiserver v0.33.13
+	k8s.io/client-go => k8s.io/client-go v0.33.13
+	k8s.io/component-base => k8s.io/component-base v0.33.13
 	k8s.io/kubernetes => k8s.io/kubernetes v1.33.13
 )
 
@@ -92,6 +94,7 @@ require (
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
