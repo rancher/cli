@@ -5,11 +5,14 @@ go 1.25.11
 toolchain go1.25.14
 
 replace (
+	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.44.0
+	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.43.0
 	k8s.io/api => k8s.io/api v0.32.13
 	k8s.io/apimachinery => k8s.io/apimachinery v0.32.13
 	k8s.io/apiserver => k8s.io/apiserver v0.32.13
 	k8s.io/client-go => k8s.io/client-go v0.32.13
 	k8s.io/component-base => k8s.io/component-base v0.32.13
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f
 	k8s.io/kubernetes => k8s.io/kubernetes v1.32.13
 )
 
@@ -75,8 +78,8 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.opentelemetry.io/otel v1.41.0 // indirect
-	go.opentelemetry.io/otel/trace v1.41.0 // indirect
+	go.opentelemetry.io/otel v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
@@ -94,7 +97,6 @@ require (
 	k8s.io/kubernetes v1.32.13 // indirect
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
