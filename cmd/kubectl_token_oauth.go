@@ -12,9 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"os/signal"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -186,25 +184,13 @@ func openBrowser(openURL string) error {
 		return fmt.Errorf("unsupported URL scheme %s", URL.Scheme)
 	}
 
-	var (
-		cmd  string
-		args []string
-	)
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = "open"
-		args = []string{openURL}
-	case "linux":
-		cmd = "xdg-open"
-		args = []string{openURL}
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start", "", openURL}
-	default:
-		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
-	}
-
-	return exec.Command(cmd, args...).Start()
+	// The launch is delegated to an OS-specific opener
+	// (kubectl_token_oauth_windows.go / kubectl_token_oauth_other.go). The URL
+	// is never handed to a shell: non-Windows passes it as a single argv
+	// element, Windows uses the ShellExecute API — so a server-supplied
+	// authorize URL (which legitimately contains `&` between query parameters)
+	// cannot be truncated or have its metacharacters interpreted.
+	return osOpenURL(openURL)
 }
 
 // callbackResult is used to communicate the result of the OAuth callback handling back to the main authentication flow.
