@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/rancher/cli/config"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/exp/maps"
 )
 
@@ -24,21 +25,21 @@ type serverData struct {
 }
 
 // ServerCommand defines the 'rancher server' sub-commands
-func ServerCommand() cli.Command {
+func ServerCommand() *cli.Command {
 	cfg := &config.Config{}
 
-	return cli.Command{
+	return &cli.Command{
 		Name:  "server",
 		Usage: "Operations for the server",
 		Description: `Switch or view the server currently in focus.
 `,
 		Before: loadAndValidateConfig(cfg),
-		Subcommands: []cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:  "current",
 				Usage: "Display the current server",
-				Action: func(ctx *cli.Context) error {
-					return serverCurrent(ctx.App.Writer, cfg)
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return serverCurrent(cmd.Root().Writer, cfg)
 				},
 			},
 			{
@@ -49,8 +50,8 @@ func ServerCommand() cli.Command {
 The server arg is optional, if not passed in a list of available servers will
 be displayed and one can be selected.
 `,
-				Action: func(ctx *cli.Context) error {
-					serverName, err := getSelectedServer(ctx, cfg)
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					serverName, err := getSelectedServer(cmd, cfg)
 					if err != nil {
 						return err
 					}
@@ -61,12 +62,12 @@ be displayed and one can be selected.
 				Name:      "ls",
 				Usage:     "List all servers",
 				ArgsUsage: "None",
-				Action: func(ctx *cli.Context) error {
-					format := ctx.String("format")
-					return serverLs(ctx.App.Writer, cfg, format)
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					format := cmd.String("format")
+					return serverLs(cmd.Root().Writer, cfg, format)
 				},
 				Flags: []cli.Flag{
-					cli.StringFlag{
+					&cli.StringFlag{
 						Name:  "format",
 						Usage: "'json', 'yaml' or Custom format: '{{.Name}} {{.URL}}'",
 					},
@@ -80,8 +81,8 @@ be displayed and one can be selected.
 		The server arg is optional, if not passed in a list of available servers will
 		be displayed and one can be selected.
 		`,
-				Action: func(ctx *cli.Context) error {
-					serverName, err := getSelectedServer(ctx, cfg)
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					serverName, err := getSelectedServer(cmd, cfg)
 					if err != nil {
 						return err
 					}
@@ -170,20 +171,20 @@ func serverSwitch(cf *config.Config, serverName string) error {
 
 // getSelectedServer will get the selected server if provided as argument,
 // or it will prompt the user to select one.
-func getSelectedServer(ctx *cli.Context, cfg *config.Config) (string, error) {
-	serverName := ctx.Args().First()
+func getSelectedServer(cmd *cli.Command, cfg *config.Config) (string, error) {
+	serverName := cmd.Args().First()
 	if serverName != "" {
 		return serverName, nil
 	}
-	return serverFromInput(ctx, cfg)
+	return serverFromInput(cmd, cfg)
 }
 
 // serverFromInput displays the list of servers from the local config and
 // prompt the user to select one.
-func serverFromInput(ctx *cli.Context, cf *config.Config) (string, error) {
+func serverFromInput(cmd *cli.Command, cf *config.Config) (string, error) {
 	servers := getServers(cf)
 
-	if err := displayListServers(ctx, servers); err != nil {
+	if err := displayListServers(cmd, servers); err != nil {
 		return "", err
 	}
 
@@ -219,12 +220,12 @@ func serverFromInput(ctx *cli.Context, cf *config.Config) (string, error) {
 }
 
 // displayListServers displays the list of rancher servers
-func displayListServers(ctx *cli.Context, servers []*serverData) error {
+func displayListServers(cmd *cli.Command, servers []*serverData) error {
 	writer := NewTableWriter([][]string{
 		{"INDEX", "Index"},
 		{"NAME", "Name"},
 		{"URL", "URL"},
-	}, ctx)
+	}, cmd)
 
 	defer writer.Close()
 
@@ -259,16 +260,16 @@ func getServers(cfg *config.Config) []*serverData {
 }
 
 func loadAndValidateConfig(cfg *config.Config) cli.BeforeFunc {
-	return func(ctx *cli.Context) error {
-		conf, err := loadConfig(ctx)
+	return func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+		conf, err := loadConfig(cmd)
 		if err != nil {
-			return err
+			return ctx, err
 		}
 		*cfg = conf
 
 		if len(cfg.Servers) == 0 {
-			return errors.New("no servers are currently configured")
+			return ctx, errors.New("no servers are currently configured")
 		}
-		return nil
+		return ctx, nil
 	}
 }

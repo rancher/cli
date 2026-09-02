@@ -8,7 +8,7 @@ import (
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
-	capiClient "github.com/rancher/rancher/pkg/client/generated/cluster/v1beta1"
+	capiClient "github.com/rancher/rancher/pkg/client/generated/cluster/v1beta2"
 	clusterClient "github.com/rancher/rancher/pkg/client/generated/cluster/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	projectClient "github.com/rancher/rancher/pkg/client/generated/project/v3"
@@ -113,9 +113,9 @@ func (mc *MasterClient) newManagementClient() error {
 
 func (mc *MasterClient) newClusterClient() error {
 	options := createClientOpts(mc.UserConfig)
-	options.URL = options.URL + "/clusters/" + mc.UserConfig.FocusedCluster()
+	options.URL = options.URL + "/clusters/" + mc.UserConfig.GetCurrentCluster()
 
-	// Setup the project client
+	// Setup the cluster client
 	cc, err := clusterClient.NewClient(options)
 	if err != nil {
 		if clientbase.IsNotFound(err) {
@@ -136,7 +136,7 @@ func (mc *MasterClient) newProjectClient() error {
 	pc, err := projectClient.NewClient(options)
 	if err != nil {
 		if clientbase.IsNotFound(err) {
-			err = fmt.Errorf("current project not available, try running `rancher context switch: %w", err)
+			err = fmt.Errorf("current project not available, try running `rancher context switch`: %w", err)
 		}
 		return err
 	}
