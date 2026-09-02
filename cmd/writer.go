@@ -6,8 +6,8 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/ghodss/yaml"
 	"github.com/urfave/cli/v3"
+	"sigs.k8s.io/yaml"
 )
 
 type TableWriter struct {

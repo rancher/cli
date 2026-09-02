@@ -2,11 +2,9 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -70,28 +68,6 @@ func ClusterCommand() *cli.Command {
 					&cli.StringFlag{
 						Name:  "description",
 						Usage: "Description to apply to the cluster",
-					},
-					&cli.BoolFlag{
-						Name:  "disable-docker-version",
-						Usage: "Allow unsupported versions of docker on the nodes, [default=true]",
-						Value: true,
-					},
-					&cli.BoolFlag{
-						Name:  "import",
-						Usage: "Mark the cluster for import, this is required if the cluster is going to be used to import an existing k8s cluster",
-					},
-					&cli.StringFlag{
-						Name:  "k8s-version",
-						Usage: "Kubernetes version to use for the cluster, pass in 'list' to see available versions",
-					},
-					&cli.StringFlag{
-						Name:  "network-provider",
-						Usage: "Network provider for the cluster (flannel, canal, calico)",
-						Value: "canal",
-					},
-					&cli.StringFlag{
-						Name:  "rke-config",
-						Usage: "Location of an rke config file to import. Can be JSON or YAML format",
 					},
 				},
 			},
@@ -274,22 +250,6 @@ func clusterCreate(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	k8sVersion := cmd.String("k8s-version")
-	if k8sVersion != "" {
-		k8sVersions, err := getClusterK8sOptions(c)
-		if err != nil {
-			return err
-		}
-
-		if slices.Contains(k8sVersions, k8sVersion) {
-			fmt.Println("Available Kubernetes versions:")
-			for _, val := range k8sVersions {
-				fmt.Println(val)
-			}
-			return nil
-		}
-	}
-
 	config, err := getClusterConfig(cmd)
 	if err != nil {
 		return err
@@ -365,18 +325,7 @@ func clusterAddNode(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	if cluster.Driver == "rancherKubernetesEngine" || cluster.Driver == "" {
-		filter := defaultListOpts(cmd)
-		filter.Filters["clusterId"] = cluster.ID
-		nodePools, err := c.ManagementClient.NodePool.List(filter)
-		if err != nil {
-			return err
-		}
-
-		if len(nodePools.Data) > 0 {
-			return errors.New("a node can't be manually registered to a cluster utilizing node-pools")
-		}
-	} else {
+	if cluster.Driver != "" {
 		return errors.New("a node can only be manually registered to a custom cluster")
 	}
 
@@ -774,72 +723,9 @@ func getClusterPods(cluster managementClient.Cluster) string {
 	return cluster.Requested["pods"] + "/" + cluster.Allocatable["pods"]
 }
 
-func getClusterK8sOptions(c *cliclient.MasterClient) ([]string, error) {
-	var options []string
-
-	setting, err := c.ManagementClient.Setting.ByID("k8s-version-to-images")
-	if err != nil {
-		return nil, err
-	}
-
-	var objmap map[string]*json.RawMessage
-	err = json.Unmarshal([]byte(setting.Value), &objmap)
-	if err != nil {
-		return nil, err
-	}
-
-	for key := range objmap {
-		options = append(options, key)
-	}
-	return options, nil
-}
-
 func getClusterConfig(cmd *cli.Command) (*managementClient.Cluster, error) {
 	config := managementClient.Cluster{}
 	config.Name = cmd.Args().First()
 	config.Description = cmd.String("description")
-
-	if !cmd.Bool("import") {
-		config.RancherKubernetesEngineConfig = new(managementClient.RancherKubernetesEngineConfig)
-		ignoreDockerVersion := cmd.Bool("disable-docker-version")
-		config.RancherKubernetesEngineConfig.IgnoreDockerVersion = &ignoreDockerVersion
-
-		if cmd.String("k8s-version") != "" {
-			config.RancherKubernetesEngineConfig.Version = cmd.String("k8s-version")
-		}
-
-		if cmd.String("network-provider") != "" {
-			config.RancherKubernetesEngineConfig.Network = &managementClient.NetworkConfig{
-				Plugin: cmd.String("network-provider"),
-			}
-		}
-
-		if cmd.String("rke-config") != "" {
-			bytes, err := readFileReturnJSON(cmd.String("rke-config"))
-			if err != nil {
-				return nil, err
-			}
-
-			var jsonObject map[string]interface{}
-			if err = json.Unmarshal(bytes, &jsonObject); err != nil {
-				return nil, err
-			}
-
-			// Most values in RancherKubernetesEngineConfig are defined with struct tags for both JSON and YAML in camelCase.
-			// Changing the tags will be a breaking change. For proper deserialization, we must convert all keys to camelCase.
-			// Note that we ignore kebab-case keys. Users themselves should ensure any relevant keys
-			// (especially top-level keys in `services`, like `kube-api` or `kube-controller`) are camelCase or snake-case in cluster config.
-			convertSnakeCaseKeysToCamelCase(jsonObject)
-
-			marshalled, err := json.Marshal(jsonObject)
-			if err != nil {
-				return nil, err
-			}
-			if err = json.Unmarshal(marshalled, &config); err != nil {
-				return nil, err
-			}
-		}
-	}
-
 	return &config, nil
 }

@@ -82,13 +82,13 @@ func nodeSSH(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	sshNode, key, err := getNodeAndKey(cmd, c, nodeName)
+	sshNode, key, sshUser, err := getNodeAndKey(cmd, c, nodeName)
 	if err != nil {
 		return err
 	}
 
 	if user == "" {
-		user = sshNode.SshUser
+		user = sshUser
 	}
 	ipAddress := sshNode.IPAddress
 	if cmd.Bool("external") {
@@ -98,16 +98,16 @@ func nodeSSH(ctx context.Context, cmd *cli.Command) error {
 	return processExitCode(callSSH(key, ipAddress, user, args))
 }
 
-func getNodeAndKey(cmd *cli.Command, c *cliclient.MasterClient, nodeName string) (managementClient.Node, []byte, error) {
+func getNodeAndKey(cmd *cli.Command, c *cliclient.MasterClient, nodeName string) (managementClient.Node, []byte, string, error) {
 	sshNode := managementClient.Node{}
 	resource, err := Lookup(c, nodeName, "node")
 	if err != nil {
-		return sshNode, nil, err
+		return sshNode, nil, "", err
 	}
 
 	sshNode, err = getNodeByID(cmd, c, resource.ID)
 	if err != nil {
-		return sshNode, nil, err
+		return sshNode, nil, "", err
 	}
 
 	link := sshNode.Links["nodeConfig"]
@@ -115,7 +115,7 @@ func getNodeAndKey(cmd *cli.Command, c *cliclient.MasterClient, nodeName string)
 		// Get the machine and use that instead.
 		machine, err := getMachineByNodeName(cmd, c, sshNode.NodeName)
 		if err != nil {
-			return sshNode, nil, fmt.Errorf("failed to find SSH key for node [%s]", nodeName)
+			return sshNode, nil, "", fmt.Errorf("failed to find SSH key for node [%s]", nodeName)
 		}
 
 		link = machine.Links["sshkeys"]
@@ -123,13 +123,10 @@ func getNodeAndKey(cmd *cli.Command, c *cliclient.MasterClient, nodeName string)
 
 	key, sshUser, err := getSSHKey(c, link, getNodeName(sshNode))
 	if err != nil {
-		return sshNode, nil, err
-	}
-	if sshUser != "" {
-		sshNode.SshUser = sshUser
+		return sshNode, nil, "", err
 	}
 
-	return sshNode, key, nil
+	return sshNode, key, sshUser, nil
 }
 
 func callSSH(content []byte, ip string, user string, args []string) error {

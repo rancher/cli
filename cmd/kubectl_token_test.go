@@ -15,6 +15,27 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+// buildExecCredential replicates the loginToken→ExecCredential conversion in loginAndGenerateCred.
+func buildExecCredential(tok loginToken) (*config.ExecCredential, error) {
+	cred := &config.ExecCredential{
+		TypeMeta: config.TypeMeta{
+			Kind:       "ExecCredential",
+			APIVersion: "client.authentication.k8s.io/v1beta1",
+		},
+		Status: &config.ExecCredentialStatus{},
+	}
+	cred.Status.Token = tok.BearerToken
+	if tok.ExpiresAt == "" {
+		return cred, nil
+	}
+	ts, err := time.Parse(time.RFC3339, tok.ExpiresAt)
+	if err != nil {
+		return nil, err
+	}
+	cred.Status.ExpirationTimestamp = &config.Time{Time: ts}
+	return cred, nil
+}
+
 func TestGetAuthProviders(t *testing.T) {
 	t.Parallel()
 
@@ -70,6 +91,33 @@ func TestGetAuthProviders(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, useV1Public)
 		assert.Equal(t, expectedProviders, providers)
+	})
+
+	t.Run("local provider hidden when hide-local-auth-provider is set", func(t *testing.T) {
+		// This is to make sure getAuthProviders doesn't hardcode the local provider.
+		expected := []TypedProvider{
+			&apiv3.AuthProvider{
+				Type: "openLdapProvider",
+			},
+		}
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Contains(t, r.URL.Path, "/v1-public/authproviders")
+			// Simulate the /v1-public/authproviders response
+			// when the hide-local-auth-provider feature flag is set:
+			// the localProvider is hidden.
+			fmt.Fprint(w, `{"data": [{"id": "openldap", "type": "openLdapProvider"}]}`)
+		}))
+		t.Cleanup(server.Close)
+
+		providers, useV1Public, err := getAuthProviders(client, server.URL, true)
+
+		require.NoError(t, err)
+		assert.True(t, useV1Public)
+		assert.Equal(t, expected, providers)
+		for _, p := range providers {
+			assert.NotEqual(t, "localProvider", p.GetType(), "localProvider should be hidden")
+		}
 	})
 
 	t.Run("fallback from v1-public to v3-public on 404", func(t *testing.T) {
@@ -236,6 +284,159 @@ var authProvidersResponseV3 = `{
         }
     ]
 }`
+
+func TestSelectAuthProvider(t *testing.T) {
+	t.Parallel()
+
+	ldapProvider := &apiv3.AuthProvider{Type: "openLdapProvider"}
+	localProvider := &apiv3.LocalProvider{
+		AuthProvider: apiv3.AuthProvider{Type: "localProvider"},
+	}
+
+	tests := []struct {
+		name         string
+		providers    []TypedProvider
+		providerType string
+		expected     TypedProvider
+		expectedErr  string
+	}{
+		{
+			name:        "no providers configured",
+			providers:   nil,
+			expectedErr: "no auth provider configured",
+		},
+		{
+			name:         "localProvider not found when hidden",
+			providers:    []TypedProvider{ldapProvider},
+			providerType: "localProvider",
+			expectedErr:  "provider localProvider not found",
+		},
+		{
+			name:      "single external provider auto-selected",
+			providers: []TypedProvider{ldapProvider},
+			expected:  ldapProvider,
+		},
+		{
+			name:         "local selected when both local and external present",
+			providers:    []TypedProvider{localProvider, ldapProvider},
+			providerType: "localProvider",
+			expected:     localProvider,
+		},
+		{
+			name:         "external selected when both local and external present",
+			providers:    []TypedProvider{localProvider, ldapProvider},
+			providerType: "openLdapProvider",
+			expected:     ldapProvider,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			provider, err := selectAuthProvider(tc.providers, tc.providerType)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tc.expectedErr)
+				assert.Nil(t, provider)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, provider)
+		})
+	}
+}
+
+func TestLoginTokenExtFormat(t *testing.T) {
+	t.Parallel()
+
+	expiresAt := time.Now().UTC().Add(time.Hour).Truncate(time.Second)
+	expiresAtStr := expiresAt.Format(time.RFC3339)
+
+	tests := []struct {
+		name            string
+		responseBody    string
+		wantBearer      string
+		wantExpiresAt   bool
+		wantExpiresTime time.Time
+	}{
+		{
+			name: "v3 token response",
+			responseBody: fmt.Sprintf(`{
+				"token": "v3-bearer-token",
+				"expiresAt": "%s",
+				"type": "token"
+			}`, expiresAtStr),
+			wantBearer:      "v3-bearer-token",
+			wantExpiresAt:   true,
+			wantExpiresTime: expiresAt,
+		},
+		{
+			name: "ext token response",
+			responseBody: fmt.Sprintf(`{
+				"apiVersion": "ext.cattle.io/v1",
+				"kind": "Token",
+				"metadata": {"name": "token-abc"},
+				"spec": {"userID": "user-456"},
+				"status": {
+					"bearerToken": "ext/token-abc:ext-bearer-value",
+					"expiresAt": "%s"
+				}
+			}`, expiresAtStr),
+			wantBearer:      "ext/token-abc:ext-bearer-value",
+			wantExpiresAt:   true,
+			wantExpiresTime: expiresAt,
+		},
+		{
+			name: "v3 token response without expiresAt",
+			responseBody: `{
+				"token": "v3-no-expiry-token",
+				"type": "token"
+			}`,
+			wantBearer:    "v3-no-expiry-token",
+			wantExpiresAt: false,
+		},
+		{
+			name: "ext token response without expiresAt",
+			responseBody: `{
+				"apiVersion": "ext.cattle.io/v1",
+				"kind": "Token",
+				"metadata": {"name": "token-noexp"},
+				"spec": {"userID": "user-789"},
+				"status": {
+					"bearerToken": "ext/token-noexp:no-expiry-value"
+				}
+			}`,
+			wantBearer:    "ext/token-noexp:no-expiry-value",
+			wantExpiresAt: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tok, err := parseLoginResponse([]byte(tt.responseBody))
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantBearer, tok.BearerToken)
+
+			cred, err := buildExecCredential(tok)
+			require.NoError(t, err)
+			require.NotNil(t, cred)
+			assert.Equal(t, tt.wantBearer, cred.Status.Token)
+
+			if tt.wantExpiresAt {
+				require.NotNil(t, cred.Status.ExpirationTimestamp)
+				assert.True(t, tt.wantExpiresTime.Equal(cred.Status.ExpirationTimestamp.Time))
+			} else {
+				assert.Nil(t, cred.Status.ExpirationTimestamp)
+			}
+		})
+	}
+}
 
 func TestCacheCredential(t *testing.T) {
 	configDir := t.TempDir()

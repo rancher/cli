@@ -12,16 +12,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"os/signal"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
-	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
@@ -33,7 +30,7 @@ const (
 )
 
 // oauthAuth dispatches the OAuth authentication flow based on the auth flow type.
-func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider, useV1Public bool) (*managementClient.Token, error) {
+func oauthAuth(client *http.Client, input *LoginInput, provider TypedProvider, useV1Public bool) (*loginToken, error) {
 	if input.authFlow == "" { // The flag has precedence over the env variable.
 		input.authFlow = os.Getenv("CATTLE_OAUTH_AUTH_FLOW")
 	}
@@ -77,7 +74,7 @@ func oauthAuthCodeAuth(
 	timeoutAfter time.Duration,
 	useV1Public bool,
 	openBrowser openBrowserFunc,
-) (*managementClient.Token, error) {
+) (*loginToken, error) {
 	oauthConfig, err := newOauthConfig(provider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oauth config: %w", err)
@@ -187,25 +184,13 @@ func openBrowser(openURL string) error {
 		return fmt.Errorf("unsupported URL scheme %s", URL.Scheme)
 	}
 
-	var (
-		cmd  string
-		args []string
-	)
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = "open"
-		args = []string{openURL}
-	case "linux":
-		cmd = "xdg-open"
-		args = []string{openURL}
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start", "", openURL}
-	default:
-		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
-	}
-
-	return exec.Command(cmd, args...).Start()
+	// The launch is delegated to an OS-specific opener
+	// (kubectl_token_oauth_windows.go / kubectl_token_oauth_other.go). The URL
+	// is never handed to a shell: non-Windows passes it as a single argv
+	// element, Windows uses the ShellExecute API — so a server-supplied
+	// authorize URL (which legitimately contains `&` between query parameters)
+	// cannot be truncated or have its metacharacters interpreted.
+	return osOpenURL(openURL)
 }
 
 // callbackResult is used to communicate the result of the OAuth callback handling back to the main authentication flow.
@@ -271,7 +256,7 @@ func startCallbackServer(listener net.Listener, expectedState string, resultCh c
 }
 
 // oauthDeviceCodeAuth implements the device code flow for OAuth authentication.
-func oauthDeviceCodeAuth(client *http.Client, input *LoginInput, provider TypedProvider, useV1Public bool) (*managementClient.Token, error) {
+func oauthDeviceCodeAuth(client *http.Client, input *LoginInput, provider TypedProvider, useV1Public bool) (*loginToken, error) {
 	oauthConfig, err := newOauthConfig(provider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oauth config: %w", err)
@@ -325,7 +310,7 @@ func newOauthConfig(provider TypedProvider) (*oauth2.Config, error) {
 }
 
 // rancherLogin sends the obtained OAuth token to Rancher to exchange it for a Rancher token that can be used for API authentication.
-func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Token, useV1Public bool) (*managementClient.Token, error) {
+func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Token, useV1Public bool) (*loginToken, error) {
 	reqURL := fmt.Sprintf(loginURL, input.server)
 	if !useV1Public {
 		providerName := strings.ToLower(strings.TrimSuffix(input.authProvider, "Provider"))
@@ -360,11 +345,10 @@ func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Tok
 		return nil, err
 	}
 
-	token := &managementClient.Token{}
-	err = json.Unmarshal(respBody, token)
+	token, err := parseLoginResponse(respBody)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshaling login response: %w", err)
+		return nil, err
 	}
 
-	return token, nil
+	return &token, nil
 }

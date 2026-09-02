@@ -22,14 +22,11 @@ import (
 	"syscall"
 	"text/template"
 	"time"
-	"unicode"
 
-	"github.com/ghodss/yaml"
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
-	"github.com/rancher/norman/types/convert"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
@@ -550,42 +547,6 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 		return parts[0], parts[1], nil
 	}
 	return "", "", fmt.Errorf("unable to extract clusterid and projectid from [%s]", id)
-}
-
-// Return a JSON blob of the file at path
-func readFileReturnJSON(path string) ([]byte, error) {
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return []byte{}, err
-	}
-	// This is probably already JSON if true
-	if hasPrefix(file, []byte("{")) {
-		return file, nil
-	}
-	return yaml.YAMLToJSON(file)
-}
-
-// renameKeys renames the keys in a given map of arbitrary depth with a provided function for string keys.
-func renameKeys(input map[string]interface{}, f func(string) string) {
-	for k, v := range input {
-		delete(input, k)
-		newKey := f(k)
-		input[newKey] = v
-		if innerMap, ok := v.(map[string]interface{}); ok {
-			renameKeys(innerMap, f)
-		}
-	}
-}
-
-// convertSnakeCaseKeysToCamelCase takes a map and recursively transforms all snake_case keys into camelCase keys.
-func convertSnakeCaseKeysToCamelCase(input map[string]interface{}) {
-	renameKeys(input, convert.ToJSONKey)
-}
-
-// Return true if the first non-whitespace bytes in buf is prefix.
-func hasPrefix(buf []byte, prefix []byte) bool {
-	trim := bytes.TrimLeftFunc(buf, unicode.IsSpace)
-	return bytes.HasPrefix(trim, prefix)
 }
 
 // getClusterNames maps cluster ID to name and defaults to ID if name is blank

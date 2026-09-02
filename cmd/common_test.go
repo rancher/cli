@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"testing"
 	"time"
 
@@ -69,41 +68,6 @@ func TestParseClusterAndProjectID(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, test.cluster, cluster)
 			assert.Equal(t, test.project, project)
-		})
-	}
-}
-
-func TestConvertSnakeCaseKeysToCamelCase(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		input map[string]any
-		want  map[string]any
-	}{
-		{
-			map[string]any{"foo_bar": "hello"},
-			map[string]any{"fooBar": "hello"},
-		},
-		{
-			map[string]any{"fooBar": "hello"},
-			map[string]any{"fooBar": "hello"},
-		},
-		{
-			map[string]any{"foobar": "hello", "some_key": "valueUnmodified", "bar-baz": "bar-baz"},
-			map[string]any{"foobar": "hello", "someKey": "valueUnmodified", "bar-baz": "bar-baz"},
-		},
-		{
-			map[string]any{"foo_bar": "hello", "backup_config": map[string]any{"hello_world": true}, "config_id": 123},
-			map[string]any{"fooBar": "hello", "backupConfig": map[string]any{"helloWorld": true}, "configId": 123},
-		},
-	}
-
-	for i, test := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			t.Parallel()
-
-			convertSnakeCaseKeysToCamelCase(test.input)
-			assert.Equal(t, test.input, test.want)
 		})
 	}
 }
