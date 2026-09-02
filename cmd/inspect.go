@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-func InspectCommand() cli.Command {
-	return cli.Command{
+func InspectCommand() *cli.Command {
+	return &cli.Command{
 		Name:  "inspect",
 		Usage: "View details of resources",
 		Description: `
@@ -25,15 +26,15 @@ Examples:
 		ArgsUsage: "[RESOURCEID RESOURCENAME]",
 		Action:    inspectResources,
 		Flags: []cli.Flag{
-			cli.BoolFlag{
+			&cli.BoolFlag{
 				Name:  "links",
 				Usage: "Include URLs to actions and links in resource output",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "type",
 				Usage: "Specify the type of resource to inspect",
 			},
-			cli.StringFlag{
+			&cli.StringFlag{
 				Name:  "format",
 				Usage: "'json', 'yaml' or Custom format: '{{.kind}}'",
 				Value: "json",
@@ -42,17 +43,17 @@ Examples:
 	}
 }
 
-func inspectResources(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return cli.ShowCommandHelp(ctx, "inspect")
+func inspectResources(ctx context.Context, cmd *cli.Command) error {
+	if cmd.NArg() == 0 {
+		return cli.ShowCommandHelp(ctx, cmd, "inspect")
 	}
 
-	c, err := GetClient(ctx)
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	t := ctx.String("type")
+	t := cmd.String("type")
 	types := []string{}
 	if t != "" {
 		rt, err := GetResourceType(c, t)
@@ -64,7 +65,7 @@ func inspectResources(ctx *cli.Context) error {
 		types = listAllRoles()
 	}
 
-	resource, err := Lookup(c, ctx.Args().First(), types...)
+	resource, err := Lookup(c, cmd.Args().First(), types...)
 	if err != nil {
 		return err
 	}
@@ -75,11 +76,11 @@ func inspectResources(ctx *cli.Context) error {
 		return err
 	}
 
-	if !ctx.Bool("links") {
+	if !cmd.Bool("links") {
 		delete(mapResource, "links")
 		delete(mapResource, "actions")
 	}
-	writer := NewTableWriter(nil, ctx)
+	writer := NewTableWriter(nil, cmd)
 	writer.Write(mapResource)
 	writer.Close()
 

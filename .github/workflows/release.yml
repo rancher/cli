@@ -14,10 +14,12 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      with:
+        persist-credentials: false
 
     - name: Load Secrets from Vault
-      uses: rancher-eio/read-vault-secrets@main
+      uses: rancher-eio/read-vault-secrets@0da85151ad1f19ed7986c41587e45aac1ace74b6 # v3
       with:
         secrets: |
           secret/data/github/repo/${{ github.repository }}/dockerhub/rancher/credentials username | DOCKER_USERNAME ;
@@ -25,7 +27,7 @@ jobs:
           secret/data/github/repo/${{ github.repository }}/google-auth/rancher/credentials token  | GOOGLE_AUTH ;
 
     - name: Login to Docker Hub
-      uses: docker/login-action@v3
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
       with:
         username: ${{ env.DOCKER_USERNAME }}
         password: ${{ env.DOCKER_PASSWORD }}
@@ -41,8 +43,14 @@ jobs:
         go-version-file: go.mod
         cache: false
 
+    # https://github.com/golang/go/issues/75031
+    - name: Set toolchain version
+      run: go env -w GOTOOLCHAIN=go1.26.1+auto
+
     - name: Lint
-      uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
+      uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
+      with:
+        version: v2.11.3
 
     - name: Validate Go modules
       run: ./scripts/validate
@@ -60,6 +68,7 @@ jobs:
       run: ./scripts/build
 
     - name: Package
+      id: package
       run: |
         ./scripts/package
         ls -lR dist/artifacts
@@ -69,23 +78,24 @@ jobs:
         # Export the tag for the next step
         source ./scripts/version
         echo "VERSION=$VERSION"
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Upload Release assets
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VERSION: ${{ steps.package.outputs.VERSION }}
       run: |
-        cd dist/artifacts/$VERSION
+        cd dist/artifacts/"$VERSION"
         ls -lR
         # generate sha256sum file
         find . -maxdepth 1 -type f ! -name sha256sum.txt -printf '%P\0' | xargs -0 sha256sum > sha256sum.txt
-        gh release upload $VERSION *.txt *.xz *.gz *.zip
+        gh release upload "$VERSION" *.txt *.xz *.gz *.zip
 
     - name: Upload Release assets to Google Cloud
       uses: google-github-actions/upload-cloud-storage@6397bd7208e18d13ba2619ee21b9873edc94427a # v3
       with:
-        path: dist/artifacts/${{ env.VERSION }}
-        destination: releases.rancher.com/cli2/${{ env.VERSION }}
+        path: dist/artifacts/${{ steps.package.outputs.VERSION }}
+        destination: releases.rancher.com/cli2/${{ steps.package.outputs.VERSION }}
         glob: '*.*' # copy only the files in the path folder
         parent: false
         process_gcloudignore: false
@@ -93,8 +103,8 @@ jobs:
           cache-control: public,max-age=3600
 
     - name: Docker Build
-      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
       with:
         push: true
         context: package
-        tags: rancher/cli2:${{ env.VERSION }}
+        tags: rancher/cli2:${{ steps.package.outputs.VERSION }}

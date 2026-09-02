@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -21,17 +22,14 @@ import (
 	"syscall"
 	"text/template"
 	"time"
-	"unicode"
 
-	"github.com/ghodss/yaml"
 	"github.com/rancher/cli/cliclient"
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
 	ntypes "github.com/rancher/norman/types"
-	"github.com/rancher/norman/types/convert"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -47,19 +45,21 @@ const (
 var (
 	// ManagementResourceTypes lists the types we use the management client for
 	ManagementResourceTypes = []string{"cluster", "node", "project"}
-	// ProjectResourceTypes lists the types we use the cluster client for
+	// ProjectResourceTypes lists the types we use the project client for
 	ProjectResourceTypes = []string{"secret", "namespacedSecret", "workload"}
-	// ClusterResourceTypes lists the types we use the project client for
+	// ClusterResourceTypes lists the types we use the cluster client for
 	ClusterResourceTypes = []string{"persistentVolume", "storageClass", "namespace"}
 
-	formatFlag = cli.StringFlag{
-		Name:  "format,o",
-		Usage: "'json', 'yaml' or custom format",
+	formatFlag = &cli.StringFlag{
+		Name:    "format",
+		Aliases: []string{"o"},
+		Usage:   "'json', 'yaml' or custom format",
 	}
 
-	quietFlag = cli.BoolFlag{
-		Name:  "quiet,q",
-		Usage: "Only display IDs or suppress help text",
+	quietFlag = &cli.BoolFlag{
+		Name:    "quiet",
+		Aliases: []string{"q"},
+		Usage:   "Only display IDs or suppress help text",
 	}
 )
 
@@ -90,15 +90,15 @@ func listAllRoles() []string {
 	return roles
 }
 
-func listRoles(ctx *cli.Context, context string) error {
-	c, err := GetClient(ctx)
+func listRoles(cmd *cli.Command, roleContext string) error {
+	c, err := GetClient(cmd)
 	if err != nil {
 		return err
 	}
 
-	filter := defaultListOpts(ctx)
+	filter := defaultListOpts(cmd)
 	filter.Filters["hidden"] = false
-	filter.Filters["context"] = context
+	filter.Filters["context"] = roleContext
 
 	templates, err := c.ManagementClient.RoleTemplate.List(filter)
 	if err != nil {
@@ -109,7 +109,7 @@ func listRoles(ctx *cli.Context, context string) error {
 		{"ID", "ID"},
 		{"NAME", "Name"},
 		{"DESCRIPTION", "Description"},
-	}, ctx)
+	}, cmd)
 
 	defer writer.Close()
 
@@ -178,42 +178,42 @@ func parsePrincipalID(principalID string) *managementClient.Principal {
 	}
 }
 
-func getKubeConfigForUser(ctx *cli.Context, user string) (*api.Config, error) {
-	cf, err := loadConfig(ctx)
+func getKubeConfigForUser(cmd *cli.Command, user string) (*api.Config, error) {
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	focusedServer, err := cf.FocusedServer()
+	currentServer, err := cf.GetCurrentServer()
 	if err != nil {
 		return nil, err
 	}
 
-	kubeConfig := focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())]
+	kubeConfig := currentServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, currentServer.GetCurrentCluster())]
 	return kubeConfig, nil
 }
 
-func setKubeConfigForUser(ctx *cli.Context, user string, kubeConfig *api.Config) error {
-	cf, err := loadConfig(ctx)
+func setKubeConfigForUser(cmd *cli.Command, user string, kubeConfig *api.Config) error {
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return err
 	}
 
-	focusedServer, err := cf.FocusedServer()
+	currentServer, err := cf.GetCurrentServer()
 	if err != nil {
 		return err
 	}
 
-	if focusedServer.KubeConfigs == nil {
-		focusedServer.KubeConfigs = make(map[string]*api.Config)
+	if currentServer.KubeConfigs == nil {
+		currentServer.KubeConfigs = make(map[string]*api.Config)
 	}
 
-	focusedServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, focusedServer.FocusedCluster())] = kubeConfig
+	currentServer.KubeConfigs[fmt.Sprintf(kubeConfigKeyFormat, user, currentServer.GetCurrentCluster())] = kubeConfig
 	return cf.Write()
 }
 
-func searchForMember(ctx *cli.Context, c *cliclient.MasterClient, name string) (*managementClient.Principal, error) {
-	filter := defaultListOpts(ctx)
+func searchForMember(cmd *cli.Command, c *cliclient.MasterClient, name string) (*managementClient.Principal, error) {
+	filter := defaultListOpts(cmd)
 	filter.Filters["ID"] = "thisisnotathingIhope"
 
 	// A collection is needed to get the action link
@@ -261,7 +261,7 @@ func loadAndVerifyCert(path string) (string, error) {
 
 func verifyCert(caCert []byte) (string, error) {
 	// replace the escaped version of the line break
-	caCert = bytes.Replace(caCert, []byte(`\n`), []byte("\n"), -1)
+	caCert = bytes.ReplaceAll(caCert, []byte(`\n`), []byte("\n"))
 
 	block, _ := pem.Decode(caCert)
 
@@ -280,24 +280,24 @@ func verifyCert(caCert []byte) (string, error) {
 	return string(caCert), nil
 }
 
-func GetConfigPath(ctx *cli.Context) string {
+func GetConfigPath(cmd *cli.Command) string {
 	// path will always be set by the global flag default
-	path := ctx.GlobalString("config")
+	path := cmd.String("config")
 	return filepath.Join(path, cfgFile)
 }
 
-func loadConfig(ctx *cli.Context) (config.Config, error) {
-	path := GetConfigPath(ctx)
+func loadConfig(cmd *cli.Command) (config.Config, error) {
+	path := GetConfigPath(cmd)
 	return config.LoadFromPath(path)
 }
 
-func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
-	cf, err := loadConfig(ctx)
+func lookupConfig(cmd *cli.Command) (*config.ServerConfig, error) {
+	cf, err := loadConfig(cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	cs, err := cf.FocusedServer()
+	cs, err := cf.GetCurrentServer()
 	if err != nil {
 		return nil, err
 	}
@@ -305,8 +305,8 @@ func lookupConfig(ctx *cli.Context) (*config.ServerConfig, error) {
 	return cs, nil
 }
 
-func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
-	cf, err := lookupConfig(ctx)
+func GetClient(cmd *cli.Command) (*cliclient.MasterClient, error) {
+	cf, err := lookupConfig(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -322,28 +322,28 @@ func GetClient(ctx *cli.Context) (*cliclient.MasterClient, error) {
 // GetResourceType maps an incoming resource type to a valid one from the schema
 func GetResourceType(c *cliclient.MasterClient, resource string) (string, error) {
 	if c.ManagementClient != nil {
-		for key := range c.ManagementClient.APIBaseClient.Types {
+		for key := range c.ManagementClient.Types {
 			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.ProjectClient != nil {
-		for key := range c.ProjectClient.APIBaseClient.Types {
+		for key := range c.ProjectClient.Types {
 			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.ClusterClient != nil {
-		for key := range c.ClusterClient.APIBaseClient.Types {
+		for key := range c.ClusterClient.Types {
 			if strings.EqualFold(key, resource) {
 				return key, nil
 			}
 		}
 	}
 	if c.CAPIClient != nil {
-		for key := range c.CAPIClient.APIBaseClient.Types {
+		for key := range c.CAPIClient.Types {
 			lowerKey := strings.ToLower(key)
 			if strings.HasPrefix(lowerKey, "cluster.x-k8s.io") && lowerKey == strings.ToLower(resource) {
 				return key, nil
@@ -370,17 +370,17 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 			}
 		}
 		if c.ManagementClient != nil {
-			if _, ok := c.ManagementClient.APIBaseClient.Types[rt]; ok {
+			if _, ok := c.ManagementClient.Types[rt]; ok {
 				schemaClient = c.ManagementClient
 			}
 		}
 		if c.ProjectClient != nil {
-			if _, ok := c.ProjectClient.APIBaseClient.Types[rt]; ok {
+			if _, ok := c.ProjectClient.Types[rt]; ok {
 				schemaClient = c.ProjectClient
 			}
 		}
 		if c.ClusterClient != nil {
-			if _, ok := c.ClusterClient.APIBaseClient.Types[rt]; ok {
+			if _, ok := c.ClusterClient.Types[rt]; ok {
 				schemaClient = c.ClusterClient
 			}
 		}
@@ -415,7 +415,7 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 			for _, data := range collection.Data {
 				ids = append(ids, data.ID)
 			}
-			return nil, fmt.Errorf("Multiple resources of type %s found for name %s: %v", schemaType, name, ids)
+			return nil, fmt.Errorf("multiple resources of type %s found for name %s: %v", schemaType, name, ids)
 		}
 
 		// No matches for this schemaType, try the next one
@@ -424,7 +424,7 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 		}
 
 		if byName != nil {
-			return nil, fmt.Errorf("Multiple resources named %s: %s:%s, %s:%s", name, collection.Data[0].Type,
+			return nil, fmt.Errorf("multiple resources named %s: %s:%s, %s:%s", name, collection.Data[0].Type,
 				collection.Data[0].ID, byName.Type, byName.ID)
 		}
 
@@ -433,7 +433,7 @@ func Lookup(c *cliclient.MasterClient, name string, types ...string) (*ntypes.Re
 	}
 
 	if byName == nil {
-		return nil, fmt.Errorf("Not found: %s", name)
+		return nil, fmt.Errorf("not found: %s", name)
 	}
 
 	return byName, nil
@@ -475,12 +475,12 @@ func SimpleFormat(values [][]string) (string, string) {
 	return headerBuffer.String(), valueBuffer.String()
 }
 
-func defaultAction(fn func(ctx *cli.Context) error) func(ctx *cli.Context) error {
-	return func(ctx *cli.Context) error {
-		if ctx.Bool("help") {
-			return cli.ShowAppHelp(ctx)
+func defaultAction(fn func(ctx context.Context, cmd *cli.Command) error) func(ctx context.Context, cmd *cli.Command) error {
+	return func(ctx context.Context, cmd *cli.Command) error {
+		if cmd.Bool("help") {
+			return cli.ShowSubcommandHelp(cmd)
 		}
-		return fn(ctx)
+		return fn(ctx, cmd)
 	}
 }
 
@@ -546,49 +546,13 @@ func parseClusterAndProjectID(id string) (string, string, error) {
 		parts := SplitOnColon(id)
 		return parts[0], parts[1], nil
 	}
-	return "", "", fmt.Errorf("Unable to extract clusterid and projectid from [%s]", id)
-}
-
-// Return a JSON blob of the file at path
-func readFileReturnJSON(path string) ([]byte, error) {
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return []byte{}, err
-	}
-	// This is probably already JSON if true
-	if hasPrefix(file, []byte("{")) {
-		return file, nil
-	}
-	return yaml.YAMLToJSON(file)
-}
-
-// renameKeys renames the keys in a given map of arbitrary depth with a provided function for string keys.
-func renameKeys(input map[string]interface{}, f func(string) string) {
-	for k, v := range input {
-		delete(input, k)
-		newKey := f(k)
-		input[newKey] = v
-		if innerMap, ok := v.(map[string]interface{}); ok {
-			renameKeys(innerMap, f)
-		}
-	}
-}
-
-// convertSnakeCaseKeysToCamelCase takes a map and recursively transforms all snake_case keys into camelCase keys.
-func convertSnakeCaseKeysToCamelCase(input map[string]interface{}) {
-	renameKeys(input, convert.ToJSONKey)
-}
-
-// Return true if the first non-whitespace bytes in buf is prefix.
-func hasPrefix(buf []byte, prefix []byte) bool {
-	trim := bytes.TrimLeftFunc(buf, unicode.IsSpace)
-	return bytes.HasPrefix(trim, prefix)
+	return "", "", fmt.Errorf("unable to extract clusterid and projectid from [%s]", id)
 }
 
 // getClusterNames maps cluster ID to name and defaults to ID if name is blank
-func getClusterNames(ctx *cli.Context, c *cliclient.MasterClient) (map[string]string, error) {
+func getClusterNames(cmd *cli.Command, c *cliclient.MasterClient) (map[string]string, error) {
 	clusterNames := make(map[string]string)
-	clusterCollection, err := c.ManagementClient.Cluster.List(defaultListOpts(ctx))
+	clusterCollection, err := c.ManagementClient.Cluster.List(defaultListOpts(cmd))
 	if err != nil {
 		return clusterNames, err
 	}
@@ -612,7 +576,7 @@ func getClusterName(cluster *managementClient.Cluster) string {
 
 const humanTimeFormat = "02 Jan 2006 15:04:05 MST"
 
-func createdTimetoHuman(t string) (string, error) {
+func createdTimeToHuman(t string) (string, error) {
 	parsedTime, err := time.Parse(time.RFC3339, t)
 	if err != nil {
 		return "", err
