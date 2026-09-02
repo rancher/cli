@@ -1,29 +1,31 @@
 package cmd
 
 import (
+	"context"
 	"os"
 
 	"github.com/rancher/cli/cliclient"
 	client "github.com/rancher/rancher/pkg/client/generated/management/v3"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 )
 
-func UpCommand() cli.Command {
-	return cli.Command{
+func UpCommand() *cli.Command {
+	return &cli.Command{
 		Name:   "up",
 		Usage:  "apply compose config",
 		Action: defaultAction(apply),
 		Flags: []cli.Flag{
-			cli.StringFlag{
-				Name:  "file,f",
-				Usage: "The location of compose config file",
+			&cli.StringFlag{
+				Name:    "file",
+				Aliases: []string{"f"},
+				Usage:   "The location of compose config file",
 			},
 		},
 	}
 }
 
-func apply(ctx *cli.Context) error {
-	cf, err := lookupConfig(ctx)
+func apply(ctx context.Context, cmd *cli.Command) error {
+	cf, err := lookupConfig(cmd)
 	if err != nil {
 		return err
 	}
@@ -32,7 +34,7 @@ func apply(ctx *cli.Context) error {
 		return err
 	}
 
-	filePath := ctx.String("file")
+	filePath := cmd.String("file")
 	compose, err := os.ReadFile(filePath)
 	if err != nil {
 		return err

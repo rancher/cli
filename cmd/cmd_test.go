@@ -21,20 +21,20 @@ func (g *fakePrincipalGetter) ByID(id string) (*managementClient.Principal, erro
 }
 
 type fakeUserConfig struct {
-	FocusedClusterFunc func() string
-	FocusedProjectFunc func() string
+	GetCurrentClusterFunc func() string
+	GetCurrentProjectFunc func() string
 }
 
-func (c *fakeUserConfig) FocusedCluster() string {
-	if c.FocusedClusterFunc != nil {
-		return c.FocusedClusterFunc()
+func (c *fakeUserConfig) GetCurrentCluster() string {
+	if c.GetCurrentClusterFunc != nil {
+		return c.GetCurrentClusterFunc()
 	}
 	return ""
 }
 
-func (c *fakeUserConfig) FocusedProject() string {
-	if c.FocusedProjectFunc != nil {
-		return c.FocusedProjectFunc()
+func (c *fakeUserConfig) GetCurrentProject() string {
+	if c.GetCurrentProjectFunc != nil {
+		return c.GetCurrentProjectFunc()
 	}
 	return ""
 }
