@@ -15,10 +15,10 @@ replace (
 
 require (
 	github.com/rancher/norman v0.10.0
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260818132838-4b280ac2069e
-	github.com/rancher/rancher/pkg/client v0.0.0-20260818132838-4b280ac2069e
-	github.com/sirupsen/logrus v1.9.4
-	github.com/stretchr/testify v1.12.0
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260902193809-46f3c1865152
+	github.com/rancher/rancher/pkg/client v0.0.0-20260902193809-46f3c1865152
+	github.com/sirupsen/logrus v1.10.2
+	github.com/stretchr/testify v1.12.1
 	github.com/tidwall/gjson v1.19.0
 	github.com/urfave/cli/v3 v3.11.0
 	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93
@@ -60,7 +60,7 @@ require (
 	github.com/rancher/aks-operator v1.15.0 // indirect
 	github.com/rancher/ali-operator v1.15.0-rc.3 // indirect
 	github.com/rancher/eks-operator v1.15.0 // indirect
-	github.com/rancher/fleet/pkg/apis v0.16.0 // indirect
+	github.com/rancher/fleet/pkg/apis v0.17.0-alpha.1 // indirect
 	github.com/rancher/gke-operator v1.15.0 // indirect
 	github.com/rancher/lasso v0.2.9 // indirect
 	github.com/rancher/wrangler/v3 v3.7.1 // indirect
@@ -69,7 +69,7 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
