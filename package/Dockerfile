@@ -1,4 +1,4 @@
-FROM registry.suse.com/bci/bci-base:15.7
+FROM registry.suse.com/bci/bci-base:16.1
 
 ARG user=cli
 
