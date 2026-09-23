@@ -13,11 +13,11 @@ replace (
 
 require (
 	github.com/ghodss/yaml v1.0.0
-	github.com/rancher/norman v0.9.10
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260827224206-8c257d748d23
-	github.com/rancher/rancher/pkg/client v0.0.0-20260827224206-8c257d748d23
-	github.com/sirupsen/logrus v1.9.4
-	github.com/stretchr/testify v1.11.1
+	github.com/rancher/norman v0.9.11
+	github.com/rancher/rancher/pkg/apis v0.0.0-20260923184111-272e65580ca9
+	github.com/rancher/rancher/pkg/client v0.0.0-20260923184111-272e65580ca9
+	github.com/sirupsen/logrus v1.10.0
+	github.com/stretchr/testify v1.12.0
 	github.com/tidwall/gjson v1.19.0
 	github.com/urfave/cli/v3 v3.10.1
 	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93
@@ -54,13 +54,13 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
-	github.com/rancher/aks-operator v1.15.1 // indirect
-	github.com/rancher/ali-operator v1.15.0 // indirect
-	github.com/rancher/eks-operator v1.15.1 // indirect
-	github.com/rancher/fleet/pkg/apis v0.16.1 // indirect
-	github.com/rancher/gke-operator v1.15.1 // indirect
+	github.com/rancher/aks-operator v1.15.2 // indirect
+	github.com/rancher/ali-operator v1.15.1 // indirect
+	github.com/rancher/eks-operator v1.15.2 // indirect
+	github.com/rancher/fleet/pkg/apis v0.16.2 // indirect
+	github.com/rancher/gke-operator v1.15.3 // indirect
 	github.com/rancher/lasso v0.2.9 // indirect
-	github.com/rancher/wrangler/v3 v3.7.1 // indirect
+	github.com/rancher/wrangler/v3 v3.7.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
@@ -73,8 +73,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.36.3 // indirect
-	k8s.io/apimachinery v0.36.3 // indirect
+	k8s.io/api v0.36.4 // indirect
+	k8s.io/apimachinery v0.36.4 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
