@@ -4,7 +4,43 @@
     "github>rancher/renovate-config#release"
   ],
   "baseBranchPatterns": [
-    "main"
+    "main",
+    "v2.15",
+    "v2.14",
+    "v2.13",
+    "v2.12",
+    "v2.11"
+  ],
+  "packageRules": [
+    {
+      "matchBaseBranches": ["main"],
+      "extends": ["github>rancher/renovate-config//rancher-main#release"]
+    },
+    {
+      "description": "Apply Rancher 2.15 update constraints to branch v2.15.",
+      "matchBaseBranches": ["v2.15"],
+      "extends": ["github>rancher/renovate-config//rancher-2.15#release"]
+    },
+    {
+      "description": "Apply Rancher 2.14 update constraints to branch v2.14.",
+      "matchBaseBranches": ["v2.14"],
+      "extends": ["github>rancher/renovate-config//rancher-2.14#release"]
+    },
+    {
+      "description": "Apply Rancher 2.13 update constraints to branch v2.13.",
+      "matchBaseBranches": ["v2.13"],
+      "extends": ["github>rancher/renovate-config//rancher-2.13#release"]
+    },
+    {
+      "description": "Apply Rancher 2.12 update constraints to branch v2.12.",
+      "matchBaseBranches": ["v2.12"],
+      "extends": ["github>rancher/renovate-config//rancher-2.12#release"]
+    },
+    {
+      "description": "Apply Rancher 2.11 update constraints to branch v2.11.",
+      "matchBaseBranches": ["v2.11"],
+      "extends": ["github>rancher/renovate-config//rancher-2.11#release"]
+    }
   ],
   "prHourlyLimit": 2
 }
