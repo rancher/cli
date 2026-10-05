@@ -72,7 +72,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, useV1Public, err := getAuthProviders(client, server.URL, true)
+		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.NoError(t, err)
 		assert.True(t, useV1Public)
@@ -86,7 +86,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, useV1Public, err := getAuthProviders(client, server.URL, false)
+		providers, _, useV1Public, err := listAuthProviders(client, server.URL, false)
 
 		require.NoError(t, err)
 		assert.False(t, useV1Public)
@@ -94,7 +94,7 @@ func TestGetAuthProviders(t *testing.T) {
 	})
 
 	t.Run("local provider hidden when hide-local-auth-provider is set", func(t *testing.T) {
-		// This is to make sure getAuthProviders doesn't hardcode the local provider.
+		// This is to make sure listAuthProviders doesn't hardcode the local provider.
 		expected := []TypedProvider{
 			&apiv3.AuthProvider{
 				Type: "openLdapProvider",
@@ -110,7 +110,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, useV1Public, err := getAuthProviders(client, server.URL, true)
+		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.NoError(t, err)
 		assert.True(t, useV1Public)
@@ -136,7 +136,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, useV1Public, err := getAuthProviders(client, server.URL, true)
+		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.NoError(t, err)
 		assert.False(t, useV1Public, "should have fallen back to v3-public")
@@ -152,7 +152,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, useV1Public, err := getAuthProviders(client, server.URL, true)
+		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "error listing auth providers")
@@ -167,7 +167,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, useV1Public, err := getAuthProviders(client, server.URL, true)
+		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "invalid JSON response")
@@ -181,7 +181,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, useV1Public, err := getAuthProviders(client, server.URL, true)
+		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "500")
@@ -212,7 +212,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, useV1Public, err := getAuthProviders(client, server.URL, true)
+		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.NoError(t, err)
 		assert.True(t, useV1Public)

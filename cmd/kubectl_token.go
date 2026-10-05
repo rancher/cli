@@ -57,6 +57,11 @@ type LoginInput struct {
 	caCerts      string
 	skipVerify   bool
 	authFlow     string // devicecode or authcode.
+
+	// matchProviderName makes authProvider also match the name of an auth
+	// provider, which Rancher writes into the kubeconfigs it generates. The
+	// server gives it in the "id" field.
+	matchProviderName bool
 }
 
 const (
@@ -110,36 +115,16 @@ func CredentialCommand() *cli.Command {
 		Name:   "token",
 		Usage:  "Authenticate and generate new kubeconfig token",
 		Action: runCredential,
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:  "server",
-				Usage: "Name of rancher server",
-			},
+		Flags: credentialFlags(
 			&cli.StringFlag{
 				Name:  "user",
 				Usage: "user-id",
 			},
 			&cli.StringFlag{
-				Name:  "cluster",
-				Usage: "cluster-id",
-			},
-			&cli.StringFlag{
 				Name:  "auth-provider",
 				Usage: "Name of Auth Provider to use for authentication",
 			},
-			&cli.StringFlag{
-				Name:  "auth-flow",
-				Usage: "Auth flow to use for OAuth providers: 'devicecode' (default) or 'authcode'",
-			},
-			&cli.StringFlag{
-				Name:  "cacerts",
-				Usage: "Location of CaCerts to use",
-			},
-			&cli.BoolFlag{
-				Name:  "skip-verify",
-				Usage: "Skip verification of the CACerts presented by the Server",
-			},
-		},
+		),
 		Commands: []*cli.Command{
 			{
 				Name:   "delete",
@@ -150,7 +135,81 @@ func CredentialCommand() *cli.Command {
 	}
 }
 
+// AuthCommand returns the auth command group.
+func AuthCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "auth",
+		Usage: "Authentication commands for kubectl",
+		Commands: []*cli.Command{
+			{
+				Name:   "get-token",
+				Usage:  "Authenticate and print a kubectl exec credential",
+				Action: runGetToken,
+				Flags: credentialFlags(
+					&cli.StringFlag{
+						Name: "user-id",
+						Usage: "Rancher user id the kubeconfig was generated for, " +
+							"used to keep cached credentials apart; not verified by this command",
+					},
+					&cli.StringFlag{
+						Name:  "auth-provider",
+						Usage: "Name or type of Auth Provider to use for authentication",
+					},
+				),
+			},
+		},
+	}
+}
+
+// credentialFlags returns the flags shared by the credential commands, with
+// userFlag, the one that names the user, in second place and authProviderFlag
+// in fourth.
+func credentialFlags(userFlag, authProviderFlag *cli.StringFlag) []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:  "server",
+			Usage: "Name of rancher server",
+		},
+		userFlag,
+		&cli.StringFlag{
+			Name:  "cluster",
+			Usage: "cluster-id",
+		},
+		authProviderFlag,
+		&cli.StringFlag{
+			Name:  "auth-flow",
+			Usage: "Auth flow to use for OAuth providers: 'devicecode' (default) or 'authcode'",
+		},
+		&cli.StringFlag{
+			Name:  "cacerts",
+			Usage: "Location of CaCerts to use",
+		},
+		&cli.BoolFlag{
+			Name:  "skip-verify",
+			Usage: "Skip verification of the CACerts presented by the Server",
+		},
+	}
+}
+
+// runCredential runs "rancher token". The user names both the cached
+// credential and the default at the username prompt.
 func runCredential(ctx context.Context, cmd *cli.Command) error {
+	user := cmd.String("user")
+	return getCredential(cmd, user, user, false)
+}
+
+// runGetToken runs "rancher auth get-token". The user id only names the cached
+// credential: it is an id, not a login name, so the username prompt has no
+// default.
+func runGetToken(ctx context.Context, cmd *cli.Command) error {
+	return getCredential(cmd, cmd.String("user-id"), "", true)
+}
+
+// getCredential prints the cached credential named <cacheUser>_<cluster>, or
+// signs in and caches a new one. promptUser is the default at the username
+// prompt, empty for none. With matchProviderName, --auth-provider may also be the
+// name of an auth provider instead of only its type.
+func getCredential(cmd *cli.Command, cacheUser, promptUser string, matchProviderName bool) error {
 	server := cmd.String("server")
 	if server == "" {
 		return errors.New("name of rancher server is required")
@@ -164,8 +223,7 @@ func runCredential(ctx context.Context, cmd *cli.Command) error {
 		server = fmt.Sprintf("https://%s", server)
 	}
 
-	userID := cmd.String("user")
-	if userID == "" {
+	if cacheUser == "" {
 		return errors.New("user-id is required")
 	}
 	clusterID := cmd.String("cluster")
@@ -175,7 +233,7 @@ func runCredential(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("error looking up server config: %w", err)
 	}
 
-	cachedCredName := fmt.Sprintf("%s_%s", userID, clusterID)
+	cachedCredName := fmt.Sprintf("%s_%s", cacheUser, clusterID)
 	cachedCred, err := loadCachedCredential(cmd, serverConfig, cachedCredName)
 	if err != nil {
 		customPrint(fmt.Errorf("LoadToken: %v", err))
@@ -186,12 +244,14 @@ func runCredential(ctx context.Context, cmd *cli.Command) error {
 
 	input := &LoginInput{
 		server:       server,
-		userID:       userID,
+		userID:       promptUser,
 		clusterID:    clusterID,
 		authProvider: cmd.String("auth-provider"),
 		caCerts:      cmd.String("cacerts"),
 		skipVerify:   cmd.Bool("skip-verify"),
 		authFlow:     cmd.String("auth-flow"),
+
+		matchProviderName: matchProviderName,
 	}
 
 	tlsConfig, err := getTLSConfig(input.skipVerify, input.caCerts)
@@ -328,11 +388,14 @@ func cacheCredential(cmd *cli.Command, serverConfig *config.ServerConfig, key st
 
 func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecCredential, error) {
 	// Try /v1-public first.
-	authProviders, useV1Public, err := getAuthProviders(client, input.server, true)
+	authProviders, typesByName, useV1Public, err := listAuthProviders(client, input.server, true)
 	if err != nil {
 		return nil, err
 	}
 
+	if t, ok := typesByName[input.authProvider]; ok && input.matchProviderName {
+		input.authProvider = t
+	}
 	selectedProvider, err := selectAuthProvider(authProviders, input.authProvider)
 	if err != nil {
 		return nil, err
@@ -386,12 +449,15 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 	return cred, nil
 }
 
+// promptFunc reads a line from the user; tests replace it.
+var promptFunc = customPrompt
+
 func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (loginToken, error) {
 	prompt := "Enter username"
 	if input.userID != "" {
 		prompt += " [" + input.userID + "]"
 	}
-	username, err := customPrompt(prompt+": ", true)
+	username, err := promptFunc(prompt+": ", true)
 	if err != nil {
 		return loginToken{}, err
 	}
@@ -400,7 +466,7 @@ func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (loginT
 		username = input.userID
 	}
 
-	password, err := customPrompt("Enter password: ", false)
+	password, err := promptFunc("Enter password: ", false)
 	if err != nil {
 		return loginToken{}, err
 	}
@@ -584,14 +650,16 @@ type TypedProvider interface {
 	GetType() string
 }
 
-// getAuthProviders fetches the list of auth providers from the Rancher server.
+// listAuthProviders fetches the list of auth providers from the Rancher server.
 // Note: it should always be called with useV1Public=true first to avoid infinite recursion.
 // Returns:
 //   - A list of supported auth providers
+//   - A map from the name of each provider, as the server gives it in the "id"
+//     field, to its type; providers without a name are left out
 //   - A bool flag indicating whether the /v1-public endpoint was used (true)
 //     or if it had to fallback to /v3-public (false)
 //   - An error.
-func getAuthProviders(client *http.Client, server string, useV1Public bool) ([]TypedProvider, bool, error) {
+func listAuthProviders(client *http.Client, server string, useV1Public bool) ([]TypedProvider, map[string]string, bool, error) {
 	authProvidersURL := fmt.Sprintf(authProviderURL, server)
 	if !useV1Public {
 		authProvidersURL = fmt.Sprintf(authProviderURLv3, server)
@@ -599,7 +667,7 @@ func getAuthProviders(client *http.Client, server string, useV1Public bool) ([]T
 
 	req, err := http.NewRequest(http.MethodGet, authProvidersURL, nil)
 	if err != nil {
-		return nil, false, fmt.Errorf("error creating request: %w", err)
+		return nil, nil, false, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, respBody, err := doRequest(client, req)
@@ -609,7 +677,7 @@ func getAuthProviders(client *http.Client, server string, useV1Public bool) ([]T
 		case http.StatusNotFound:
 			if useV1Public {
 				// Fallback to v3-public endpoint.
-				return getAuthProviders(client, server, !useV1Public)
+				return listAuthProviders(client, server, !useV1Public)
 			}
 			fallthrough
 		default:
@@ -617,15 +685,16 @@ func getAuthProviders(client *http.Client, server string, useV1Public bool) ([]T
 		}
 	}
 	if err != nil {
-		return nil, false, fmt.Errorf("error listing auth providers: %w", err)
+		return nil, nil, false, fmt.Errorf("error listing auth providers: %w", err)
 	}
 
 	if !gjson.ValidBytes(respBody) {
-		return nil, false, errors.New("invalid JSON response")
+		return nil, nil, false, errors.New("invalid JSON response")
 	}
 	data := gjson.GetBytes(respBody, "data").Array()
 
 	var supportedProviders []TypedProvider
+	typesByName := make(map[string]string)
 	for _, provider := range data {
 		providerType := provider.Get("type").String()
 
@@ -643,7 +712,11 @@ func getAuthProviders(client *http.Client, server string, useV1Public bool) ([]T
 
 			err = json.Unmarshal([]byte(provider.Raw), typedProvider)
 			if err != nil {
-				return nil, false, fmt.Errorf("error decoding the auth provider %s: %w", providerType, err)
+				return nil, nil, false, fmt.Errorf("error decoding the auth provider %s: %w", providerType, err)
+			}
+
+			if name := provider.Get("id").String(); name != "" {
+				typesByName[name] = providerType
 			}
 
 			if typedProvider.GetType() == "localProvider" {
@@ -654,7 +727,7 @@ func getAuthProviders(client *http.Client, server string, useV1Public bool) ([]T
 		}
 	}
 
-	return supportedProviders, useV1Public, err
+	return supportedProviders, typesByName, useV1Public, err
 }
 
 func selectAuthProvider(authProviders []TypedProvider, providerType string) (TypedProvider, error) {
@@ -684,7 +757,7 @@ func selectAuthProvider(authProviders []TypedProvider, providerType string) (Typ
 
 	for range 3 {
 		customPrint(fmt.Sprintf("Auth providers:\n%v", strings.Join(providers, "\n")))
-		providerIndexStr, err := customPrompt("Select auth provider: ", true)
+		providerIndexStr, err := promptFunc("Select auth provider: ", true)
 		if err != nil {
 			continue
 		}
