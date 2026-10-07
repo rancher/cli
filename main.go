@@ -109,6 +109,7 @@ func mainErr() error {
 			},
 		},
 		Commands: []*cli.Command{
+			cmd.AuthCommand(),
 			cmd.ClusterCommand(),
 			cmd.ContextCommand(),
 			cmd.InspectCommand(),
