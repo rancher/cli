@@ -3,10 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/rancher/cli/config"
 	extv1 "github.com/rancher/rancher/pkg/apis/ext.cattle.io/v1"
 	"github.com/urfave/cli/v3"
 	"k8s.io/client-go/tools/clientcmd"
@@ -58,13 +60,9 @@ func runKubectl(ctx context.Context, cmd *cli.Command) error {
 
 	// Norman's MasterClient does not expose its underlying http.Client, so
 	// build a parallel one here for the direct ext API call.
-	tlsConf, err := getTLSConfig(false, currentRancherServer.CACerts)
+	httpClient, err := newServerHTTPClient(currentRancherServer)
 	if err != nil {
-		return fmt.Errorf("error creating TLS config: %w", err)
-	}
-	httpClient, err := newHTTPClient(currentRancherServer, tlsConf)
-	if err != nil {
-		return fmt.Errorf("error creating HTTP client: %w", err)
+		return err
 	}
 	baseURL, err := currentRancherServer.EnvironmentURL()
 	if err != nil {
@@ -156,4 +154,19 @@ func extractKubeconfigTokenID(kubeconfig api.Config) (string, error) {
 	}
 
 	return parts[0], nil
+}
+
+// newServerHTTPClient builds an HTTP client for the server that trusts the CA
+// certificates saved at login.
+func newServerHTTPClient(serverConfig *config.ServerConfig) (*http.Client, error) {
+	// CACerts holds the PEM-encoded certificates read at login, not a path.
+	tlsConfig, err := tlsConfigFromPEM(false, serverConfig.CACerts)
+	if err != nil {
+		return nil, fmt.Errorf("error creating TLS config: %w", err)
+	}
+	httpClient, err := newHTTPClient(serverConfig, tlsConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error creating HTTP client: %w", err)
+	}
+	return httpClient, nil
 }

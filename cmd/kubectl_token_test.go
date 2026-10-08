@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -493,4 +496,79 @@ func TestCacheCredential(t *testing.T) {
 	expirationTimestamp := cfg.Servers["rancher.example.com"].KubeCredentials["dev-server"].Status.ExpirationTimestamp
 	require.NotNil(t, expirationTimestamp)
 	assert.True(t, expirationTimestamp.Equal(expires.Time))
+}
+
+func TestTLSConfigFromPEM(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer srv.Close()
+	caCerts := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw}))
+
+	t.Run("trusts the PEM-encoded CA", func(t *testing.T) {
+		tlsConfig, err := tlsConfigFromPEM(false, caCerts)
+		require.NoError(t, err)
+		require.NotNil(t, tlsConfig)
+		require.NotNil(t, tlsConfig.RootCAs)
+
+		client := &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}
+		resp, err := client.Get(srv.URL)
+		require.NoError(t, err)
+		resp.Body.Close()
+	})
+
+	t.Run("no CA certs", func(t *testing.T) {
+		tlsConfig, err := tlsConfigFromPEM(true, "")
+		require.NoError(t, err)
+		require.NotNil(t, tlsConfig)
+
+		assert.True(t, tlsConfig.InsecureSkipVerify)
+		assert.Nil(t, tlsConfig.RootCAs)
+	})
+
+	t.Run("invalid PEM", func(t *testing.T) {
+		tlsConfig, err := tlsConfigFromPEM(false, "not a certificate")
+		assert.Error(t, err)
+		assert.Nil(t, tlsConfig)
+	})
+
+	t.Run("CA in a non-CERTIFICATE PEM block", func(t *testing.T) {
+		caCerts := string(pem.EncodeToMemory(&pem.Block{Type: "TRUSTED CERTIFICATE", Bytes: srv.Certificate().Raw}))
+
+		tlsConfig, err := tlsConfigFromPEM(false, caCerts)
+		assert.EqualError(t, err, "no valid CA certificates found")
+		assert.Nil(t, tlsConfig)
+	})
+}
+
+func TestGetTLSConfig(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer srv.Close()
+	caCerts := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})
+
+	t.Run("trusts the CA in the file", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "cacerts.pem")
+		require.NoError(t, os.WriteFile(path, caCerts, 0o600))
+
+		tlsConfig, err := getTLSConfig(false, path)
+		require.NoError(t, err)
+		require.NotNil(t, tlsConfig)
+
+		client := &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}
+		resp, err := client.Get(srv.URL)
+		require.NoError(t, err)
+		resp.Body.Close()
+	})
+
+	t.Run("no path", func(t *testing.T) {
+		tlsConfig, err := getTLSConfig(false, "")
+		require.NoError(t, err)
+		require.NotNil(t, tlsConfig)
+
+		assert.Nil(t, tlsConfig.RootCAs)
+	})
+
+	t.Run("missing file", func(t *testing.T) {
+		tlsConfig, err := getTLSConfig(false, filepath.Join(t.TempDir(), "missing.pem"))
+		assert.Error(t, err)
+		assert.Nil(t, tlsConfig)
+	})
 }
