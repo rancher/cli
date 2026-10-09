@@ -1,8 +1,8 @@
 module github.com/rancher/cli
 
-go 1.26.5
+go 1.27.0
 
-toolchain go1.26.8
+toolchain go1.27.2
 
 replace (
 	k8s.io/api => k8s.io/api v0.36.4
