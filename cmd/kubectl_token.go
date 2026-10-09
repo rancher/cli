@@ -789,7 +789,24 @@ func generateKey() (string, error) {
 	return string(token), nil
 }
 
-func getTLSConfig(skipVerify bool, caCerts string) (*tls.Config, error) {
+// getTLSConfig builds a TLS config that trusts the CA certificates in the
+// file at caCertsPath, if set.
+func getTLSConfig(skipVerify bool, caCertsPath string) (*tls.Config, error) {
+	if caCertsPath == "" {
+		return tlsConfigFromPEM(skipVerify, "")
+	}
+
+	caCerts, err := os.ReadFile(caCertsPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return tlsConfigFromPEM(skipVerify, string(caCerts))
+}
+
+// tlsConfigFromPEM builds a TLS config that trusts the PEM-encoded CA
+// certificates in caCerts, if set.
+func tlsConfigFromPEM(skipVerify bool, caCerts string) (*tls.Config, error) {
 	config := &tls.Config{
 		InsecureSkipVerify: skipVerify,
 	}
@@ -798,16 +815,14 @@ func getTLSConfig(skipVerify bool, caCerts string) (*tls.Config, error) {
 		return config, nil
 	}
 
-	// load custom certs
-	cert, err := loadAndVerifyCert(caCerts)
+	cert, err := verifyCert([]byte(caCerts))
 	if err != nil {
 		return nil, err
 	}
 
 	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM([]byte(cert))
-	if !ok {
-		return nil, err
+	if ok := roots.AppendCertsFromPEM([]byte(cert)); !ok {
+		return nil, errors.New("no valid CA certificates found")
 	}
 	config.RootCAs = roots
 
