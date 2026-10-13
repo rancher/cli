@@ -5,8 +5,36 @@ on:
     tags:        
       - v*
 
+# GitHub can deliver the tag push event twice. Run one release per tag at a time
+# and let the second run skip when the first one already uploaded the assets.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  check:
+    permissions:
+      contents: read # needed to read the release assets
+    runs-on: ubuntu-latest
+    outputs:
+      has-assets: ${{ steps.assets.outputs.has-assets }}
+    steps:
+    - name: Check for existing Release assets
+      id: assets
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        count=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')
+        if [ "$count" -gt 0 ]; then
+          echo "::notice::Release $GITHUB_REF_NAME already has $count assets, skipping"
+          echo "has-assets=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "has-assets=false" >> "$GITHUB_OUTPUT"
+        fi
+
   release:
+    needs: check
+    if: needs.check.outputs.has-assets != 'true'
     permissions:
       contents: write # needed to create/update the release with the assets
       id-token: write # needed for the Vault authentication
