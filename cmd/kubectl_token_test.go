@@ -44,13 +44,13 @@ func TestGetAuthProviders(t *testing.T) {
 
 	client := &http.Client{Timeout: time.Second}
 
-	expectedProviders := []TypedProvider{
-		&apiv3.LocalProvider{
+	expectedProviders := []authConfig{
+		{name: "local", provider: &apiv3.LocalProvider{
 			AuthProvider: apiv3.AuthProvider{
 				Type: "localProvider",
 			},
-		},
-		&apiv3.AzureADProvider{
+		}},
+		{name: "azuread", provider: &apiv3.AzureADProvider{
 			AuthProvider: apiv3.AuthProvider{
 				Type: "azureADProvider",
 			},
@@ -65,7 +65,7 @@ func TestGetAuthProviders(t *testing.T) {
 					TokenURL:      "https://login.microsoftonline.com/258928db-3ed6-49fb-9a7e-52e492ffb066/oauth2/v2.0/token",
 				},
 			},
-		},
+		}},
 	}
 
 	t.Run("successful response with v1-public endpoints", func(t *testing.T) {
@@ -75,7 +75,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
+		providers, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.NoError(t, err)
 		assert.True(t, useV1Public)
@@ -89,7 +89,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, _, useV1Public, err := listAuthProviders(client, server.URL, false)
+		providers, useV1Public, err := listAuthProviders(client, server.URL, false)
 
 		require.NoError(t, err)
 		assert.False(t, useV1Public)
@@ -98,10 +98,10 @@ func TestGetAuthProviders(t *testing.T) {
 
 	t.Run("local provider hidden when hide-local-auth-provider is set", func(t *testing.T) {
 		// This is to make sure listAuthProviders doesn't hardcode the local provider.
-		expected := []TypedProvider{
-			&apiv3.AuthProvider{
+		expected := []authConfig{
+			{name: "openldap", provider: &apiv3.AuthProvider{
 				Type: "openLdapProvider",
-			},
+			}},
 		}
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -113,13 +113,13 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
+		providers, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.NoError(t, err)
 		assert.True(t, useV1Public)
 		assert.Equal(t, expected, providers)
 		for _, p := range providers {
-			assert.NotEqual(t, "localProvider", p.GetType(), "localProvider should be hidden")
+			assert.NotEqual(t, "localProvider", p.provider.GetType(), "localProvider should be hidden")
 		}
 	})
 
@@ -139,7 +139,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
+		providers, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.NoError(t, err)
 		assert.False(t, useV1Public, "should have fallen back to v3-public")
@@ -155,7 +155,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
+		providers, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "error listing auth providers")
@@ -170,7 +170,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
+		providers, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "invalid JSON response")
@@ -184,7 +184,7 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
+		providers, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "500")
@@ -215,12 +215,12 @@ func TestGetAuthProviders(t *testing.T) {
 		}))
 		t.Cleanup(server.Close)
 
-		providers, _, useV1Public, err := listAuthProviders(client, server.URL, true)
+		providers, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 		require.NoError(t, err)
 		assert.True(t, useV1Public)
 		require.Len(t, providers, 1, "should only return supported providers")
-		assert.Equal(t, "localProvider", providers[0].GetType())
+		assert.Equal(t, "localProvider", providers[0].provider.GetType())
 	})
 }
 
@@ -291,17 +291,18 @@ var authProvidersResponseV3 = `{
 func TestSelectAuthProvider(t *testing.T) {
 	t.Parallel()
 
-	ldapProvider := &apiv3.AuthProvider{Type: "openLdapProvider"}
-	localProvider := &apiv3.LocalProvider{
+	ldapProvider := authConfig{name: "openldap", provider: &apiv3.AuthProvider{Type: "openLdapProvider"}}
+	corpLDAPProvider := authConfig{name: "corp-ldap", provider: &apiv3.AuthProvider{Type: "openLdapProvider"}}
+	localProvider := authConfig{name: "local", provider: &apiv3.LocalProvider{
 		AuthProvider: apiv3.AuthProvider{Type: "localProvider"},
-	}
+	}}
 
 	tests := []struct {
-		name         string
-		providers    []TypedProvider
-		providerType string
-		expected     TypedProvider
-		expectedErr  string
+		name        string
+		providers   []authConfig
+		value       string
+		expected    authConfig
+		expectedErr string
 	}{
 		{
 			name:        "no providers configured",
@@ -309,27 +310,45 @@ func TestSelectAuthProvider(t *testing.T) {
 			expectedErr: "no auth provider configured",
 		},
 		{
-			name:         "localProvider not found when hidden",
-			providers:    []TypedProvider{ldapProvider},
-			providerType: "localProvider",
-			expectedErr:  "provider localProvider not found",
+			name:        "localProvider not found when hidden",
+			providers:   []authConfig{ldapProvider},
+			value:       "localProvider",
+			expectedErr: "provider localProvider not found",
 		},
 		{
 			name:      "single external provider auto-selected",
-			providers: []TypedProvider{ldapProvider},
+			providers: []authConfig{ldapProvider},
 			expected:  ldapProvider,
 		},
 		{
-			name:         "local selected when both local and external present",
-			providers:    []TypedProvider{localProvider, ldapProvider},
-			providerType: "localProvider",
-			expected:     localProvider,
+			name:      "local selected when both local and external present",
+			providers: []authConfig{localProvider, ldapProvider},
+			value:     "localProvider",
+			expected:  localProvider,
 		},
 		{
-			name:         "external selected when both local and external present",
-			providers:    []TypedProvider{localProvider, ldapProvider},
-			providerType: "openLdapProvider",
-			expected:     ldapProvider,
+			name:      "external selected when both local and external present",
+			providers: []authConfig{localProvider, ldapProvider},
+			value:     "openLdapProvider",
+			expected:  ldapProvider,
+		},
+		{
+			name:      "auth config name",
+			providers: []authConfig{localProvider, ldapProvider, corpLDAPProvider},
+			value:     "corp-ldap",
+			expected:  corpLDAPProvider,
+		},
+		{
+			name:      "provider name matches the only auth config of the provider",
+			providers: []authConfig{localProvider, corpLDAPProvider},
+			value:     "openldap",
+			expected:  corpLDAPProvider,
+		},
+		{
+			name:      "provider type matches the only auth config of the provider",
+			providers: []authConfig{localProvider, corpLDAPProvider},
+			value:     "openLdapProvider",
+			expected:  corpLDAPProvider,
 		},
 	}
 
@@ -338,12 +357,12 @@ func TestSelectAuthProvider(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			provider, err := selectAuthProvider(tc.providers, tc.providerType)
+			provider, err := selectAuthProvider(tc.providers, tc.value)
 
 			if tc.expectedErr != "" {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tc.expectedErr)
-				assert.Nil(t, provider)
+				assert.Equal(t, authConfig{}, provider)
 				return
 			}
 
