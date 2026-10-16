@@ -240,6 +240,7 @@ func TestRancherLogin(t *testing.T) {
 					assert.Equal(t, "azureADProvider", body["type"])
 					assert.Equal(t, "kubeconfig_c-12345", body["responseType"])
 					assert.Equal(t, "test-id-token", body["id_token"])
+					assert.Equal(t, "azuread", body["configName"])
 				}
 
 				w.WriteHeader(tt.statusCode)
@@ -253,6 +254,7 @@ func TestRancherLogin(t *testing.T) {
 				userID:       "test-user",
 				clusterID:    "c-12345",
 				authProvider: "azureADProvider",
+				configName:   "azuread",
 			}
 
 			oauthToken := &oauth2.Token{

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,10 +41,24 @@ const (
 		{"id": "openLdapProvider", "type": "freeIpaProvider"},
 		{"id": "openldap", "type": "openLdapProvider"}
 	]}`
+
+	// multiIdPProviders has two auth configs of one provider.
+	multiIdPProviders = `{"data": [
+		{"id": "local", "type": "localProvider"},
+		{"id": "openldap", "type": "openLdapProvider"},
+		{"id": "corp-ldap", "type": "openLdapProvider"}
+	]}`
+
+	// corpLDAPProviders has one auth config of a provider, not named after it.
+	corpLDAPProviders = `{"data": [
+		{"id": "local", "type": "localProvider"},
+		{"id": "corp-ldap", "type": "openLdapProvider"}
+	]}`
 )
 
 type loginRequest struct {
 	Type         string `json:"type"`
+	ConfigName   string `json:"configName"`
 	ResponseType string `json:"responseType"`
 	Username     string `json:"username"`
 	Password     string `json:"password"`
@@ -63,6 +78,8 @@ type credentialHarness struct {
 	prompts        []string
 	username       string
 	providerChoice string
+	// noInput makes the provider selection prompt find no input.
+	noInput bool
 }
 
 // newCredentialHarness returns a harness whose server lists one provider and
@@ -117,6 +134,9 @@ func newCredentialHarness(t *testing.T) *credentialHarness {
 		h.prompts = append(h.prompts, msg)
 		switch {
 		case msg == "Select auth provider: ":
+			if h.noInput {
+				return "", io.EOF
+			}
 			return h.providerChoice, nil
 		case show:
 			return h.username, nil
@@ -343,23 +363,39 @@ func TestAuthProviderSelection(t *testing.T) {
 		// provider is the --auth-provider value, empty for none.
 		provider string
 		// choice is the answer to the provider selection prompt.
-		choice     string
+		choice string
+		// noInput makes the provider selection prompt find no input.
+		noInput    bool
 		wantType   string
+		wantConfig string
 		wantErr    string
 		wantPrompt bool
 	}{
-		{name: "get-token name", command: getToken, providers: manyProviders, provider: "local", wantType: "localProvider"},
-		{name: "get-token type", command: getToken, providers: manyProviders, provider: "localProvider", wantType: "localProvider"},
-		{name: "get-token other name", command: getToken, providers: manyProviders, provider: "openldap", wantType: "openLdapProvider"},
-		{name: "get-token other type", command: getToken, providers: manyProviders, provider: "openLdapProvider", wantType: "openLdapProvider"},
-		{name: "get-token third name", command: getToken, providers: manyProviders, provider: "freeipa", wantType: "freeIpaProvider"},
-		{name: "get-token name wins over type", command: getToken, providers: collidingProviders, provider: "openLdapProvider", wantType: "freeIpaProvider"},
+		{name: "get-token name", command: getToken, providers: manyProviders, provider: "local", wantType: "localProvider", wantConfig: "local"},
+		{name: "get-token type", command: getToken, providers: manyProviders, provider: "localProvider", wantType: "localProvider", wantConfig: "local"},
+		{name: "get-token other name", command: getToken, providers: manyProviders, provider: "openldap", wantType: "openLdapProvider", wantConfig: "openldap"},
+		{name: "get-token other type", command: getToken, providers: manyProviders, provider: "openLdapProvider", wantType: "openLdapProvider", wantConfig: "openldap"},
+		{name: "get-token third name", command: getToken, providers: manyProviders, provider: "freeipa", wantType: "freeIpaProvider", wantConfig: "freeipa"},
+		{name: "get-token name wins over type", command: getToken, providers: collidingProviders, provider: "openLdapProvider", wantType: "freeIpaProvider", wantConfig: "openLdapProvider"},
 		{name: "get-token unknown", command: getToken, providers: manyProviders, provider: "nosuch", wantErr: "provider nosuch not found"},
-		{name: "get-token chosen from the prompt", command: getToken, providers: manyProviders, choice: "1", wantType: "openLdapProvider", wantPrompt: true},
+		{name: "get-token chosen from the prompt", command: getToken, providers: manyProviders, choice: "1", wantType: "openLdapProvider", wantConfig: "openldap", wantPrompt: true},
 		{name: "get-token unnamed providers are not matched by an empty value", command: getToken, providers: unnamedProviders, choice: "1", wantType: "openLdapProvider", wantPrompt: true},
-		{name: "token type", command: token, providers: manyProviders, provider: "openLdapProvider", wantType: "openLdapProvider"},
-		{name: "token name fails", command: token, providers: manyProviders, provider: "local", wantErr: "provider local not found"},
-		{name: "token matches the type even if it is another provider's name", command: token, providers: collidingProviders, provider: "openLdapProvider", wantType: "openLdapProvider"},
+		{name: "get-token unnamed provider by type", command: getToken, providers: unnamedProviders, provider: "openLdapProvider", wantType: "openLdapProvider"},
+		{name: "token type", command: token, providers: manyProviders, provider: "openLdapProvider", wantType: "openLdapProvider", wantConfig: "openldap"},
+		{name: "token name", command: token, providers: manyProviders, provider: "local", wantType: "localProvider", wantConfig: "local"},
+		{name: "token name wins over type", command: token, providers: collidingProviders, provider: "openLdapProvider", wantType: "freeIpaProvider", wantConfig: "openLdapProvider"},
+
+		// Several auth configs of one provider.
+		{name: "get-token auth config name", command: getToken, providers: multiIdPProviders, provider: "corp-ldap", wantType: "openLdapProvider", wantConfig: "corp-ldap"},
+		{name: "token auth config name", command: token, providers: multiIdPProviders, provider: "corp-ldap", wantType: "openLdapProvider", wantConfig: "corp-ldap"},
+		{name: "get-token auth config named after the provider", command: getToken, providers: multiIdPProviders, provider: "openldap", wantType: "openLdapProvider", wantConfig: "openldap"},
+		{name: "get-token type chosen from the auth configs of the provider", command: getToken, providers: multiIdPProviders, provider: "openLdapProvider", choice: "1", wantType: "openLdapProvider", wantConfig: "corp-ldap", wantPrompt: true},
+		{name: "token type chosen from the auth configs of the provider", command: token, providers: multiIdPProviders, provider: "openLdapProvider", choice: "0", wantType: "openLdapProvider", wantConfig: "openldap", wantPrompt: true},
+		{name: "get-token type without input", command: getToken, providers: multiIdPProviders, provider: "openLdapProvider", noInput: true, wantErr: "use --auth-provider with one of: openldap, corp-ldap", wantPrompt: true},
+		{name: "get-token no value without input", command: getToken, providers: multiIdPProviders, noInput: true, wantErr: "use --auth-provider with one of: local, openldap, corp-ldap", wantPrompt: true},
+		{name: "token no value without input", command: token, providers: multiIdPProviders, noInput: true, wantErr: "use --auth-provider with one of: local, openldap, corp-ldap", wantPrompt: true},
+		{name: "get-token provider name matches the only auth config", command: getToken, providers: corpLDAPProviders, provider: "openldap", wantType: "openLdapProvider", wantConfig: "corp-ldap"},
+		{name: "token provider type matches the only auth config", command: token, providers: corpLDAPProviders, provider: "openLdapProvider", wantType: "openLdapProvider", wantConfig: "corp-ldap"},
 	}
 
 	for _, tc := range tests {
@@ -367,6 +403,7 @@ func TestAuthProviderSelection(t *testing.T) {
 			h := newCredentialHarness(t)
 			h.providers = tc.providers
 			h.providerChoice = tc.choice
+			h.noInput = tc.noInput
 
 			run, args := h.getToken, []string{"--user-id", "u-1"}
 			if tc.command == token {
@@ -377,6 +414,15 @@ func TestAuthProviderSelection(t *testing.T) {
 			}
 			out, err := run(args...)
 
+			if tc.wantPrompt {
+				// Without input, the prompt is asked once only.
+				assert.Equal(t, "Select auth provider: ", h.prompts[0])
+				if tc.noInput {
+					assert.Len(t, h.prompts, 1)
+				}
+			} else {
+				assert.NotContains(t, h.prompts, "Select auth provider: ")
+			}
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
 				assert.Empty(t, out)
@@ -386,30 +432,22 @@ func TestAuthProviderSelection(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, h.logins, 1)
 			assert.Equal(t, tc.wantType, h.logins[0].Type)
-			if tc.wantPrompt {
-				assert.Contains(t, h.prompts, "Select auth provider: ")
-			} else {
-				assert.NotContains(t, h.prompts, "Select auth provider: ")
-			}
+			assert.Equal(t, tc.wantConfig, h.logins[0].ConfigName)
 		})
 	}
 }
 
-// TestListAuthProviderNames asserts that listAuthProviders maps the name of
-// each supported provider, whatever its sign-in method, to its type, on
-// /v1-public and on the /v3-public fallback, and leaves out unnamed providers.
+// TestListAuthProviderNames asserts that listAuthProviders keeps the name of
+// each supported auth config, whatever its sign-in method, on /v1-public and
+// on the /v3-public fallback, and an empty name for unnamed ones.
 func TestListAuthProviderNames(t *testing.T) {
 	const providers = `{"data": [
-		{"id": "local", "type": "localProvider"},
 		{"id": "okta", "type": "oktaProvider"},
 		{"id": "azuread", "type": "azureADProvider"},
+		{"id": "local", "type": "localProvider"},
 		{"type": "openLdapProvider"}
 	]}`
-	want := map[string]string{
-		"local":   "localProvider",
-		"okta":    "oktaProvider",
-		"azuread": "azureADProvider",
-	}
+	want := []string{"local", "okta", "azuread", ""}
 
 	tests := []struct {
 		name        string
@@ -444,14 +482,34 @@ func TestListAuthProviderNames(t *testing.T) {
 			// A transport without a proxy function: the default one reads the
 			// proxy environment once per process, which TestNewHTTPClient sets.
 			client := &http.Client{Timeout: time.Second, Transport: &http.Transport{}}
-			list, typesByName, useV1Public, err := listAuthProviders(client, server.URL, true)
+			list, useV1Public, err := listAuthProviders(client, server.URL, true)
 
 			require.NoError(t, err)
 			assert.Equal(t, tc.useV1Public, useV1Public)
-			assert.Len(t, list, 4)
-			assert.Equal(t, want, typesByName)
+			var names []string
+			for _, c := range list {
+				names = append(names, c.name)
+			}
+			assert.Equal(t, want, names)
 		})
 	}
+}
+
+// TestCustomPrompt asserts that the prompt reads lines one by one from shared
+// input, and returns io.EOF once the input ends.
+func TestCustomPrompt(t *testing.T) {
+	oldStdin := stdin
+	stdin = bufio.NewReader(strings.NewReader("1\r\n\nlast"))
+	t.Cleanup(func() { stdin = oldStdin })
+
+	for _, want := range []string{"1", "", "last"} {
+		got, err := customPrompt("> ", true)
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
+	}
+
+	_, err := customPrompt("> ", true)
+	assert.ErrorIs(t, err, io.EOF)
 }
 
 // TestTokenHelp asserts that the help text of the token command, rendered with
@@ -490,7 +548,7 @@ func TestTokenHelp(t *testing.T) {
 		"   --server string         Name of rancher server\n" +
 		"   --user string           user-id\n" +
 		"   --cluster string        cluster-id\n" +
-		"   --auth-provider string  Name of Auth Provider to use for authentication\n" +
+		"   --auth-provider string  Name or type of Auth Provider to use for authentication\n" +
 		"   --auth-flow string      Auth flow to use for OAuth providers: 'devicecode' (default) or 'authcode'\n" +
 		"   --cacerts string        Location of CaCerts to use\n" +
 		"   --skip-verify           Skip verification of the CACerts presented by the Server\n" +
