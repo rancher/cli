@@ -15,19 +15,19 @@ replace (
 
 require (
 	github.com/ghodss/yaml v1.0.0
-	github.com/rancher/norman v0.8.8
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260826145222-63d8501ec849
-	github.com/rancher/rancher/pkg/client v0.0.0-20260826145222-63d8501ec849
+	github.com/rancher/norman v0.8.9
+	github.com/rancher/rancher/pkg/apis v0.0.0-20261023141655-1d26661a8c5a
+	github.com/rancher/rancher/pkg/client v0.0.0-20261023141655-1d26661a8c5a
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
 	github.com/urfave/cli v1.22.17
-	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
+	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/sync v0.22.0
-	golang.org/x/sys v0.47.0
-	golang.org/x/term v0.45.0
-	golang.org/x/text v0.40.0
+	golang.org/x/sync v0.24.0
+	golang.org/x/sys v0.49.0
+	golang.org/x/term v0.47.0
+	golang.org/x/text v0.43.0
 	k8s.io/client-go v12.0.0+incompatible
 )
 
@@ -59,14 +59,14 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	github.com/rancher/aks-operator v1.14.5 // indirect
-	github.com/rancher/ali-operator v1.14.4 // indirect
-	github.com/rancher/eks-operator v1.14.5 // indirect
-	github.com/rancher/fleet/pkg/apis v0.15.5 // indirect
-	github.com/rancher/gke-operator v1.14.5 // indirect
+	github.com/rancher/aks-operator v1.14.7-rc.3 // indirect
+	github.com/rancher/ali-operator v1.14.6-rc.2 // indirect
+	github.com/rancher/eks-operator v1.14.7-rc.2 // indirect
+	github.com/rancher/fleet/pkg/apis v0.15.8 // indirect
+	github.com/rancher/gke-operator v1.14.8-rc.2 // indirect
 	github.com/rancher/lasso v0.2.8 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
-	github.com/rancher/wrangler/v3 v3.6.0 // indirect
+	github.com/rancher/wrangler/v3 v3.6.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
@@ -76,19 +76,19 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.35.6 // indirect
-	k8s.io/apimachinery v0.35.6 // indirect
+	k8s.io/api v0.35.7 // indirect
+	k8s.io/apimachinery v0.35.7 // indirect
 	k8s.io/apiserver v0.35.6 // indirect
 	k8s.io/component-base v0.35.6 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 // indirect
-	k8s.io/kubernetes v1.35.6 // indirect
+	k8s.io/kubernetes v1.35.9 // indirect
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
