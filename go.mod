@@ -2,30 +2,32 @@ module github.com/rancher/cli
 
 go 1.26.5
 
-toolchain go1.26.6
+toolchain go1.26.10
 
 replace (
-	k8s.io/apiserver => k8s.io/apiserver v0.36.3
-	k8s.io/client-go => k8s.io/client-go v0.36.3
-	k8s.io/component-base => k8s.io/component-base v0.36.3
-	k8s.io/kubernetes => k8s.io/kubernetes v1.36.3
+	k8s.io/api => k8s.io/api v0.36.5
+	k8s.io/apimachinery => k8s.io/apimachinery v0.36.5
+	k8s.io/apiserver => k8s.io/apiserver v0.36.5
+	k8s.io/client-go => k8s.io/client-go v0.36.5
+	k8s.io/component-base => k8s.io/component-base v0.36.5
+	k8s.io/kubernetes => k8s.io/kubernetes v1.36.5
 )
 
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.9.11
-	github.com/rancher/rancher/pkg/apis v0.0.0-20260923184111-272e65580ca9
-	github.com/rancher/rancher/pkg/client v0.0.0-20260923184111-272e65580ca9
+	github.com/rancher/rancher/pkg/apis v0.0.0-20261023144727-f53af636ce73
+	github.com/rancher/rancher/pkg/client v0.0.0-20261023144727-f53af636ce73
 	github.com/sirupsen/logrus v1.10.0
 	github.com/stretchr/testify v1.12.0
 	github.com/tidwall/gjson v1.19.0
 	github.com/urfave/cli/v3 v3.10.1
 	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/sync v0.22.0
-	golang.org/x/sys v0.47.0
-	golang.org/x/term v0.45.0
-	golang.org/x/text v0.41.0
+	golang.org/x/sync v0.24.0
+	golang.org/x/sys v0.49.0
+	golang.org/x/term v0.47.0
+	golang.org/x/text v0.43.0
 	k8s.io/client-go v12.0.0+incompatible
 )
 
@@ -54,11 +56,11 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
-	github.com/rancher/aks-operator v1.15.2 // indirect
-	github.com/rancher/ali-operator v1.15.1 // indirect
-	github.com/rancher/eks-operator v1.15.2 // indirect
-	github.com/rancher/fleet/pkg/apis v0.16.2 // indirect
-	github.com/rancher/gke-operator v1.15.3 // indirect
+	github.com/rancher/aks-operator v1.15.3-rc.3 // indirect
+	github.com/rancher/ali-operator v1.15.2-rc.2 // indirect
+	github.com/rancher/eks-operator v1.15.3-rc.2 // indirect
+	github.com/rancher/fleet/pkg/apis v0.16.3 // indirect
+	github.com/rancher/gke-operator v1.15.4-rc.2 // indirect
 	github.com/rancher/lasso v0.2.9 // indirect
 	github.com/rancher/wrangler/v3 v3.7.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
@@ -67,14 +69,14 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.36.4 // indirect
-	k8s.io/apimachinery v0.36.4 // indirect
+	k8s.io/api v0.36.5 // indirect
+	k8s.io/apimachinery v0.36.5 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
