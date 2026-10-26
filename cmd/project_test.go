@@ -17,7 +17,7 @@ import (
 func TestListProjectMembers(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	userConfig := &fakeUserConfig{
 		GetCurrentProjectFunc: func() string {

@@ -17,7 +17,7 @@ import (
 func TestListClusterMembers(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	userConfig := &fakeUserConfig{
 		GetCurrentClusterFunc: func() string {
