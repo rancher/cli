@@ -16,8 +16,8 @@ replace (
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/rancher/norman v0.8.9
-	github.com/rancher/rancher/pkg/apis v0.0.0-20261023141655-1d26661a8c5a
-	github.com/rancher/rancher/pkg/client v0.0.0-20261023141655-1d26661a8c5a
+	github.com/rancher/rancher/pkg/apis v0.0.0-20261028225841-ba14fe8e3c42
+	github.com/rancher/rancher/pkg/client v0.0.0-20261028225841-ba14fe8e3c42
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.17.0
@@ -59,11 +59,11 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	github.com/rancher/aks-operator v1.14.7-rc.3 // indirect
-	github.com/rancher/ali-operator v1.14.6-rc.2 // indirect
-	github.com/rancher/eks-operator v1.14.7-rc.2 // indirect
+	github.com/rancher/aks-operator v1.14.7 // indirect
+	github.com/rancher/ali-operator v1.14.6 // indirect
+	github.com/rancher/eks-operator v1.14.7 // indirect
 	github.com/rancher/fleet/pkg/apis v0.15.8 // indirect
-	github.com/rancher/gke-operator v1.14.8-rc.2 // indirect
+	github.com/rancher/gke-operator v1.14.8 // indirect
 	github.com/rancher/lasso v0.2.8 // indirect
 	github.com/rancher/rke v1.8.0 // indirect
 	github.com/rancher/wrangler/v3 v3.6.1 // indirect
