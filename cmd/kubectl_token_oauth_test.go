@@ -160,9 +160,22 @@ func TestRancherLogin(t *testing.T) {
 		shouldError    bool
 		errorMsg       string
 		expectedBearer string // when empty, the assertion falls back to expectedToken
+		configName     string // when empty, no configName is sent
 	}{
 		{
 			name:        "successful login with v1-public",
+			useV1Public: true,
+			statusCode:  http.StatusCreated,
+			responseBody: fmt.Sprintf(`{
+				"token": "%s",
+				"expiresAt": "%s",
+				"type": "token"
+			}`, expectedToken, expiresAt),
+			shouldError: false,
+			configName:  "azuread",
+		},
+		{
+			name:        "successful login without config name",
 			useV1Public: true,
 			statusCode:  http.StatusCreated,
 			responseBody: fmt.Sprintf(`{
@@ -240,6 +253,11 @@ func TestRancherLogin(t *testing.T) {
 					assert.Equal(t, "azureADProvider", body["type"])
 					assert.Equal(t, "kubeconfig_c-12345", body["responseType"])
 					assert.Equal(t, "test-id-token", body["id_token"])
+					if tt.configName == "" {
+						assert.NotContains(t, body, "configName")
+					} else {
+						assert.Equal(t, tt.configName, body["configName"])
+					}
 				}
 
 				w.WriteHeader(tt.statusCode)
@@ -253,6 +271,7 @@ func TestRancherLogin(t *testing.T) {
 				userID:       "test-user",
 				clusterID:    "c-12345",
 				authProvider: "azureADProvider",
+				configName:   tt.configName,
 			}
 
 			oauthToken := &oauth2.Token{
