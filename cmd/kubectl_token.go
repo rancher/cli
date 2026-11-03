@@ -58,10 +58,10 @@ type LoginInput struct {
 	skipVerify   bool
 	authFlow     string // devicecode or authcode.
 
-	// matchProviderName makes authProvider also match the name of an auth
-	// provider, which Rancher writes into the kubeconfigs it generates. The
-	// server gives it in the "id" field.
-	matchProviderName bool
+	// configName is the name of the chosen auth config, sent in the login
+	// request so that Rancher can tell apart several auth configs of one
+	// provider. Empty if the server gave no name.
+	configName string
 }
 
 const (
@@ -122,7 +122,7 @@ func CredentialCommand() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:  "auth-provider",
-				Usage: "Name of Auth Provider to use for authentication",
+				Usage: "Name or type of Auth Provider to use for authentication",
 			},
 		),
 		Commands: []*cli.Command{
@@ -195,21 +195,20 @@ func credentialFlags(userFlag, authProviderFlag *cli.StringFlag) []cli.Flag {
 // credential and the default at the username prompt.
 func runCredential(ctx context.Context, cmd *cli.Command) error {
 	user := cmd.String("user")
-	return getCredential(cmd, user, user, false)
+	return getCredential(cmd, user, user)
 }
 
 // runGetToken runs "rancher auth get-token". The user id only names the cached
 // credential: it is an id, not a login name, so the username prompt has no
 // default.
 func runGetToken(ctx context.Context, cmd *cli.Command) error {
-	return getCredential(cmd, cmd.String("user-id"), "", true)
+	return getCredential(cmd, cmd.String("user-id"), "")
 }
 
-// getCredential prints the cached credential named <cacheUser>_<cluster>, or
-// signs in and caches a new one. promptUser is the default at the username
-// prompt, empty for none. With matchProviderName, --auth-provider may also be the
-// name of an auth provider instead of only its type.
-func getCredential(cmd *cli.Command, cacheUser, promptUser string, matchProviderName bool) error {
+// getCredential prints the cached credential named <cacheUser>_<cluster>, with
+// _<auth-provider> appended when --auth-provider is set, or signs in and caches
+// a new one. promptUser is the default at the username prompt, empty for none.
+func getCredential(cmd *cli.Command, cacheUser, promptUser string) error {
 	server := cmd.String("server")
 	if server == "" {
 		return errors.New("name of rancher server is required")
@@ -233,7 +232,13 @@ func getCredential(cmd *cli.Command, cacheUser, promptUser string, matchProvider
 		return fmt.Errorf("error looking up server config: %w", err)
 	}
 
+	// Rancher adds only the groups of the token's auth provider, so tokens of
+	// different auth providers are cached apart. Without --auth-provider the
+	// name is unchanged, so credentials cached before still match.
 	cachedCredName := fmt.Sprintf("%s_%s", cacheUser, clusterID)
+	if authProvider := cmd.String("auth-provider"); authProvider != "" {
+		cachedCredName += "_" + authProvider
+	}
 	cachedCred, err := loadCachedCredential(cmd, serverConfig, cachedCredName)
 	if err != nil {
 		customPrint(fmt.Errorf("LoadToken: %v", err))
@@ -250,8 +255,6 @@ func getCredential(cmd *cli.Command, cacheUser, promptUser string, matchProvider
 		caCerts:      cmd.String("cacerts"),
 		skipVerify:   cmd.Bool("skip-verify"),
 		authFlow:     cmd.String("auth-flow"),
-
-		matchProviderName: matchProviderName,
 	}
 
 	tlsConfig, err := getTLSConfig(input.skipVerify, input.caCerts)
@@ -388,19 +391,18 @@ func cacheCredential(cmd *cli.Command, serverConfig *config.ServerConfig, key st
 
 func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecCredential, error) {
 	// Try /v1-public first.
-	authProviders, typesByName, useV1Public, err := listAuthProviders(client, input.server, true)
+	authConfigs, useV1Public, err := listAuthProviders(client, input.server, true)
 	if err != nil {
 		return nil, err
 	}
 
-	if t, ok := typesByName[input.authProvider]; ok && input.matchProviderName {
-		input.authProvider = t
-	}
-	selectedProvider, err := selectAuthProvider(authProviders, input.authProvider)
+	selected, err := selectAuthProvider(authConfigs, input.authProvider)
 	if err != nil {
 		return nil, err
 	}
+	selectedProvider := selected.provider
 	input.authProvider = selectedProvider.GetType()
+	input.configName = selected.name
 
 	var token loginToken
 	switch {
@@ -421,7 +423,7 @@ func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecC
 		}
 		token = *tokenPtr
 	default:
-		customPrint(fmt.Sprintf("Enter credentials for %s \n", input.authProvider))
+		customPrint(fmt.Sprintf("Enter credentials for %s \n", selected.label()))
 		tok, err := basicAuth(client, input, useV1Public)
 		if err != nil {
 			return nil, err
@@ -458,6 +460,13 @@ func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (loginT
 		prompt += " [" + input.userID + "]"
 	}
 	username, err := promptFunc(prompt+": ", true)
+	// At the end of input, an empty answer takes the default username.
+	if errors.Is(err, io.EOF) && username == "" {
+		if input.userID == "" {
+			return loginToken{}, errors.New("no username given on input")
+		}
+		err = nil
+	}
 	if err != nil {
 		return loginToken{}, err
 	}
@@ -476,12 +485,16 @@ func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (loginT
 		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
 	}
 
-	reqBody, err := json.Marshal(map[string]any{
+	body := map[string]any{
 		"type":         input.authProvider,
 		"responseType": responseType,
 		"username":     username,
 		"password":     password,
-	})
+	}
+	if input.configName != "" {
+		body["configName"] = input.configName
+	}
+	reqBody, err := json.Marshal(body)
 	if err != nil {
 		return loginToken{}, fmt.Errorf("failed to marshal request body: %w", err)
 	}
@@ -650,16 +663,44 @@ type TypedProvider interface {
 	GetType() string
 }
 
+// authConfig is an auth config listed by the server. A server can have several
+// auth configs of one provider, told apart by their names.
+type authConfig struct {
+	// name is the name of the auth config, as the server gives it in the "id"
+	// field; empty if the server gave none.
+	name     string
+	provider TypedProvider
+}
+
+// providerName returns the name of the provider of the auth config, such as
+// openldap for openLdapProvider.
+func (c authConfig) providerName() string {
+	return strings.ToLower(strings.TrimSuffix(c.provider.GetType(), "Provider"))
+}
+
+// displayName returns the name of the auth config, or the name of its
+// provider if it has none.
+func (c authConfig) displayName() string {
+	if c.name != "" {
+		return c.name
+	}
+	return c.providerName()
+}
+
+// label returns the name of the auth config with the name of its provider,
+// such as "corp-ldap (openldap)".
+func (c authConfig) label() string {
+	return fmt.Sprintf("%s (%s)", c.displayName(), c.providerName())
+}
+
 // listAuthProviders fetches the list of auth providers from the Rancher server.
 // Note: it should always be called with useV1Public=true first to avoid infinite recursion.
 // Returns:
-//   - A list of supported auth providers
-//   - A map from the name of each provider, as the server gives it in the "id"
-//     field, to its type; providers without a name are left out
+//   - A list of supported auth configs, with the local one first
 //   - A bool flag indicating whether the /v1-public endpoint was used (true)
 //     or if it had to fallback to /v3-public (false)
 //   - An error.
-func listAuthProviders(client *http.Client, server string, useV1Public bool) ([]TypedProvider, map[string]string, bool, error) {
+func listAuthProviders(client *http.Client, server string, useV1Public bool) ([]authConfig, bool, error) {
 	authProvidersURL := fmt.Sprintf(authProviderURL, server)
 	if !useV1Public {
 		authProvidersURL = fmt.Sprintf(authProviderURLv3, server)
@@ -667,7 +708,7 @@ func listAuthProviders(client *http.Client, server string, useV1Public bool) ([]
 
 	req, err := http.NewRequest(http.MethodGet, authProvidersURL, nil)
 	if err != nil {
-		return nil, nil, false, fmt.Errorf("error creating request: %w", err)
+		return nil, false, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, respBody, err := doRequest(client, req)
@@ -685,16 +726,15 @@ func listAuthProviders(client *http.Client, server string, useV1Public bool) ([]
 		}
 	}
 	if err != nil {
-		return nil, nil, false, fmt.Errorf("error listing auth providers: %w", err)
+		return nil, false, fmt.Errorf("error listing auth providers: %w", err)
 	}
 
 	if !gjson.ValidBytes(respBody) {
-		return nil, nil, false, errors.New("invalid JSON response")
+		return nil, false, errors.New("invalid JSON response")
 	}
 	data := gjson.GetBytes(respBody, "data").Array()
 
-	var supportedProviders []TypedProvider
-	typesByName := make(map[string]string)
+	var supportedProviders []authConfig
 	for _, provider := range data {
 		providerType := provider.Get("type").String()
 
@@ -712,66 +752,83 @@ func listAuthProviders(client *http.Client, server string, useV1Public bool) ([]
 
 			err = json.Unmarshal([]byte(provider.Raw), typedProvider)
 			if err != nil {
-				return nil, nil, false, fmt.Errorf("error decoding the auth provider %s: %w", providerType, err)
+				return nil, false, fmt.Errorf("error decoding the auth provider %s: %w", providerType, err)
 			}
 
-			if name := provider.Get("id").String(); name != "" {
-				typesByName[name] = providerType
-			}
-
+			ac := authConfig{name: provider.Get("id").String(), provider: typedProvider}
 			if typedProvider.GetType() == "localProvider" {
-				supportedProviders = append([]TypedProvider{typedProvider}, supportedProviders...)
+				supportedProviders = append([]authConfig{ac}, supportedProviders...)
 			} else {
-				supportedProviders = append(supportedProviders, typedProvider)
+				supportedProviders = append(supportedProviders, ac)
 			}
 		}
 	}
 
-	return supportedProviders, typesByName, useV1Public, err
+	return supportedProviders, useV1Public, err
 }
 
-func selectAuthProvider(authProviders []TypedProvider, providerType string) (TypedProvider, error) {
-	if len(authProviders) == 0 {
-		return nil, errors.New("no auth provider configured")
+// selectAuthProvider picks the auth config to sign in with. A value that is
+// the name of an auth config selects it. Otherwise the value picks the auth
+// configs of the provider whose type, such as openLdapProvider, or name, such
+// as openldap, it is. An empty value picks all. If several are picked, the user
+// chooses one of them.
+func selectAuthProvider(configs []authConfig, value string) (authConfig, error) {
+	if len(configs) == 0 {
+		return authConfig{}, errors.New("no auth provider configured")
 	}
 
-	// if providerType was specified, look for it
-	if providerType != "" {
-		for _, p := range authProviders {
-			if p.GetType() == providerType {
-				return p, nil
+	candidates := configs
+	if value != "" {
+		for _, c := range configs {
+			if c.name == value {
+				return c, nil
 			}
 		}
-		return nil, fmt.Errorf("provider %s not found", providerType)
+
+		candidates = nil
+		for _, c := range configs {
+			if c.provider.GetType() == value || c.providerName() == value {
+				candidates = append(candidates, c)
+			}
+		}
+		if len(candidates) == 0 {
+			return authConfig{}, fmt.Errorf("provider %s not found", value)
+		}
 	}
 
-	// otherwise ask to the user (if more than one)
-	if len(authProviders) == 1 {
-		return authProviders[0], nil
+	if len(candidates) == 1 {
+		return candidates[0], nil
 	}
 
-	var providers []string
-	for i, val := range authProviders {
-		providers = append(providers, fmt.Sprintf("%d - %s", i, val.GetType()))
+	var options, names []string
+	for i, c := range candidates {
+		options = append(options, fmt.Sprintf("%d - %s", i, c.label()))
+		names = append(names, c.displayName())
 	}
 
 	for range 3 {
-		customPrint(fmt.Sprintf("Auth providers:\n%v", strings.Join(providers, "\n")))
-		providerIndexStr, err := promptFunc("Select auth provider: ", true)
+		customPrint(fmt.Sprintf("Auth providers:\n%v", strings.Join(options, "\n")))
+		indexStr, err := promptFunc("Select auth provider: ", true)
+		if errors.Is(err, io.EOF) {
+			// No answer will come, for example when kubectl runs the command
+			// without a terminal.
+			return authConfig{}, fmt.Errorf("no auth provider selected, use --auth-provider with one of: %s",
+				strings.Join(names, ", "))
+		}
 		if err != nil {
 			continue
 		}
 
-		providerIndex, err := strconv.Atoi(providerIndexStr)
-		if err != nil || (providerIndex < 0 || providerIndex > len(providers)-1) {
+		index, err := strconv.Atoi(indexStr)
+		if err != nil || index < 0 || index > len(candidates)-1 {
 			customPrint("Pick a valid auth provider")
 			continue
 		}
 
-		return authProviders[providerIndex], nil
+		return candidates[index], nil
 	}
 
-	return nil, errors.New("invalid auth provider")
+	return authConfig{}, errors.New("invalid auth provider")
 }
 
 func generateKey() (string, error) {
@@ -844,14 +901,20 @@ func doRequest(client *http.Client, req *http.Request) (*http.Response, []byte, 
 	return resp, body, nil
 }
 
+// stdin is shared by the prompts, so that a line one prompt reads ahead stays
+// for the next one.
+var stdin = bufio.NewReader(os.Stdin)
+
+// customPrompt prints msg and reads a line from standard input, without echo
+// unless show. It returns io.EOF if the input ends before any text.
 func customPrompt(msg string, show bool) (result string, err error) {
 	fmt.Fprint(os.Stderr, msg)
 	if show {
-		scanner := bufio.NewScanner(os.Stdin)
-		if scanner.Scan() {
-			result = scanner.Text()
+		result, err = stdin.ReadString('\n')
+		if errors.Is(err, io.EOF) && result != "" {
+			err = nil
 		}
-		err = scanner.Err()
+		result = strings.TrimRight(result, "\r\n")
 	} else {
 		var data []byte
 		data, err = term.ReadPassword(int(os.Stdin.Fd()))

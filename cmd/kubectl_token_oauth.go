@@ -322,11 +322,15 @@ func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Tok
 		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
 	}
 
-	reqBody, err := json.Marshal(map[string]any{
+	body := map[string]any{
 		"type":         input.authProvider,
 		"responseType": responseType,
 		"id_token":     oauthToken.Extra("id_token"),
-	})
+	}
+	if input.configName != "" {
+		body["configName"] = input.configName
+	}
+	reqBody, err := json.Marshal(body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request body: %w", err)
 	}
