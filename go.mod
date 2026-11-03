@@ -13,8 +13,8 @@ replace (
 
 require (
 	github.com/rancher/norman v0.10.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20261026073715-7758e3eb8c0f
-	github.com/rancher/rancher/pkg/client v0.0.0-20261026073715-7758e3eb8c0f
+	github.com/rancher/rancher/pkg/apis v0.0.0-20261103153029-d7fe4e9ae2ea
+	github.com/rancher/rancher/pkg/client v0.0.0-20261103153029-d7fe4e9ae2ea
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/tidwall/gjson v1.20.0
@@ -76,7 +76,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
