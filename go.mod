@@ -13,8 +13,8 @@ replace (
 
 require (
 	github.com/rancher/norman v0.10.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20261026073715-7758e3eb8c0f
-	github.com/rancher/rancher/pkg/client v0.0.0-20261026073715-7758e3eb8c0f
+	github.com/rancher/rancher/pkg/apis v0.0.0-20261103153029-d7fe4e9ae2ea
+	github.com/rancher/rancher/pkg/client v0.0.0-20261103153029-d7fe4e9ae2ea
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/tidwall/gjson v1.20.0
