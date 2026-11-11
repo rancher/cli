@@ -81,7 +81,7 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
     # Releases are immutable once published, so the release is created as a
-    # draft with all of its assets and only published in the last step.
+    # draft with all of its assets and must be published manually.
     - name: Create draft release with assets
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -110,9 +110,3 @@ jobs:
         push: true
         context: package
         tags: rancher/cli2:${{ steps.package.outputs.VERSION }}
-
-    - name: Publish the release
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        VERSION: ${{ steps.package.outputs.VERSION }}
-      run: gh release edit -R "${GITHUB_REPOSITORY}" "$VERSION" --draft=false
