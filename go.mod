@@ -2,19 +2,21 @@ module github.com/rancher/cli
 
 go 1.27.3
 
+toolchain go1.27.4
+
 replace (
-	k8s.io/api => k8s.io/api v0.37.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.37.1
-	k8s.io/apiserver => k8s.io/apiserver v0.37.1
-	k8s.io/client-go => k8s.io/client-go v0.37.1
-	k8s.io/component-base => k8s.io/component-base v0.37.1
-	k8s.io/kubernetes => k8s.io/kubernetes v1.37.1
+	k8s.io/api => k8s.io/api v0.37.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.37.2
+	k8s.io/apiserver => k8s.io/apiserver v0.37.2
+	k8s.io/client-go => k8s.io/client-go v0.37.2
+	k8s.io/component-base => k8s.io/component-base v0.37.2
+	k8s.io/kubernetes => k8s.io/kubernetes v1.37.2
 )
 
 require (
-	github.com/rancher/norman v0.10.1
-	github.com/rancher/rancher/pkg/apis v0.0.0-20261103153029-d7fe4e9ae2ea
-	github.com/rancher/rancher/pkg/client v0.0.0-20261103153029-d7fe4e9ae2ea
+	github.com/rancher/norman v0.10.2
+	github.com/rancher/rancher/pkg/apis v0.0.0-20261111150202-ae878da0d3aa
+	github.com/rancher/rancher/pkg/client v0.0.0-20261111150202-ae878da0d3aa
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/tidwall/gjson v1.20.0
@@ -63,26 +65,26 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.70.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
-	github.com/rancher/aks-operator v1.16.0-rc.5 // indirect
+	github.com/rancher/aks-operator v1.16.0-rc.7 // indirect
 	github.com/rancher/ali-operator v1.16.0-rc.3 // indirect
-	github.com/rancher/eks-operator v1.16.0-rc.3 // indirect
-	github.com/rancher/fleet/pkg/apis v0.17.0-beta.2 // indirect
-	github.com/rancher/gke-operator v1.16.0-rc.4 // indirect
+	github.com/rancher/eks-operator v1.16.0-rc.6 // indirect
+	github.com/rancher/fleet/pkg/apis v0.17.0-rc.1 // indirect
+	github.com/rancher/gke-operator v1.16.0-rc.5 // indirect
 	github.com/rancher/lasso v0.2.10 // indirect
-	github.com/rancher/wrangler/v3 v3.8.0-rc.3 // indirect
+	github.com/rancher/wrangler/v3 v3.8.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/api v0.37.1 // indirect
-	k8s.io/apimachinery v0.37.1 // indirect
+	k8s.io/api v0.37.2 // indirect
+	k8s.io/apimachinery v0.37.2 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
