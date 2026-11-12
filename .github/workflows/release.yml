@@ -14,7 +14,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         persist-credentials: false
 
@@ -38,7 +38,7 @@ jobs:
         credentials_json: "${{ env.GOOGLE_AUTH }}"
 
     - name: Set up Go
-      uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
       with:
         go-version-file: go.mod
         cache: false
@@ -105,7 +105,7 @@ jobs:
           cache-control: public,max-age=3600
 
     - name: Docker Build
-      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
       with:
         push: true
         context: package
