@@ -45,7 +45,7 @@ jobs:
 
     # https://github.com/golang/go/issues/75031
     - name: Set toolchain version
-      run: go env -w GOTOOLCHAIN=go1.27.3+auto
+      run: go env -w GOTOOLCHAIN=go1.27.4+auto
 
     - name: Lint
       uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
