@@ -2,7 +2,7 @@ module github.com/rancher/cli
 
 go 1.26.0
 
-toolchain go1.26.10
+toolchain go1.26.11
 
 replace (
 	github.com/google/gnostic-models => github.com/google/gnostic-models v0.6.9
