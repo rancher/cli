@@ -11,6 +11,8 @@ jobs:
       contents: write # needed to create/update the release with the assets
       id-token: write # needed for the Vault authentication
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/go1.27:1.27.4
 
     steps:
     - name: Checkout Repo
@@ -37,23 +39,11 @@ jobs:
       with:
         credentials_json: "${{ env.GOOGLE_AUTH }}"
 
-    - name: Set up Go
-      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-      with:
-        go-version-file: go.mod
-        cache: false
-
-    # https://github.com/golang/go/issues/75031
-    - name: Set toolchain version
-      run: go env -w GOTOOLCHAIN=go1.27.4+auto
-
-    - name: Lint
-      uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
-      with:
-        version: v2.15.0
-
     - name: Validate Go modules
       run: ./scripts/validate
+
+    - name: Lint the sources
+      run: ./scripts/lint
 
     - name: Test
       run: ./scripts/test
@@ -103,6 +93,9 @@ jobs:
         process_gcloudignore: false
         headers: |-
           cache-control: public,max-age=3600
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
     - name: Docker Build
       uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
