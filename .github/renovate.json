@@ -3,6 +3,7 @@
   "extends": ["github>rancher/renovate-config//default#release"],
   "baseBranchPatterns": [
     "main",
+    "v2.16",
     "v2.15",
     "v2.14",
     "v2.13",
@@ -12,6 +13,11 @@
     {
       "matchBaseBranches": ["main"],
       "extends": ["github>rancher/renovate-config//rancher-main#release"]
+    },
+    {
+      "description": "Apply Rancher 2.16 update constraints to branch v2.16.",
+      "matchBaseBranches": ["v2.16"],
+      "extends": ["github>rancher/renovate-config//rancher-2.16#release"]
     },
     {
       "description": "Apply Rancher 2.15 update constraints to branch v2.15.",
