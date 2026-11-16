@@ -7,7 +7,7 @@ toolchain go1.26.11
 replace (
 	github.com/google/gnostic-models => github.com/google/gnostic-models v0.6.9
 	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.44.0
-	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.44.0
+	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.47.0
 	k8s.io/api => k8s.io/api v0.33.13
 	k8s.io/apimachinery => k8s.io/apimachinery v0.33.13
 	k8s.io/apiserver => k8s.io/apiserver v0.33.13
@@ -76,7 +76,7 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
-	go.opentelemetry.io/otel/trace v1.44.0 // indirect
+	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
