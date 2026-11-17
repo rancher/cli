@@ -22,11 +22,11 @@ require (
 	github.com/tidwall/gjson v1.20.2
 	github.com/urfave/cli/v3 v3.14.0
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
-	golang.org/x/oauth2 v0.37.0
+	golang.org/x/oauth2 v0.38.0
 	golang.org/x/sync v0.25.0
-	golang.org/x/sys v0.49.0
-	golang.org/x/term v0.47.0
-	golang.org/x/text v0.43.0
+	golang.org/x/sys v0.50.0
+	golang.org/x/term v0.48.0
+	golang.org/x/text v0.44.0
 	k8s.io/client-go v12.0.0+incompatible
 	sigs.k8s.io/yaml v1.6.0
 )
