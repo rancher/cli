@@ -1,9 +1,11 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -187,4 +189,35 @@ func TestLoadFromPath(t *testing.T) {
 			assert.Equal(t, tt.expectedConf, conf)
 		})
 	}
+}
+
+func TestCheckTokenExpiry(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		expiresAt string
+		wantErr   bool
+	}{
+		{expiresAt: ""},
+		{expiresAt: "not-a-time"},
+		{expiresAt: "2026-01-01T13:00:00Z"},
+		{expiresAt: "2026-01-01T12:00:00Z", wantErr: true},
+		{expiresAt: "2025-12-31T00:00:00Z", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.expiresAt, func(t *testing.T) {
+			sc := &ServerConfig{URL: "https://rancher.example.com", TokenExpiresAt: tt.expiresAt}
+			err := sc.CheckTokenExpiry(now)
+			if tt.wantErr {
+				assert.ErrorIs(t, err, ErrTokenExpired)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestTokenExpiresAtOmittedWhenEmpty(t *testing.T) {
+	out, err := json.Marshal(ServerConfig{})
+	assert.NoError(t, err)
+	assert.NotContains(t, string(out), "tokenExpiresAt")
 }

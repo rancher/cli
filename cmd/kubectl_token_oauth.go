@@ -124,10 +124,14 @@ func oauthAuthCodeAuth(
 	}()
 
 	// Open the user's browser.
-	customPrint("\nOpening browser for authentication...\n")
-	if err := openBrowser(authURL); err != nil {
-		logrus.Debugf("Failed to open browser: %v", err)
-		customPrint(fmt.Sprintf("Failed to open browser automatically. Please open the following URL manually:\n%s\n", authURL))
+	if input.skipBrowser {
+		customPrint(fmt.Sprintf("\nOpen the following URL in a browser to authenticate:\n%s\n", authURL))
+	} else {
+		customPrint("\nOpening browser for authentication...\n")
+		if err := openBrowser(authURL); err != nil {
+			logrus.Debugf("Failed to open browser: %v", err)
+			customPrint(fmt.Sprintf("Failed to open browser automatically. Please open the following URL manually:\n%s\n", authURL))
+		}
 	}
 
 	// Wait for the callback with the authorization code.
@@ -317,14 +321,9 @@ func rancherLogin(client *http.Client, input *LoginInput, oauthToken *oauth2.Tok
 		reqURL = fmt.Sprintf(loginURLv3, input.server, input.authProvider, providerName)
 	}
 
-	responseType := "kubeconfig"
-	if input.clusterID != "" {
-		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
-	}
-
 	body := map[string]any{
 		"type":         input.authProvider,
-		"responseType": responseType,
+		"responseType": input.loginResponseType(),
 		"id_token":     oauthToken.Extra("id_token"),
 	}
 	if input.configName != "" {

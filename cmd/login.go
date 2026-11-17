@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 
@@ -53,9 +51,26 @@ func LoginCommand() *cli.Command {
 				Name:  "name",
 				Usage: "Name of the Server",
 			},
+			&cli.StringFlag{
+				Name: "auth-provider",
+				Usage: "Name or type of the auth provider to sign in with when no --token is given " +
+					"(e.g. keyCloakProvider); prompts if the server has several",
+			},
+			&cli.StringFlag{
+				Name:  "auth-flow",
+				Usage: "Auth flow to use for OAuth providers: 'devicecode' (default) or 'authcode'",
+			},
+			&cli.BoolFlag{
+				Name:  "skip-browser",
+				Usage: "Print the login URL instead of opening it in the default browser",
+			},
 		},
 	}
 }
+
+// loginOpenBrowser opens the SAML login page during "rancher login"; tests
+// replace it.
+var loginOpenBrowser openBrowserFunc = openBrowser
 
 func loginSetup(ctx context.Context, cmd *cli.Command) error {
 	if cmd.NArg() == 0 {
@@ -83,26 +98,23 @@ func loginSetup(ctx context.Context, cmd *cli.Command) error {
 	u.Path = ""
 	serverConfig.URL = u.String()
 
-	if cmd.String("token") != "" {
-		auth := SplitOnColon(cmd.String("token"))
-		if len(auth) != 2 {
-			return errors.New("invalid token")
-		}
-		serverConfig.AccessKey = auth[0]
-		serverConfig.SecretKey = auth[1]
-		serverConfig.TokenKey = cmd.String("token")
-	} else {
-		// This can be removed once username and password is accepted
-		return errors.New("token flag is required")
-	}
-
 	if cmd.String("cacert") != "" {
 		cert, err := loadAndVerifyCert(cmd.String("cacert"))
 		if err != nil {
 			return err
 		}
 		serverConfig.CACerts = cert
+	}
 
+	if cmd.String("token") != "" {
+		if cmd.String("auth-provider") != "" || cmd.String("auth-flow") != "" || cmd.Bool("skip-browser") {
+			return errors.New("--token cannot be combined with --auth-provider, --auth-flow or --skip-browser")
+		}
+		if err := setServerToken(serverConfig, cmd.String("token")); err != nil {
+			return errors.New("invalid token")
+		}
+	} else if err := browserLogin(serverConfig, cmd.String("auth-provider"), cmd.String("auth-flow"), cmd.Bool("skip-browser")); err != nil {
+		return err
 	}
 
 	c, err := cliclient.NewManagementClient(serverConfig)
@@ -125,6 +137,61 @@ func loginSetup(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
+	return nil
+}
+
+// setServerToken stores a token of the form <access key>:<secret key> in the
+// server config.
+func setServerToken(serverConfig *config.ServerConfig, token string) error {
+	auth := SplitOnColon(token)
+	if len(auth) != 2 || auth[0] == "" || auth[1] == "" {
+		return errors.New("token is not of the form <access key>:<secret key>")
+	}
+	serverConfig.AccessKey = auth[0]
+	serverConfig.SecretKey = auth[1]
+	serverConfig.TokenKey = token
+	return nil
+}
+
+// browserLogin signs the user in to serverConfig.URL with an auth provider,
+// in the browser for SAML and OAuth providers or with a username and password
+// otherwise, and stores the token Rancher issues in serverConfig.
+func browserLogin(serverConfig *config.ServerConfig, authProvider, authFlow string, skipBrowser bool) error {
+	// CACerts holds the PEM-encoded certificates read from --cacert.
+	tlsConfig, err := tlsConfigFromPEM(false, serverConfig.CACerts)
+	if err != nil {
+		return err
+	}
+	client, err := newHTTPClient(serverConfig, tlsConfig)
+	if err != nil {
+		return err
+	}
+
+	input := &LoginInput{
+		server:       serverConfig.URL,
+		authProvider: authProvider,
+		authFlow:     authFlow,
+		openBrowser:  loginOpenBrowser,
+		skipBrowser:  skipBrowser,
+		responseType: sessionResponseType,
+	}
+	token, err := loginAndGetToken(client, input)
+	if err != nil {
+		return fmt.Errorf("login failed: %w", err)
+	}
+	if token.BearerToken == "" {
+		return errors.New("login failed: no token received from the server")
+	}
+	if err := setServerToken(serverConfig, token.BearerToken); err != nil {
+		return fmt.Errorf("login failed: unexpected token from the server: %w", err)
+	}
+	serverConfig.TokenExpiresAt = token.ExpiresAt
+
+	if token.ExpiresAt != "" {
+		customPrint(fmt.Sprintf("Logged in, token expires at %s", token.ExpiresAt))
+	} else {
+		customPrint("Logged in")
+	}
 	return nil
 }
 
@@ -206,7 +273,9 @@ func getProjectContext(cmd *cli.Command, c *cliclient.MasterClient) (string, err
 
 	fmt.Print("Select a Project:")
 
-	reader := bufio.NewReader(os.Stdin)
+	// Read from the reader the sign-in prompts share, which may have read
+	// ahead of the project selection.
+	reader := stdin
 
 	errMessage := fmt.Sprintf("Invalid input, enter a number between 1 and %v: ", len(projectCollection.Data))
 	var selection int

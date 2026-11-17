@@ -27,6 +27,7 @@ import (
 	"github.com/rancher/cli/config"
 	apiv3 "github.com/rancher/rancher/pkg/apis/management.cattle.io/v3"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/urfave/cli/v3"
 	"golang.org/x/term"
@@ -62,6 +63,40 @@ type LoginInput struct {
 	// request so that Rancher can tell apart several auth configs of one
 	// provider. Empty if the server gave no name.
 	configName string
+
+	// openBrowser, if set, opens the SAML login page in the user's browser.
+	// The URL is printed either way, so headless users can still sign in.
+	openBrowser openBrowserFunc
+
+	// skipBrowser prints login URLs without opening a browser.
+	skipBrowser bool
+
+	// responseType is the responseType sent in basic and OAuth login
+	// requests. Empty means a kubeconfig token, see kubeconfigResponseType.
+	responseType string
+}
+
+// sessionResponseType asks Rancher for a login session token, which lasts
+// auth-user-session-ttl-minutes, instead of a kubeconfig token. Rancher creates
+// a session token for every responseType that neither starts with "kubeconfig"
+// nor is "cookie"; "json" is the value its API docs use.
+const sessionResponseType = "json"
+
+// kubeconfigResponseType returns the responseType that asks Rancher for a
+// kubeconfig token, scoped to input.clusterID if set.
+func (input *LoginInput) kubeconfigResponseType() string {
+	if input.clusterID != "" {
+		return "kubeconfig_" + input.clusterID
+	}
+	return "kubeconfig"
+}
+
+// loginResponseType returns the responseType for basic and OAuth logins.
+func (input *LoginInput) loginResponseType() string {
+	if input.responseType != "" {
+		return input.responseType
+	}
+	return input.kubeconfigResponseType()
 }
 
 const (
@@ -389,46 +424,51 @@ func cacheCredential(cmd *cli.Command, serverConfig *config.ServerConfig, key st
 	return cf.Write()
 }
 
-func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecCredential, error) {
+// loginAndGetToken signs the user in with the auth provider chosen by
+// input.authProvider, prompting for one if needed, and returns the Rancher
+// token the server issued.
+func loginAndGetToken(client *http.Client, input *LoginInput) (loginToken, error) {
 	// Try /v1-public first.
 	authConfigs, useV1Public, err := listAuthProviders(client, input.server, true)
 	if err != nil {
-		return nil, err
+		return loginToken{}, err
 	}
 
 	selected, err := selectAuthProvider(authConfigs, input.authProvider)
 	if err != nil {
-		return nil, err
+		return loginToken{}, err
 	}
 	selectedProvider := selected.provider
 	input.authProvider = selectedProvider.GetType()
 	input.configName = selected.name
 
-	var token loginToken
 	switch {
 	case samlProviders[input.authProvider]:
 		samlTok, err := samlAuth(client, input, useV1Public)
 		if err != nil {
-			return nil, err
+			return loginToken{}, err
 		}
-		token = loginToken{
+		return loginToken{
 			BearerToken: samlTok.Token,
 			ExpiresAt:   samlTok.ExpiresAt,
 			UserID:      samlTok.UserID,
-		}
+		}, nil
 	case oauthProviders[input.authProvider]:
 		tokenPtr, err := oauthAuth(client, input, selectedProvider, useV1Public)
 		if err != nil {
-			return nil, err
+			return loginToken{}, err
 		}
-		token = *tokenPtr
+		return *tokenPtr, nil
 	default:
 		customPrint(fmt.Sprintf("Enter credentials for %s \n", selected.label()))
-		tok, err := basicAuth(client, input, useV1Public)
-		if err != nil {
-			return nil, err
-		}
-		token = tok
+		return basicAuth(client, input, useV1Public)
+	}
+}
+
+func loginAndGenerateCred(client *http.Client, input *LoginInput) (*config.ExecCredential, error) {
+	token, err := loginAndGetToken(client, input)
+	if err != nil {
+		return nil, err
 	}
 
 	cred := &config.ExecCredential{
@@ -480,14 +520,9 @@ func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (loginT
 		return loginToken{}, err
 	}
 
-	responseType := "kubeconfig"
-	if input.clusterID != "" {
-		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
-	}
-
 	body := map[string]any{
 		"type":         input.authProvider,
-		"responseType": responseType,
+		"responseType": input.loginResponseType(),
 		"username":     username,
 		"password":     password,
 	}
@@ -526,6 +561,10 @@ func basicAuth(client *http.Client, input *LoginInput, useV1Public bool) (loginT
 	return token, nil
 }
 
+// samlPollInterval is how often samlAuth polls for the auth token; tests
+// shorten it.
+var samlPollInterval = 10 * time.Second
+
 func samlAuth(client *http.Client, input *LoginInput, useV1Public bool) (managementClient.Token, error) {
 	token := managementClient.Token{}
 
@@ -546,10 +585,9 @@ func samlAuth(client *http.Client, input *LoginInput, useV1Public bool) (managem
 		return token, fmt.Errorf("error generating request id: %w", err)
 	}
 
-	responseType := "kubeconfig"
-	if input.clusterID != "" {
-		responseType = fmt.Sprintf("%s_%s", responseType, input.clusterID)
-	}
+	// Rancher always issues a kubeconfig token for a SAML CLI login, whatever
+	// the responseType, so input.responseType does not apply here.
+	responseType := input.kubeconfigResponseType()
 
 	tokenURL := fmt.Sprintf(authTokenURL, input.server, id)
 	if !useV1Public {
@@ -584,6 +622,12 @@ func samlAuth(client *http.Client, input *LoginInput, useV1Public bool) (managem
 
 	customPrint(fmt.Sprintf("\nLogin Request Id: %s\n", id))
 	customPrint(fmt.Sprintf("\nLogin to Rancher Server at %s \n", loginURL))
+	if input.openBrowser != nil && !input.skipBrowser {
+		if err := input.openBrowser(loginURL.String()); err != nil {
+			logrus.Debugf("Failed to open browser: %v", err)
+			customPrint("Failed to open browser automatically. Please open the URL above manually.")
+		}
+	}
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
@@ -592,8 +636,8 @@ func samlAuth(client *http.Client, input *LoginInput, useV1Public bool) (managem
 	// Timeout for the login flow.
 	timeout := time.NewTimer(15 * time.Minute)
 	defer timeout.Stop()
-	// Poll for the auth token every 10 seconds.
-	poll := time.NewTicker(10 * time.Second)
+	// Poll for the auth token.
+	poll := time.NewTicker(samlPollInterval)
 	defer poll.Stop()
 
 loop:

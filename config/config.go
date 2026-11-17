@@ -39,6 +39,29 @@ type ServerConfig struct {
 	KubeConfigs        map[string]*api.Config     `json:"kubeConfigs"`
 	ProxyURL           string                     `json:"proxyUrl"`
 	HTTPTimeoutSeconds int                        `json:"httpTimeoutSeconds"`
+	// TokenExpiresAt is when the token from a browser or credential login
+	// expires, in RFC3339. Empty if unknown, e.g. for tokens given with --token.
+	TokenExpiresAt string `json:"tokenExpiresAt,omitempty"`
+}
+
+// ErrTokenExpired is returned when the token of a server config has expired.
+var ErrTokenExpired = errors.New("token expired")
+
+// CheckTokenExpiry returns an error wrapping ErrTokenExpired if the token's
+// recorded expiry has passed. An empty or unparsable expiry is not checked.
+func (c *ServerConfig) CheckTokenExpiry(now time.Time) error {
+	if c.TokenExpiresAt == "" {
+		return nil
+	}
+	expiresAt, err := time.Parse(time.RFC3339, c.TokenExpiresAt)
+	if err != nil {
+		logrus.Debugf("ignoring unparsable tokenExpiresAt %q: %v", c.TokenExpiresAt, err)
+		return nil
+	}
+	if !now.Before(expiresAt) {
+		return fmt.Errorf("%w at %s, run `rancher login %s` again", ErrTokenExpired, c.TokenExpiresAt, c.URL)
+	}
+	return nil
 }
 
 func (c *ServerConfig) GetHTTPTimeout() time.Duration {

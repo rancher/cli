@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rancher/cli/config"
 	"github.com/rancher/norman/clientbase"
@@ -27,6 +28,10 @@ type MasterClient struct {
 // NewMasterClient returns a new MasterClient with Cluster, Management and Project
 // clients populated
 func NewMasterClient(config *config.ServerConfig) (*MasterClient, error) {
+	if err := config.CheckTokenExpiry(time.Now()); err != nil {
+		return nil, err
+	}
+
 	mc := &MasterClient{
 		UserConfig: config,
 	}
@@ -51,6 +56,10 @@ func NewMasterClient(config *config.ServerConfig) (*MasterClient, error) {
 
 // NewManagementClient returns a new MasterClient with only the Management client
 func NewManagementClient(config *config.ServerConfig) (*MasterClient, error) {
+	if err := config.CheckTokenExpiry(time.Now()); err != nil {
+		return nil, err
+	}
+
 	mc := &MasterClient{
 		UserConfig: config,
 	}
@@ -64,6 +73,10 @@ func NewManagementClient(config *config.ServerConfig) (*MasterClient, error) {
 
 // NewClusterClient returns a new MasterClient with only the Cluster client
 func NewClusterClient(config *config.ServerConfig) (*MasterClient, error) {
+	if err := config.CheckTokenExpiry(time.Now()); err != nil {
+		return nil, err
+	}
+
 	clustProj := CheckProject(config.Project)
 	if clustProj == nil {
 		return nil, errors.New("no context set")
@@ -82,6 +95,10 @@ func NewClusterClient(config *config.ServerConfig) (*MasterClient, error) {
 
 // NewProjectClient returns a new MasterClient with only the Project client
 func NewProjectClient(config *config.ServerConfig) (*MasterClient, error) {
+	if err := config.CheckTokenExpiry(time.Now()); err != nil {
+		return nil, err
+	}
+
 	clustProj := CheckProject(config.Project)
 	if clustProj == nil {
 		return nil, errors.New("no context set")

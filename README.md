@@ -76,6 +76,16 @@ mounted directory.
    Options: `--cacert <file>` for a server certificate signed by a private CA,
    `--context <cluster-id>:<project-id>` to skip the prompt, `--name <name>` to
    name the server in the local config.
+
+   Instead of a token, you can sign in with one of the server's auth
+   providers, e.g. `--auth-provider keyCloakProvider`. SAML providers open the
+   Rancher login page in your browser, Azure AD uses the device code flow (or
+   `--auth-flow authcode`), and other providers prompt for a username and
+   password. Without `--auth-provider`, the CLI asks you to pick a provider if
+   the server has more than one. `--skip-browser` only prints the login URL.
+   The resulting token expires (SAML: `kubeconfig-default-token-ttl-minutes`,
+   others: `auth-user-session-ttl-minutes`); commands then ask you to run
+   `rancher login` again.
 3. Work with the server:
 
    ```
