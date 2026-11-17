@@ -7,10 +7,10 @@ namespaces and members, and authenticate `kubectl` against Rancher-managed
 clusters.
 
 > [!IMPORTANT]
-> **[rancher-cli](https://github.com/rancher/rancher-cli) is the successor to this CLI and will replace it. Start using it today.**
+> **[rancher-cli](https://github.com/rancher/rancher-cli) is the successor to this CLI and is planned to eventually replace it.**
 > It is an experimental, AI-native rewrite for both operators and AI coding agents.
 > It adds structured JSON/YAML output, a server-side dry run before every change,
-> machine-readable errors and exit codes, and an agent skill. It needs Rancher 2.14 or later.
+> machine-readable errors and exit codes, and an agent skill. It's compatible with Rancher 2.14 or later.
 >
 > If you use this CLI only as the kubectl credential plugin, rancher-cli is a drop-in replacement.
 > Kubeconfigs downloaded from Rancher keep working after you switch binaries.
