@@ -17,7 +17,7 @@ require (
 	github.com/rancher/rancher/pkg/client v0.0.0-20261111150202-ae878da0d3aa
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
-	github.com/tidwall/gjson v1.20.2
+	github.com/tidwall/gjson v1.20.3
 	github.com/urfave/cli/v3 v3.14.0
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
 	golang.org/x/oauth2 v0.38.0
