@@ -197,12 +197,16 @@ make package         # archives of ./build/bin into ./dist, and a local rancher/
 `REPO=<name> make package` tags the image `<name>/cli` instead. Releases are
 built by the [release workflow](.github/workflows/release.yml) from `v*` tags.
 
-## Contact
+## Feedback
 
-For bugs, questions, comments, corrections and suggestions, open an issue in
-[rancher/rancher](https://github.com/rancher/rancher/issues) with a title
-starting with `[cli] `, or
-[click here](https://github.com/rancher/rancher/issues/new?title=%5Bcli%5D%20).
+We are not accepting code contributions at the moment. A clear issue helps
+most: open one in [rancher/rancher](https://github.com/rancher/rancher/issues)
+with a title starting with `[cli] `, or
+[click here](https://github.com/rancher/rancher/issues/new?title=%5Bcli%5D%20),
+and read [CONTRIBUTING.md](CONTRIBUTING.md) for what to include.
+
+Questions and discussion: the [Rancher forums](https://forums.rancher.com/)
+and [Rancher Slack](https://slack.rancher.io/).
 
 Report security issues as described in the
 [Rancher security policy](https://github.com/rancher/rancher/security/policy).
