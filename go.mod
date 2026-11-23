@@ -10,7 +10,7 @@ replace (
 	k8s.io/apiserver => k8s.io/apiserver v0.35.6
 	k8s.io/client-go => k8s.io/client-go v0.35.6
 	k8s.io/component-base => k8s.io/component-base v0.35.6
-	k8s.io/kubernetes => k8s.io/kubernetes v1.35.9
+	k8s.io/kubernetes => k8s.io/kubernetes v1.35.10
 )
 
 require (
